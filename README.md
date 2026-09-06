@@ -1,6 +1,6 @@
 # SCOPI — Sistema de Control de Obras, Personal e Inventarios
 
-Sistema web para el **control integral de proyectos de construcción** del caso de estudio **Constructora XYZ** (microempresa de Cúcuta): planear, ejecutar y dar trazabilidad a proyectos de vivienda, coordinando personal, materiales, herramientas, proveedores y costos, con alertas e indicadores para la toma de decisiones.
+Sistema web para el **control integral de proyectos de construcción** del caso de estudio **Constructora XYZ** (microempresa de Cúcuta): planear, ejecutar y dar trazabilidad a proyectos de vivienda, coordinando personal, materiales, herramientas, proveedores y costos, con alertas e indicadores para la toma de decisiones
 
 > Proyecto académico · clase «Control integral de proyectos de construcción» · equipo de 5 estudiantes.
 
