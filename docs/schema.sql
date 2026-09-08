@@ -1,6 +1,15 @@
 -- =============================================================================
 -- BASE DE DATOS DE GESTIÓN DE PROYECTOS, INVENTARIO Y PERSONAL
--- Motor: MySQL 8.0+ | Engine: InnoDB | Charset: utf8mb4
+-- Motor objetivo: MySQL 8.0+ | Engine: InnoDB | Charset: utf8mb4
+-- Verificado ejecutando este archivo en MySQL 8.0.46 (27/27 tablas) y también
+-- en MariaDB 10.11, que es lo que corre el equipo de desarrollo.
+--
+-- RN07 (no eliminación física): las tablas con historial llevan baja lógica
+-- (`activo`, `fecha_baja`, `baja_por_usuario_id`) y las FK hacia entidades
+-- históricas son ON DELETE RESTRICT, de modo que el motor impide destruir el
+-- historial de un proyecto. Los CASCADE que se conservan son de composición
+-- (detalle→cabecera, evidencia→seguimiento, rol→permiso): el hijo no tiene
+-- significado sin el padre y forman un solo registro lógico.
 -- =============================================================================
 
 CREATE DATABASE IF NOT EXISTS `scopi` 
@@ -56,7 +65,10 @@ CREATE TABLE `trabajadores` (
     `disponible` TINYINT(1) DEFAULT 1,
     `estado` ENUM('ACTIVO', 'INACTIVO', 'VACACIONES', 'LICENCIA') DEFAULT 'ACTIVO',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL
 ) ENGINE=InnoDB;
 
 -- RF01: Autenticación y acceso
@@ -71,6 +83,9 @@ CREATE TABLE `usuarios` (
     `ultimo_acceso` DATETIME,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
     CONSTRAINT `fk_usuario_trabajador` FOREIGN KEY (`trabajador_id`) REFERENCES `trabajadores` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_usuario_rol` FOREIGN KEY (`rol_id`) REFERENCES `roles` (`id`)
 ) ENGINE=InnoDB;
@@ -85,7 +100,10 @@ CREATE TABLE `proveedores` (
     `email` VARCHAR(150),
     `direccion` VARCHAR(255),
     `estado` ENUM('ACTIVO', 'INACTIVO') DEFAULT 'ACTIVO',
-    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL
 ) ENGINE=InnoDB;
 
 -- =============================================================================
@@ -110,6 +128,9 @@ CREATE TABLE `proyectos` (
     `observaciones` TEXT,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
     CONSTRAINT `fk_proyecto_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `trabajadores` (`id`),
     CONSTRAINT `chk_proyecto_avance` CHECK (`porcentaje_avance_total` BETWEEN 0 AND 100)
 ) ENGINE=InnoDB;
@@ -124,7 +145,10 @@ CREATE TABLE `etapas_proyecto` (
     `fecha_inicio_programada` DATE,
     `fecha_fin_programada` DATE,
     `estado` ENUM('PENDIENTE', 'EN_PROCESO', 'COMPLETADA') DEFAULT 'PENDIENTE',
-    CONSTRAINT `fk_etapa_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
+    CONSTRAINT `fk_etapa_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 -- RF03, RF25: Actividades de cada etapa
@@ -142,7 +166,10 @@ CREATE TABLE `actividades` (
     `estado` ENUM('PENDIENTE', 'EN_PROCESO', 'COMPLETADA', 'ATRASADA', 'SUSPENDIDA') DEFAULT 'PENDIENTE',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `actualizado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT `fk_actividad_etapa` FOREIGN KEY (`etapa_id`) REFERENCES `etapas_proyecto` (`id`) ON DELETE CASCADE,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
+    CONSTRAINT `fk_actividad_etapa` FOREIGN KEY (`etapa_id`) REFERENCES `etapas_proyecto` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_actividad_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `trabajadores` (`id`) ON DELETE SET NULL,
     CONSTRAINT `chk_actividad_avance` CHECK (`porcentaje_avance` BETWEEN 0 AND 100)
 ) ENGINE=InnoDB;
@@ -160,7 +187,7 @@ CREATE TABLE `asignaciones_personal` (
     `estado` ENUM('ACTIVO', 'FINALIZADO', 'REASIGNADO') DEFAULT 'ACTIVO',
     `observaciones` TEXT,
     CONSTRAINT `fk_asig_trabajador` FOREIGN KEY (`trabajador_id`) REFERENCES `trabajadores` (`id`),
-    CONSTRAINT `fk_asig_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_asig_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_asig_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -173,7 +200,7 @@ CREATE TABLE `seguimiento_avance` (
     `porcentaje_anterior` DECIMAL(5,2) NOT NULL,
     `porcentaje_nuevo` DECIMAL(5,2) NOT NULL,
     `observaciones` TEXT,
-    CONSTRAINT `fk_seg_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_seg_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_seg_usuario` FOREIGN KEY (`registrado_por_usuario_id`) REFERENCES `usuarios` (`id`),
     CONSTRAINT `chk_seg_porcentaje` CHECK (`porcentaje_nuevo` BETWEEN 0 AND 100)
 ) ENGINE=InnoDB;
@@ -201,7 +228,7 @@ CREATE TABLE `incidencias` (
     `estado` ENUM('ABIERTA', 'EN_REVISION', 'RESUELTA', 'CERRADA') DEFAULT 'ABIERTA',
     `fecha_incidencia` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `fecha_resolucion` DATETIME,
-    CONSTRAINT `fk_inc_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_inc_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_inc_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE SET NULL,
     CONSTRAINT `fk_inc_usuario` FOREIGN KEY (`reportado_por_usuario_id`) REFERENCES `usuarios` (`id`)
 ) ENGINE=InnoDB;
@@ -229,6 +256,9 @@ CREATE TABLE `materiales` (
     `nivel_minimo` DECIMAL(12,2) NOT NULL DEFAULT 0.00,
     `estado` ENUM('ACTIVO', 'INACTIVO') DEFAULT 'ACTIVO',
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
     CONSTRAINT `fk_mat_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `categorias_materiales` (`id`)
 ) ENGINE=InnoDB;
 
@@ -240,6 +270,9 @@ CREATE TABLE `almacenes` (
     `ubicacion` VARCHAR(255),
     `proyecto_id` BIGINT NULL, -- Puede ser un almacén general o específico de obra
     `es_central` TINYINT(1) DEFAULT 0,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
     CONSTRAINT `fk_almacen_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
@@ -312,6 +345,8 @@ CREATE TABLE `devoluciones_materiales` (
     `cantidad` DECIMAL(12,2) NOT NULL,
     `fecha_devolucion` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `motivo` TEXT,
+    `salida_origen_id` BIGINT, -- RN13: la devolución debe referirse a una salida previa
+    CONSTRAINT `fk_dev_salida` FOREIGN KEY (`salida_origen_id`) REFERENCES `salidas_materiales` (`id`),
     CONSTRAINT `fk_dev_almacen` FOREIGN KEY (`almacen_destino_id`) REFERENCES `almacenes` (`id`),
     CONSTRAINT `fk_dev_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`),
     CONSTRAINT `fk_dev_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE SET NULL,
@@ -350,6 +385,9 @@ CREATE TABLE `herramientas` (
     `disponibilidad` ENUM('DISPONIBLE', 'PRESTADA', 'EN_TRASLADO', 'BAJA') DEFAULT 'DISPONIBLE',
     `observaciones` TEXT,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
+    `fecha_baja` DATETIME DEFAULT NULL,
+    `baja_por_usuario_id` BIGINT DEFAULT NULL,
     CONSTRAINT `fk_herr_almacen` FOREIGN KEY (`almacen_id`) REFERENCES `almacenes` (`id`)
 ) ENGINE=InnoDB;
 
@@ -392,7 +430,7 @@ CREATE TABLE `servicios_externos` (
     `observaciones` TEXT,
     `creado_en` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_serv_proveedor` FOREIGN KEY (`proveedor_id`) REFERENCES `proveedores` (`id`),
-    CONSTRAINT `fk_serv_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_serv_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE RESTRICT,
     CONSTRAINT `fk_serv_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
