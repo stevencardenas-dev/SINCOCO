@@ -1,4 +1,17 @@
-# SPRINT 1: HISTORIAS DE USUARIO Y SUS ÉPICAS
+# Criterios de aceptación por historia de usuario
+
+Detalle de historia y criterios de aceptación para un subconjunto de HU
+(HU-01, 02, 03, 07, 10, 15, 16, 21, 22, 23), agrupadas por su épica.
+
+> **Este archivo no es el alcance del Sprint 1.** El Sprint 1 comprende
+> únicamente **HU-01 y HU-02** (RF01 y RF02), según el plan de cuatro sprints
+> del documento de análisis de negocio (§10) y `TRAZABILIDAD.md`. Las demás HU
+> documentadas aquí pertenecen a los Sprints 2 a 4. El archivo se llamaba
+> `SPRINT_1.md`, lo que contradecía ese plan.
+
+La descripción completa de las 29 HU está en `PRODUCT_BACKLOG.md`; la
+priorización, en `BACKLOG_PRIORIZADO.md`; la asignación a sprints, en
+`TRAZABILIDAD.md`.
 
 ---
 
