@@ -113,3 +113,37 @@ Registra y gestiona las notificaciones automáticas generadas por el sistema (ej
 # Tabla: bitacora_trazabilidad
 
 Almacena el historial unificado de auditoría (logs), registrando la acción realizada (crear, editar, borrar), usuario responsable, IP, fecha y cambios efectuados (valores anteriores y nuevos) para garantizar la trazabilidad.
+# Mecanismos transversales
+
+Además de las 27 tablas, el esquema implementa dos reglas de negocio
+directamente en el motor.
+
+## Baja lógica (RN07, RF32)
+
+Nueve tablas con historial —`trabajadores`, `usuarios`, `proveedores`,
+`proyectos`, `etapas_proyecto`, `actividades`, `materiales`, `almacenes` y
+`herramientas`— llevan `activo`, `fecha_baja` y `baja_por_usuario_id`. Dar de
+baja un registro es `UPDATE ... SET activo = 0`, nunca `DELETE`; las consultas
+operativas filtran `activo = 1`.
+
+Las llaves foráneas hacia entidades históricas son `ON DELETE RESTRICT`, de
+modo que el motor rechaza un `DELETE` que destruiría historial (error 1451).
+Se conservan cinco `ON DELETE CASCADE` de composición —`roles_permisos`,
+`detalles_entrada_inventario`, `detalles_salida_materiales` hacia su cabecera y
+`evidencias_avance` hacia `seguimiento_avance`— porque el hijo no tiene
+significado sin el padre y forman un solo registro lógico.
+
+## Existencias de materiales (RN06, RN01)
+
+`materiales.existencia_total` la mantiene el motor mediante tres triggers:
+
+| Trigger | Evento | Efecto |
+|---|---|---|
+| `trg_entrada_suma_existencia` | `AFTER INSERT` en `detalles_entrada_inventario` | suma la cantidad ingresada |
+| `trg_salida_descuenta_existencia` | `AFTER INSERT` en `detalles_salida_materiales` | descuenta la cantidad despachada |
+| `trg_devolucion_suma_existencia` | `AFTER INSERT` en `devoluciones_materiales` | reingresa la cantidad devuelta |
+
+El `CHECK chk_mat_existencia` (`existencia_total >= 0`) cierra RN01: un
+despacho superior a lo disponible falla con error 3819. La aplicación no
+necesita replicar estas dos reglas, pero sí traducir ambos errores a mensajes
+comprensibles.

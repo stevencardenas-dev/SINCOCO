@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3430" height="1015" viewBox="0 0 3430 1015" font-family="Helvetica,Arial,sans-serif">
+<defs><marker id="ar" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L0,6.4 L9,3.2 z" fill="#333"/></marker></defs>
+<rect width="3430" height="1015" fill="#fff"/>
+<text x="70" y="52" font-size="21" font-weight="bold">Proceso TO-BE — Ejecución de obra con SCOPI</text>
+<rect x="70" y="80" width="3300" height="875" fill="none" stroke="#000" stroke-width="2"/>
+<rect x="70" y="80" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
+<text x="88.0" y="167.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 167.5)">GERENTE</text>
+<rect x="70" y="255" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
+<text x="88.0" y="342.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 342.5)">MAESTRO DE OBRA</text>
+<line x1="70" y1="255" x2="3370" y2="255" stroke="#000" stroke-width="1.2"/>
+<rect x="70" y="430" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
+<text x="88.0" y="517.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 517.5)">TRABAJADOR</text>
+<line x1="70" y1="430" x2="3370" y2="430" stroke="#000" stroke-width="1.2"/>
+<rect x="70" y="605" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
+<text x="88.0" y="692.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 692.5)">ENCARGADO DE BODEGA</text>
+<line x1="70" y1="605" x2="3370" y2="605" stroke="#000" stroke-width="1.2"/>
+<rect x="70" y="780" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
+<text x="88.0" y="867.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 867.5)">PROVEEDOR</text>
+<line x1="70" y1="780" x2="3370" y2="780" stroke="#000" stroke-width="1.2"/>
+<circle cx="149.0" cy="167.5" r="23.0" fill="#d5e8d4" stroke="#82b366" stroke-width="2.4"/>
+<rect x="201" y="133.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="288.5" y="165.0" font-size="14" text-anchor="middle">Registrar proyecto</text>
+<text x="288.5" y="182.0" font-size="14" text-anchor="middle">en SCOPI</text>
+<rect x="406" y="133.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="493.5" y="165.0" font-size="14" text-anchor="middle">Asignar maestro</text>
+<text x="493.5" y="182.0" font-size="14" text-anchor="middle">responsable</text>
+<rect x="611" y="308.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="698.5" y="340.0" font-size="14" text-anchor="middle">Definir etapas</text>
+<text x="698.5" y="357.0" font-size="14" text-anchor="middle">y actividades</text>
+<rect x="816" y="308.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="903.5" y="340.0" font-size="14" text-anchor="middle">Solicitar materiales</text>
+<text x="903.5" y="357.0" font-size="14" text-anchor="middle">desde el sistema</text>
+<rect x="1021" y="658.5" width="185" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="1113.5" y="690.0" font-size="14" text-anchor="middle">Recibir solicitud</text>
+<text x="1113.5" y="707.0" font-size="14" text-anchor="middle">registrada en SCOPI</text>
+<polygon points="1273.0,665.5 1300.0,692.5 1273.0,719.5 1246.0,692.5" fill="#f8cecc" stroke="#b85450" stroke-width="2.2"/>
+<path d="M1263.0,682.5 L1283.0,702.5 M1283.0,682.5 L1263.0,702.5" stroke="#b85450" stroke-width="2.6"/>
+<rect x="1341" y="612.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="1428.5" y="644.0" font-size="14" text-anchor="middle">Despachar y</text>
+<text x="1428.5" y="661.0" font-size="14" text-anchor="middle">registrar salida</text>
+<rect x="1341" y="704.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="1428.5" y="736.0" font-size="14" text-anchor="middle">Generar alerta</text>
+<text x="1428.5" y="753.0" font-size="14" text-anchor="middle">de stock mínimo</text>
+<rect x="1546" y="833.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="1633.5" y="865.0" font-size="14" text-anchor="middle">Recibir orden</text>
+<text x="1633.5" y="882.0" font-size="14" text-anchor="middle">de compra</text>
+<rect x="1751" y="833.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="1838.5" y="873.5" font-size="14" text-anchor="middle">Despachar insumos</text>
+<rect x="1956" y="704.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="2043.5" y="736.0" font-size="14" text-anchor="middle">Registrar entrada</text>
+<text x="2043.5" y="753.0" font-size="14" text-anchor="middle">al inventario</text>
+<rect x="2161" y="483.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="2248.5" y="515.0" font-size="14" text-anchor="middle">Recibir materiales</text>
+<text x="2248.5" y="532.0" font-size="14" text-anchor="middle">y herramientas</text>
+<rect x="2366" y="483.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="2453.5" y="515.0" font-size="14" text-anchor="middle">Ejecutar actividades</text>
+<text x="2453.5" y="532.0" font-size="14" text-anchor="middle">de la etapa</text>
+<rect x="2571" y="308.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="2658.5" y="340.0" font-size="14" text-anchor="middle">Registrar avance</text>
+<text x="2658.5" y="357.0" font-size="14" text-anchor="middle">y evidencias</text>
+<rect x="2776" y="133.5" width="185" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="2868.5" y="165.0" font-size="14" text-anchor="middle">Consultar dashboard</text>
+<text x="2868.5" y="182.0" font-size="14" text-anchor="middle">con avance y costos</text>
+<polygon points="3028.0,140.5 3055.0,167.5 3028.0,194.5 3001.0,167.5" fill="#f8cecc" stroke="#b85450" stroke-width="2.2"/>
+<path d="M3018.0,157.5 L3038.0,177.5 M3038.0,157.5 L3018.0,177.5" stroke="#b85450" stroke-width="2.6"/>
+<rect x="3096" y="133.5" width="185" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
+<text x="3188.5" y="165.0" font-size="14" text-anchor="middle">Cerrar proyecto</text>
+<text x="3188.5" y="182.0" font-size="14" text-anchor="middle">y generar informe</text>
+<circle cx="3339.0" cy="167.5" r="23.0" fill="#f8cecc" stroke="#b85450" stroke-width="4.5"/>
+<path d="M 172.0 167.5 L 201 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 376 167.5 L 406 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 581 167.5 L 596.0 167.5 L 596.0 342.5 L 611 342.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 786 342.5 L 816 342.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 991 342.5 L 1006.0 342.5 L 1006.0 692.5 L 1021 692.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 1206 692.5 L 1246.0 692.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 1300.0 692.5 L 1320.5 692.5 L 1320.5 646.5 L 1341 646.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<text x="1328.5" y="669.5" font-size="14" font-weight="bold" fill="#333">Sí</text>
+<path d="M 1300.0 692.5 L 1320.5 692.5 L 1320.5 738.5 L 1341 738.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<text x="1328.5" y="715.5" font-size="14" font-weight="bold" fill="#333">No</text>
+<path d="M 1516 738.5 L 1531.0 738.5 L 1531.0 867.5 L 1546 867.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 1721 867.5 L 1751 867.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 1926 867.5 L 1941.0 867.5 L 1941.0 738.5 L 1956 738.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 1516 646.5 L 1838.5 646.5 L 1838.5 517.5 L 2161 517.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 2131 738.5 L 2146.0 738.5 L 2146.0 517.5 L 2161 517.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 2336 517.5 L 2366 517.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 2541 517.5 L 2556.0 517.5 L 2556.0 342.5 L 2571 342.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 2746 342.5 L 2761.0 342.5 L 2761.0 167.5 L 2776 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 2961 167.5 L 3001.0 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 3055.0 167.5 L 3096 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<text x="3075.5" y="157.5" font-size="14" font-weight="bold" fill="#333">No</text>
+<path d="M 3281 167.5 L 3316.0 167.5" fill="none" stroke="#333" stroke-width="1.7" marker-end="url(#ar)"/>
+<path d="M 3028.0 140.5 L 3028.0 66 L 698.5 66 L 698.5 308.5" fill="none" stroke="#333" stroke-width="1.7" stroke-dasharray="7,5" marker-end="url(#ar)"/>
+<text x="1806.0" y="57" font-size="14" font-weight="bold" fill="#333" text-anchor="middle">Sí, faltan etapas</text>
+</svg>

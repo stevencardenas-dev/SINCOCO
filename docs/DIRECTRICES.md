@@ -14,4 +14,4 @@
 - Las **HU** son lo que se sigue en Jira día a día; el caso de uso es el detalle de flujo que respalda esa HU cuando hace falta precisión (flujo alterno, precondición).
 
 ## Usuarios de prueba
-- La base debe traer un usuario semilla por cada actor del negocio (`docs/ACTORES DEL NEGOCIO.md`) para poder probar RBAC sin crear usuarios manualmente. Ver `docs/seed_usuarios_prueba.sql`.
+- La base debe traer un usuario semilla por cada actor del negocio (`docs/ACTORES_DEL_NEGOCIO.md`) para poder probar RBAC sin crear usuarios manualmente. Ver `docs/seed_usuarios_prueba.sql`.

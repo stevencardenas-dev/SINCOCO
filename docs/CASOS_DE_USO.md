@@ -173,3 +173,11 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 ### CU-25 (HU-25): Generar y exportar reportes
 - **Actor:** Gerente
 - **Flujo principal:** aplica filtros (proyecto, periodo, material) y exporta el resultado a PDF o Excel.
+
+---
+
+### CU-29 (HU-29): Trasladar materiales entre almacenes
+- **Actor:** Encargado de bodega
+- **Precondición:** el material existe en el almacén de origen con existencia suficiente.
+- **Flujo principal:** selecciona almacén de origen, almacén de destino, material y cantidad; el sistema descuenta del origen y suma al destino.
+- **Flujo alterno:** cantidad solicitada mayor a la existencia en el almacén de origen → rechazado.

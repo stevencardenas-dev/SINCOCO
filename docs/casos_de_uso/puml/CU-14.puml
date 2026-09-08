@@ -1,0 +1,46 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Registrar incidencia de obra
+left to right direction
+actor "Maestro de obra" as M
+
+rectangle "Registrar incidencia de obra" {
+  usecase "Seleccionar proyecto y actividad relacionada" as UC1
+  usecase "Ingresar título y descripción" as UC2
+  usecase "Clasificar severidad (baja/media/alta/crítica)" as UC3
+  usecase "Registrar fecha de ocurrencia" as UC4
+  usecase "Registrar incidencia en estado ABIERTA" as UC5
+  usecase "Actualizar estado (en revisión/resuelta/cerrada)" as UC6
+  usecase "Registrar fecha de resolución" as UC7
+}
+
+M --> UC1
+M --> UC2
+M --> UC3
+M --> UC4
+UC2 ..> UC5 : <<include>>
+UC5 ..> UC6 : <<extend>>
+UC6 ..> UC7 : <<extend>>
+
+note right of UC3
+  severidad CRITICA alimenta
+  alertas del sistema
+end note
+@enduml

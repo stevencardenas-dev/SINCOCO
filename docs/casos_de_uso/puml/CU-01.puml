@@ -1,0 +1,49 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Registrar usuario y asignar rol
+left to right direction
+actor Administrador as A
+
+rectangle "Registrar usuario y asignar rol" {
+  usecase "Ingresar datos del usuario (documento, nombres, email)" as UC1
+  usecase "Seleccionar rol existente" as UC2
+  usecase "Validar unicidad de documento/email/username" as UC3
+  usecase "Generar hash de contraseña" as UC4
+  usecase "Crear cuenta en estado ACTIVO" as UC5
+  usecase "Bloquear usuario" as UC6
+  usecase "Activar usuario" as UC7
+  usecase "Vincular usuario a trabajador existente" as UC8
+}
+
+A --> UC1
+A --> UC2
+A --> UC6
+A --> UC7
+A --> UC8
+UC1 ..> UC3 : <<include>>
+UC2 ..> UC5 : <<include>>
+UC5 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<extend>>\n(falla si duplicado)
+
+note bottom of UC3
+  Restricción: documento, email y
+  username son únicos (schema: usuarios)
+end note
+@enduml

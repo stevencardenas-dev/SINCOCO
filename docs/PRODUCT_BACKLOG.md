@@ -206,3 +206,14 @@
 * **Criterios de Aceptación:**
   * Permite aplicar múltiples criterios de filtrado.
   * Los reportes resultantes se pueden exportar a formato PDF o Excel.
+
+---
+
+## ÉPICA 4: Inventario de materiales (continuación)
+
+### HU-29: Traslado de materiales entre almacenes
+* **Descripción:** Como encargado de bodega, quiero trasladar materiales entre almacenes (o de un almacén a una obra), para reubicar existencias sin pasar por una compra ni por una salida hacia un proyecto.
+* **Criterios de Aceptación:**
+  * El traslado descuenta la cantidad del almacén de origen y la suma al almacén de destino.
+  * No se puede trasladar más cantidad de la existente en el almacén de origen.
+  * El traslado queda registrado con responsable y fecha para trazabilidad.
