@@ -9,6 +9,14 @@ Criterio: no se elimina nada del enunciado ni del trabajo previo del equipo.
 Las reglas propias del equipo se conservan cuando son **enforceable** (se
 pueden validar en código contra el modelo de datos) y **no redundantes**.
 
+> **Discrepancia a corregir en el documento de análisis de negocio.** Su §4.5
+> atribuye al enunciado las reglas «RN01–RN14» al citar la frase *«para
+> aumentar la complejidad académica del proyecto»*. El enunciado (§9) define
+> **RN01–RN10**; RN11–RN14 son aporte del equipo. El propio documento lo dice
+> bien en su §6.3 (columna *Origen*: Enunciado / Equipo) y en su §12.1
+> («reglas de negocio RN01–RN10»), así que la inconsistencia está solo en
+> §4.5.
+
 ---
 
 ## Reglas del enunciado oficial (RN01–RN10)
