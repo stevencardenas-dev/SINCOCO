@@ -1,0 +1,35 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Consultar historial de movimientos de herramienta
+left to right direction
+actor "Encargado de bodega" as B
+
+rectangle "Consultar historial de movimientos" {
+  usecase "Seleccionar herramienta por serial" as UC1
+  usecase "Listar entregas y devoluciones cronológicamente" as UC2
+  usecase "Mostrar estado operativo en cada movimiento" as UC3
+  usecase "Mostrar responsables de entrega y recepción" as UC4
+}
+
+B --> UC1
+UC1 ..> UC2 : <<include>>
+UC2 ..> UC3 : <<include>>
+UC2 ..> UC4 : <<include>>
+@enduml

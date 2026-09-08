@@ -1,7 +1,7 @@
 # Reglas de negocio (RN)
 
 **14 reglas**: las 10 del enunciado oficial de la asignatura
-(`CONTROL INTEGRAL DE PROYECTOS DE CONSTRUCCIÓN.docx.pdf`, §9) **más 4
+(`CONTROL INTEGRAL DE PROYECTOS DE CONSTRUCCIÓN.docx.odt`, §9) **más 4
 aportadas por el equipo** en el backlog inicial (`EP-Backlog_Constructora_XYZ`)
 que no estaban en el enunciado.
 

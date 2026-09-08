@@ -32,3 +32,4 @@ Estado real vive en Jira. Esta tabla es un espejo rápido — actualizar el camp
 | HU-26 | Salida efectiva de materiales | | Pendiente |
 | HU-27 | Historial de herramienta | | Pendiente |
 | HU-28 | Detalle de servicio externo | | Pendiente |
+| HU-29 | Traslado de materiales entre almacenes | | Pendiente |

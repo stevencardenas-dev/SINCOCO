@@ -1,4 +1,4 @@
--- Usuarios de prueba: uno por actor del negocio (docs/ACTORES DEL NEGOCIO.md)
+-- Usuarios de prueba: uno por actor del negocio (docs/ACTORES_DEL_NEGOCIO.md)
 -- Password de todos: "Prueba123!" (bcrypt hash de ejemplo, reemplazar por el hash real del backend)
 
 INSERT INTO roles (nombre, descripcion) VALUES

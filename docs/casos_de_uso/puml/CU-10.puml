@@ -1,0 +1,41 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Mantener catálogo de herramientas
+left to right direction
+actor "Encargado de bodega" as B
+
+rectangle "Mantener catálogo de herramientas" {
+  usecase "Crear herramienta (código serial, marca, modelo)" as UC1
+  usecase "Editar herramienta" as UC2
+  usecase "Consultar herramienta por serial o estado" as UC3
+  usecase "Registrar estado operativo (excelente..dañada)" as UC4
+  usecase "Registrar disponibilidad (disponible/prestada/baja)" as UC5
+  usecase "Dar de baja herramienta" as UC6
+  usecase "Registrar almacén de ubicación" as UC7
+}
+
+B --> UC1
+B --> UC2
+B --> UC3
+B --> UC6
+UC1 ..> UC4 : <<include>>
+UC1 ..> UC5 : <<include>>
+UC1 ..> UC7 : <<include>>
+@enduml
