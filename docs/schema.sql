@@ -259,7 +259,8 @@ CREATE TABLE `materiales` (
     `activo` TINYINT(1) NOT NULL DEFAULT 1, -- RN07/RF32: baja lógica, nunca DELETE físico
     `fecha_baja` DATETIME DEFAULT NULL,
     `baja_por_usuario_id` BIGINT DEFAULT NULL,
-    CONSTRAINT `fk_mat_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `categorias_materiales` (`id`)
+    CONSTRAINT `fk_mat_categoria` FOREIGN KEY (`categoria_id`) REFERENCES `categorias_materiales` (`id`),
+    CONSTRAINT `chk_mat_existencia` CHECK (`existencia_total` >= 0) -- RN01: nunca existencia negativa
 ) ENGINE=InnoDB;
 
 -- RF10, RF14: Almacenes o bodegas
@@ -463,6 +464,47 @@ CREATE TABLE `bitacora_trazabilidad` (
     `fecha_registro` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT `fk_bit_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB;
+
+
+-- =============================================================================
+-- RN06: los consumos/movimientos afectan automáticamente las existencias.
+-- RN01: el CHECK `chk_mat_existencia` (existencia_total >= 0) hace que un
+-- despacho superior a lo disponible falle en la propia base de datos.
+-- =============================================================================
+
+DELIMITER $$
+
+-- Entrada de material: suma existencia
+CREATE TRIGGER `trg_entrada_suma_existencia`
+AFTER INSERT ON `detalles_entrada_inventario`
+FOR EACH ROW
+BEGIN
+    UPDATE `materiales`
+       SET `existencia_total` = `existencia_total` + NEW.`cantidad`
+     WHERE `id` = NEW.`material_id`;
+END$$
+
+-- Salida de material: descuenta existencia (RN01 via CHECK)
+CREATE TRIGGER `trg_salida_descuenta_existencia`
+AFTER INSERT ON `detalles_salida_materiales`
+FOR EACH ROW
+BEGIN
+    UPDATE `materiales`
+       SET `existencia_total` = `existencia_total` - NEW.`cantidad_despachada`
+     WHERE `id` = NEW.`material_id`;
+END$$
+
+-- Devolución de material: reingresa existencia
+CREATE TRIGGER `trg_devolucion_suma_existencia`
+AFTER INSERT ON `devoluciones_materiales`
+FOR EACH ROW
+BEGIN
+    UPDATE `materiales`
+       SET `existencia_total` = `existencia_total` + NEW.`cantidad`
+     WHERE `id` = NEW.`material_id`;
+END$$
+
+DELIMITER ;
 
 -- Reestablecer la verificación de llaves foráneas
 SET FOREIGN_KEY_CHECKS = 1;

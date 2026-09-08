@@ -61,19 +61,19 @@ confirmación del stakeholder sobre la multi-asignación).
 
 Verificado ejecutando `docs/schema.sql` contra **MySQL 8.0.46** (motor
 objetivo) y contra MariaDB 10.11 (entorno de desarrollo): 27/27 tablas en
-ambos. El esquema **no usa triggers ni vistas**: lo que la BD
-garantiza son restricciones declarativas (FK, CHECK, UNIQUE, NOT NULL). La
-columna indica qué parte de cada regla queda garantizada por la base de datos
+ambos. La BD garantiza reglas mediante restricciones declarativas
+(FK, CHECK, UNIQUE, NOT NULL) y tres triggers de inventario. La columna
+indica qué parte de cada regla queda garantizada por la base de datos
 y qué parte queda a cargo de la capa de aplicación.
 
 | RN | Aplicación en BD | Pendiente en aplicación |
 |----|---|---|
-| RN01 | Parcial: `chk_dsal_cantidad` (cantidad > 0). | Comparación contra existencia disponible antes de despachar. |
+| RN01 | **Sí** (corregido en esta revisión): `chk_mat_existencia` (`existencia_total >= 0`) sobre la existencia que mantienen los triggers; un despacho superior a lo disponible falla con error 3819. | Traducir el error a un mensaje de usuario claro. |
 | RN02 | Sí: `detalles_salida_materiales` → FK a `salidas_materiales`, con `proyecto_id` y `despachado_por_usuario_id` NOT NULL. | — |
 | RN03 | Parcial: `herramientas.estado`/disponibilidad como enum. | Impedir doble préstamo simultáneo de la misma herramienta. |
 | RN04 | Parcial: columna de estado en la devolución. | Exigirla como obligatoria al registrar la devolución. |
 | RN05 | **Sí**: `actividades.etapa_id` NOT NULL → `etapas_proyecto.proyecto_id` NOT NULL. | — |
-| RN06 | No. | Descuento de existencias al registrar consumo (sin trigger, es responsabilidad del backend). |
+| RN06 | **Sí** (corregido en esta revisión): triggers `trg_entrada_suma_existencia`, `trg_salida_descuenta_existencia` y `trg_devolucion_suma_existencia` mantienen `materiales.existencia_total`. | — |
 | RN07 | **Sí** (corregido en esta revisión): baja lógica (`activo`, `fecha_baja`, `baja_por_usuario_id`) en las 9 tablas con historial, y `ON DELETE RESTRICT` en las FK hacia entidades históricas. Un `DELETE` de proyecto con etapas es rechazado por el motor (error 1451), comprobado en MySQL 8 y MariaDB. | Usar baja lógica en la aplicación y filtrar `activo = 1` en consultas operativas. |
 | RN08 | Parcial: `actividades.fecha_fin_programada`, `estado`. | Cálculo de «atrasada» y generación de la alerta. |
 | RN09 | Parcial: `chk_proyecto_avance`, `chk_actividad_avance` (0–100). | Derivación del avance del proyecto desde sus actividades. |
@@ -96,9 +96,12 @@ y qué parte queda a cargo de la capa de aplicación.
 
 ### Riesgo abierto
 
-**RN06, RN10 y RN12 no tienen soporte en la BD y tampoco en la aplicación.**
-El backend implementa hoy solo `auth` y `usuarios`, así que el descuento
-automático de existencias (RN06), el cálculo de indicadores desde datos
-transaccionales (RN10) y la validación de cierre de proyecto (RN12) no están
-en ninguna capa. No es una contradicción documental, es trabajo pendiente:
-deben implementarse en los servicios de inventario, indicadores y proyectos.
+**RN10 y RN12 no tienen soporte en la BD ni en la aplicación.** El backend
+implementa hoy solo `auth` y `usuarios`, así que el cálculo de indicadores a
+partir de información transaccional (RN10) y la validación de cierre de
+proyecto (RN12) no están en ninguna capa. No es una contradicción documental,
+es trabajo pendiente en los servicios de indicadores y proyectos.
+
+RN03, RN04, RN08 y RN09 quedan parcialmente en la BD y se completan en la
+aplicación; RN13 tiene ya la FK, falta validar que el material devuelto
+pertenezca a esa salida.
