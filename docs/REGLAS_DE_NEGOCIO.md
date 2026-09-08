@@ -43,7 +43,7 @@ cubre, y todas son verificables contra `schema.sql`.
 | RN | Descripción | RF relacionado | Soporte en el modelo |
 |----|---|---|---|
 | RN11 | Un proyecto debe tener al menos un maestro/responsable asignado antes de iniciar actividades. | RF02, RF07 | `proyectos.responsable_id` NOT NULL |
-| RN12 | No se puede finalizar un proyecto si tiene actividades pendientes o herramientas asignadas sin devolver. | RF02, RF17 | `actividades.estado`, `herramientas.estado` (validación en aplicación) |
+| RN12 | No se puede finalizar un proyecto si tiene actividades pendientes o herramientas asignadas sin devolver. | RF02, RF17 | `actividades.estado`, `herramientas.disponibilidad` (validación en aplicación) |
 | RN13 | Un material solo puede devolverse si fue previamente solicitado/entregado en ese proyecto. | RF13 | `devoluciones_materiales` (FK a la salida previa **no existe** — ver anexo) |
 | RN14 | Un proveedor o servicio externo debe estar registrado en el sistema antes de poder asociarse a un proyecto. | RF19, RF20 | `servicios_externos.proveedor_id` (FK) |
 
@@ -78,7 +78,7 @@ y qué parte queda a cargo de la capa de aplicación.
 |----|---|---|
 | RN01 | **Sí** (corregido en esta revisión): `chk_mat_existencia` (`existencia_total >= 0`) sobre la existencia que mantienen los triggers; un despacho superior a lo disponible falla con error 3819. | Traducir el error a un mensaje de usuario claro. |
 | RN02 | Sí: `detalles_salida_materiales` → FK a `salidas_materiales`, con `proyecto_id` y `despachado_por_usuario_id` NOT NULL. | — |
-| RN03 | Parcial: `herramientas.estado`/disponibilidad como enum. | Impedir doble préstamo simultáneo de la misma herramienta. |
+| RN03 | Parcial: `herramientas.disponibilidad`/disponibilidad como enum. | Impedir doble préstamo simultáneo de la misma herramienta. |
 | RN04 | Parcial: columna de estado en la devolución. | Exigirla como obligatoria al registrar la devolución. |
 | RN05 | **Sí**: `actividades.etapa_id` NOT NULL → `etapas_proyecto.proyecto_id` NOT NULL. | — |
 | RN06 | **Sí** (corregido en esta revisión): triggers `trg_entrada_suma_existencia`, `trg_salida_descuenta_existencia` y `trg_devolucion_suma_existencia` mantienen `materiales.existencia_total`. | — |
