@@ -66,7 +66,7 @@ fuente de numeración.
 
 | RF | Descripción | CU | Soporte en el modelo |
 |----|---|---|---|
-| RF23 | Alertas de inventario: generar alertas cuando un material alcance el nivel mínimo establecido. | CU-23 | `alertas`, `materiales.stock_minimo` |
+| RF23 | Alertas de inventario: generar alertas cuando un material alcance el nivel mínimo establecido. | CU-23 | `alertas`, `materiales.nivel_minimo` |
 | RF24 | Alertas de herramientas: generar alertas sobre herramientas pendientes de devolución o que presenten novedades. | CU-24 | `alertas`, `prestamos_herramientas` |
 | RF25 | Alertas de actividades: identificar actividades atrasadas respecto a su fecha programada. | CU-24 | `alertas`, `actividades.fecha_fin_programada` |
 
