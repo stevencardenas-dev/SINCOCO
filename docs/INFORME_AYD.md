@@ -385,9 +385,10 @@ Los procesos del negocio identificados y su representación son:
 `docs/bpmn/PROCESO_TO_BE.drawio`, este último con render disponible en
 `PROCESO_TO_BE.png`.
 
-> **FALTA — render del AS-IS.** El diagrama AS-IS existe únicamente como fuente
-> `.drawio`; a diferencia del TO-BE, no tiene imagen exportada en el repositorio.
-> Se exporta desde el mismo archivo.
+El diagrama AS-IS está incrustado en el documento de análisis del equipo y su fuente
+editable es `docs/bpmn/PROCESO_AS_IS.drawio`. A diferencia del TO-BE, no tiene aún una
+imagen exportada en el repositorio; se exporta desde el mismo archivo cuando se
+requiera fuera del documento.
 
 > **FALTA — diagramas de actividades.** El lineamiento pide representar el flujo de
 > trabajo mediante **diagramas de actividades**, notación distinta de BPMN. Los BPMN
@@ -835,7 +836,6 @@ informe. Consolida lo que falta y las inconsistencias detectadas, para uso del e
 | Arquitectura de software | OE2 | Stack y organización modular vigentes |
 | Evidencia de normalización 1FN/2FN/3FN | 6.1 | `docs/schema.sql` |
 | Diagramas de actividades | 2.1 | Tabla de procesos §2.1 + flujos de los 29 CU |
-| Render PNG del BPMN AS-IS | 2.1 | `docs/bpmn/PROCESO_AS_IS.drawio` |
 | Gráfico del árbol del problema (Formato B) | 1.1 | Estructura CI/CD/ED/EI de §1.1 |
 
 ### Inconsistencias detectadas en el documento de análisis del equipo
@@ -850,6 +850,10 @@ Se reportan, no se corrigen: ese documento es del equipo y se edita en Drive.
    en `docs/bpmn/PROCESO_AS_IS.drawio` y está incrustado en §3 del propio documento.
 3. **§12.1 declara los requerimientos como pendientes de consolidación formal**, cuando
    §6.1–6.4 ya los presentan consolidados.
+
+**Opcional, no bloqueante.** El BPMN AS-IS ya está incrustado en el documento de
+análisis, de modo que el entregable está cubierto; solo falta exportar su PNG al
+repositorio, como ya lo tiene el TO-BE.
 
 Las tres se concentran en §12.1, que parece haber quedado desactualizado respecto del
 resto del documento. Dado que los profesores penalizan las inconsistencias entre
