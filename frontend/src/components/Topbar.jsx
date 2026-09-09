@@ -17,11 +17,13 @@ const TITLES = {
   '/usuarios': 'Gestión de usuarios',
 }
 
+// Roles reales del sistema (tabla `roles`, ver docs/seed_usuarios_prueba.sql)
 const ROLE_LABELS = {
-  admin: 'Administrador',
-  ingeniero: 'Ingeniero',
-  maestro: 'Maestro de obra',
-  compras: 'Compras',
+  ADMINISTRADOR: 'Administrador',
+  GERENTE: 'Gerente',
+  MAESTRO_OBRA: 'Maestro de obra',
+  ENCARGADO_BODEGA: 'Encargado de bodega',
+  TRABAJADOR: 'Trabajador',
 }
 
 export default function Topbar({ onMenuClick }) {
@@ -63,11 +65,11 @@ export default function Topbar({ onMenuClick }) {
           {/* User */}
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 py-1.5 pl-1.5 pr-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
-              {user?.name?.[0] ?? 'A'}
+              {user?.username?.[0]?.toUpperCase() ?? 'U'}
             </div>
             <div className="hidden leading-tight sm:block">
-              <p className="text-sm font-semibold text-slate-800">{user?.name ?? 'Usuario'}</p>
-              <p className="text-[11px] text-slate-500">{ROLE_LABELS[user?.role] ?? 'Usuario'}</p>
+              <p className="text-sm font-semibold text-slate-800">{user?.username ?? 'Usuario'}</p>
+              <p className="text-[11px] text-slate-500">{ROLE_LABELS[user?.rol] ?? user?.rol ?? 'Usuario'}</p>
             </div>
             <button
               onClick={handleLogout}

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 import {
   BellAlertIcon,
   CubeIcon,
@@ -15,42 +16,63 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 
+const ADMIN = 'ADMINISTRADOR'
+const GERENTE = 'GERENTE'
+const MAESTRO = 'MAESTRO_OBRA'
+const BODEGA = 'ENCARGADO_BODEGA'
+const TRABAJADOR = 'TRABAJADOR'
+const TODOS = [ADMIN, GERENTE, MAESTRO, BODEGA, TRABAJADOR]
+
+/**
+ * RNF05 · RBAC: cada opción declara qué roles la ven. Los roles salen del JWT
+ * y corresponden a los casos de uso de cada actor (ver docs/CASOS_DE_USO.md).
+ * Esto es control de acceso en la interfaz; el backend valida aparte con
+ * requireRole() — la interfaz oculta, el servidor decide.
+ */
 const NAV = [
   {
     group: 'Operación',
     items: [
-      { to: '/', label: 'Dashboard', icon: HomeIcon, end: true },
-      { to: '/proyectos', label: 'Proyectos', icon: FolderIcon },
-      { to: '/personal', label: 'Personal', icon: UsersIcon },
+      { to: '/', label: 'Dashboard', icon: HomeIcon, end: true, roles: TODOS },
+      { to: '/proyectos', label: 'Proyectos', icon: FolderIcon, roles: [ADMIN, GERENTE, MAESTRO] },
+      { to: '/personal', label: 'Personal', icon: UsersIcon, roles: [ADMIN, GERENTE] },
     ],
   },
   {
     group: 'Inventario',
     items: [
-      { to: '/materiales', label: 'Materiales', icon: CubeIcon },
-      { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon },
-      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon },
+      { to: '/materiales', label: 'Materiales', icon: CubeIcon, roles: [ADMIN, BODEGA, MAESTRO] },
+      { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, roles: [ADMIN, BODEGA] },
+      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA] },
     ],
   },
   {
     group: 'Gestión',
     items: [
-      { to: '/proveedores', label: 'Proveedores', icon: TruckIcon },
-      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon },
-      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon },
+      { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, roles: [ADMIN, GERENTE] },
+      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, roles: [ADMIN, GERENTE, MAESTRO] },
+      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE] },
     ],
   },
   {
     group: 'Sistema',
     items: [
-      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon },
-      { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon },
-      { to: '/usuarios', label: 'Usuarios', icon: UserCircleIcon },
+      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE] },
+      { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
+      { to: '/usuarios', label: 'Usuarios', icon: UserCircleIcon, roles: [ADMIN] },
     ],
   },
 ]
 
 export default function Sidebar({ open, onClose }) {
+  const { user } = useAuth()
+  const rol = user?.rol
+
+  // Solo los grupos que conservan al menos una opción visible para el rol
+  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(rol)) })).filter(
+    (g) => g.items.length > 0,
+  )
+
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-slate-900 transition-transform duration-200 lg:translate-x-0 ${
@@ -79,7 +101,7 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Nav */}
       <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-4 pb-6">
-        {NAV.map((group) => (
+        {nav.map((group) => (
           <div key={group.group}>
             <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               {group.group}
@@ -94,7 +116,7 @@ export default function Sidebar({ open, onClose }) {
                     className={({ isActive }) =>
                       `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                         isActive
-                          ? 'bg-brand-600/90 text-white shadow-lg shadow-brand-600/20'
+                          ? 'bg-brand-600 text-white'
                           : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                       }`
                     }

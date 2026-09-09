@@ -1,12 +1,8 @@
 import axios from 'axios'
 
 /**
- * Cliente HTTP de SCOPI.
- * El backend (Express + JWT) aún no existe: mientras tanto las páginas
- * usan datos de demostración en src/lib/mockData.js.
- *
- * Cuando esté listo, descomentar el proxy en vite.config.js y quitar el
- * interceptor de token falso de abajo.
+ * Cliente HTTP de SCOPI. El proxy de Vite lo enruta al backend Express
+ * (ver vite.config.js).
  */
 const api = axios.create({
   baseURL: '/api',
@@ -19,11 +15,15 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Respuesta 401 → cerrar sesión
+// 401 en una sesión ya iniciada (token vencido) → cerrar sesión.
+// Se excluye /auth/login: ahí un 401 significa credenciales incorrectas y lo
+// maneja el formulario; recargar la página borraría el mensaje de error.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const esLogin = err.config?.url?.includes('/auth/login')
+    if (err.response?.status === 401 && !esLogin) {
+      localStorage.removeItem('scopi_token')
       localStorage.removeItem('scopi_user')
       window.location.href = '/login'
     }

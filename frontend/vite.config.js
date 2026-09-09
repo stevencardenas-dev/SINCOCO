@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    // SCOPI backend (Express) will live on 3001 — uncomment when it exists:
-    // proxy: {
-    //   '/api': 'http://localhost:3001',
-    // },
+    // El backend Express corre en el puerto de backend/.env (3005 por defecto)
+    proxy: {
+      '/api': process.env.VITE_API_URL || 'http://localhost:3005',
+    },
   },
 })

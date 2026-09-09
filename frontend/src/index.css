@@ -7,7 +7,7 @@
     @apply antialiased;
   }
   body {
-    @apply bg-slate-50 text-slate-800;
+    @apply bg-slate-50 font-sans text-slate-800;
   }
 }
 
