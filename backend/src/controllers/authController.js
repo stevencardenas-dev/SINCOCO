@@ -18,7 +18,8 @@ export async function login(req, res) {
   const user = rows[0]
   if (!user) return res.status(401).json({ error: 'Credenciales inválidas' })
   if (user.estado !== 'ACTIVO') {
-    return res.status(403).json({ error: `Cuenta ${user.estado.toLowerCase()}` })
+    const leyenda = user.estado === 'BLOQUEADO' ? 'bloqueada' : 'inactiva'
+    return res.status(403).json({ error: `Cuenta ${leyenda}. Contacte al administrador.` })
   }
 
   const valid = await bcrypt.compare(password, user.password_hash)
