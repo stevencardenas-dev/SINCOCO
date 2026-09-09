@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState } from 'react'
+import api from '../services/api'
 
 const AuthContext = createContext(null)
 
 /**
- * Auth context — frontend-only for now.
- * Cuando exista el backend (RF1), esto se conecta a /api/auth/login
- * con JWT y los roles se resuelven desde el token (RNF5 · RBAC).
+ * Auth context — HU-01 / RF01.
+ * Autentica contra POST /api/auth/login; el rol viaja en el JWT y es la base
+ * del control de acceso por rol en la interfaz (RNF05 · RBAC).
  */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
@@ -13,28 +14,35 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const stored = localStorage.getItem('scopi_user')
-    if (stored) {
+    const token = localStorage.getItem('scopi_token')
+    if (stored && token) {
       try {
         setUser(JSON.parse(stored))
       } catch {
         localStorage.removeItem('scopi_user')
+        localStorage.removeItem('scopi_token')
       }
     }
     setLoading(false)
   }, [])
 
-  const login = (email) => {
-    const mockUser = {
-      id: 1,
-      name: 'Administrador',
-      email,
-      role: 'admin', // roles: admin · ingeniero · maestro · compras
+  /**
+   * @returns {Promise<{ok: true} | {ok: false, error: string}>}
+   */
+  const login = async (username, password) => {
+    try {
+      const { data } = await api.post('/auth/login', { username, password })
+      localStorage.setItem('scopi_token', data.token)
+      localStorage.setItem('scopi_user', JSON.stringify(data.user))
+      setUser(data.user)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err.response?.data?.error ?? 'No se pudo conectar con el servidor' }
     }
-    localStorage.setItem('scopi_user', JSON.stringify(mockUser))
-    setUser(mockUser)
   }
 
   const logout = () => {
+    localStorage.removeItem('scopi_token')
     localStorage.removeItem('scopi_user')
     setUser(null)
   }

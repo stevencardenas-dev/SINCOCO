@@ -5,14 +5,19 @@ import { useAuth } from '../context/AuthContext.jsx'
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [enviando, setEnviando] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // RF1: autenticación real llega con el backend (JWT).
-    login(email || 'admin@scopi.co')
-    navigate('/')
+    setError('')
+    setEnviando(true)
+    const res = await login(username, password)
+    setEnviando(false)
+    if (res.ok) navigate('/')
+    else setError(res.error)
   }
 
   return (
@@ -77,16 +82,17 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
             <div>
-              <label htmlFor="email" className="label">
-                Correo electrónico
+              <label htmlFor="username" className="label">
+                Usuario
               </label>
               <input
-                id="email"
-                type="email"
+                id="username"
+                type="text"
+                autoComplete="username"
                 className="input"
-                placeholder="admin@scopi.co"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
@@ -97,6 +103,7 @@ export default function Login() {
               <input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 className="input"
                 placeholder="••••••••"
                 value={password}
@@ -115,14 +122,24 @@ export default function Login() {
               </a>
             </div>
 
-            <button type="submit" className="btn-primary w-full justify-center py-3">
-              Ingresar
+            {error && (
+              <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {error}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={enviando}
+              className="btn-primary w-full justify-center py-3 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {enviando ? 'Verificando…' : 'Ingresar'}
             </button>
           </form>
 
           <p className="mt-6 rounded-xl bg-brand-50 px-4 py-3 text-xs leading-relaxed text-brand-700">
-            <strong>Demo:</strong> ingrese con cualquier correo. La autenticación real (RF1 · JWT · RBAC) se conecta
-            cuando exista el backend.
+            <strong>Usuarios de prueba:</strong> admin · gerente · maestro · bodega · trabajador —
+            contraseña <code>Prueba123!</code>. Cada rol ve un menú distinto (RF01 · RNF05).
           </p>
         </div>
       </div>

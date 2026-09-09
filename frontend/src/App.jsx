@@ -9,6 +9,20 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Proyectos = lazy(() => import('./pages/Proyectos.jsx'))
 const ModulePlaceholder = lazy(() => import('./pages/ModulePlaceholder.jsx'))
 
+/**
+ * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
+ * puede escribir la URL. Un rol sin permiso vuelve al dashboard.
+ */
+function RutaPorRol({ roles, children }) {
+  const { user } = useAuth()
+  return roles.includes(user?.rol) ? children : <Navigate to="/" replace />
+}
+
+const ADMIN = 'ADMINISTRADOR'
+const GERENTE = 'GERENTE'
+const MAESTRO = 'MAESTRO_OBRA'
+const BODEGA = 'ENCARGADO_BODEGA'
+
 const Spinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-slate-50">
     <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
@@ -27,27 +41,34 @@ export default function App() {
 
         <Route element={user ? <Layout /> : <Navigate to="/login" replace />}>
           <Route index element={<Dashboard />} />
-          <Route path="proyectos" element={<Proyectos />} />
+          <Route
+            path="proyectos"
+            element={
+              <RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}>
+                <Proyectos />
+              </RutaPorRol>
+            }
+          />
           {/* RF5–RF6 */}
-          <Route path="personal" element={<ModulePlaceholder title="Personal" rf="RF06 · RF07" />} />
+          <Route path="personal" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Personal" rf="RF06 · RF07" /></RutaPorRol>} />
           {/* RF7–RF9 */}
-          <Route path="materiales" element={<ModulePlaceholder title="Materiales" rf="RF09 · RF10 · RF11" />} />
+          <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" rf="RF09 · RF10 · RF11" /></RutaPorRol>} />
           {/* RF10–RF11 */}
-          <Route path="herramientas" element={<ModulePlaceholder title="Herramientas" rf="RF15 · RF16 · RF17" />} />
+          <Route path="herramientas" element={<RutaPorRol roles={[ADMIN, BODEGA]}><ModulePlaceholder title="Herramientas" rf="RF15 · RF16 · RF17" /></RutaPorRol>} />
           {/* RF12 */}
-          <Route path="proveedores" element={<ModulePlaceholder title="Proveedores y servicios" rf="RF19 · RF20" />} />
+          <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" rf="RF19 · RF20" /></RutaPorRol>} />
           {/* RF13 */}
-          <Route path="incidencias" element={<ModulePlaceholder title="Incidencias de obra" rf="RF22" />} />
+          <Route path="incidencias" element={<RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}><ModulePlaceholder title="Incidencias de obra" rf="RF22" /></RutaPorRol>} />
           {/* RF14 */}
-          <Route path="alertas" element={<ModulePlaceholder title="Alertas de inventario" rf="RF23" />} />
+          <Route path="alertas" element={<RutaPorRol roles={[ADMIN, GERENTE, BODEGA]}><ModulePlaceholder title="Alertas de inventario" rf="RF23" /></RutaPorRol>} />
           {/* RF15 */}
-          <Route path="costos" element={<ModulePlaceholder title="Consolidación de costos" rf="RF26" />} />
+          <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" rf="RF26" /></RutaPorRol>} />
           {/* RF17 */}
-          <Route path="reportes" element={<ModulePlaceholder title="Reportes" rf="RF29 · RF30" />} />
+          <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Reportes" rf="RF29 · RF30" /></RutaPorRol>} />
           {/* RF18 */}
-          <Route path="auditoria" element={<ModulePlaceholder title="Trazabilidad y auditoría" rf="RF31 · RF32" />} />
+          <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><ModulePlaceholder title="Trazabilidad y auditoría" rf="RF31 · RF32" /></RutaPorRol>} />
           {/* RF1 */}
-          <Route path="usuarios" element={<ModulePlaceholder title="Gestión de usuarios" rf="RF01" />} />
+          <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><ModulePlaceholder title="Gestión de usuarios" rf="RF01" /></RutaPorRol>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -91,10 +91,3 @@ export const avanceSeries = [
   { mes: 'Ago', 'Los Álamos': 55, 'El Portal': 28 },
   { mes: 'Sep', 'Los Álamos': 62, 'El Portal': 34 },
 ]
-
-export const estadoLabels = {
-  planificacion: { label: 'Planificación', cls: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  en_ejecucion: { label: 'En ejecución', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  pausado: { label: 'Pausado', cls: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  finalizado: { label: 'Finalizado', cls: 'bg-slate-100 text-slate-600 ring-slate-200' },
-}
