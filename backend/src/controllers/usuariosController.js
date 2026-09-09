@@ -33,6 +33,13 @@ export async function listar(req, res) {
   res.json(rows)
 }
 
+// CU-01 precondición: el rol a asignar ya existe. El formulario necesita la
+// lista para que el administrador elija, en vez de escribir un id a mano.
+export async function listarRoles(req, res) {
+  const [rows] = await pool.query('SELECT id, nombre, descripcion FROM roles ORDER BY id')
+  res.json(rows)
+}
+
 // HU-01: activar o bloquear un usuario
 export async function cambiarEstado(req, res) {
   const { id } = req.params

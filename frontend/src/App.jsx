@@ -8,6 +8,7 @@ import Login from './pages/Login.jsx'
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Proyectos = lazy(() => import('./pages/Proyectos.jsx'))
 const ModulePlaceholder = lazy(() => import('./pages/ModulePlaceholder.jsx'))
+const Usuarios = lazy(() => import('./pages/Usuarios.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -68,7 +69,7 @@ export default function App() {
           {/* RF18 */}
           <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><ModulePlaceholder title="Trazabilidad y auditoría" rf="RF31 · RF32" /></RutaPorRol>} />
           {/* RF1 */}
-          <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><ModulePlaceholder title="Gestión de usuarios" rf="RF01" /></RutaPorRol>} />
+          <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><Usuarios /></RutaPorRol>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
