@@ -8,7 +8,7 @@ export default function Proyectos() {
     <div className="space-y-6">
       <PageHeader
         title="Proyectos"
-        subtitle="Registro, etapas, actividades y seguimiento de avance · RF2 · RF3 · RF4"
+        subtitle="Registro, etapas, actividades y seguimiento de avance · RF02 · RF03 · RF04"
       >
         <button className="btn-primary">
           <PlusIcon className="h-4 w-4" /> Nuevo proyecto
@@ -71,8 +71,8 @@ export default function Proyectos() {
       )}
 
       <p className="text-xs text-slate-400">
-        El avance del proyecto se deriva de sus actividades según la regla de cálculo definida por la empresa (RN9).
-        Las etapas y actividades con responsables, fechas y evidencias llegan en el sprint 1 (RF3 · RF4).
+        El avance del proyecto se deriva de sus actividades según la regla de cálculo definida por la empresa (RN09).
+        Las etapas y actividades con responsables, fechas y evidencias llegan en el sprint 2 (RF03 · RF04).
       </p>
     </div>
   )

@@ -61,7 +61,7 @@ export default function Dashboard() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-900">Avance de proyectos</h3>
-              <p className="text-xs text-slate-500">% de avance mensual · RF4 · RN9</p>
+              <p className="text-xs text-slate-500">% de avance mensual · RF04 · RN09</p>
             </div>
             <Link to="/proyectos" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-700">
               Ver proyectos <ArrowRightIcon className="h-3.5 w-3.5" />
@@ -118,14 +118,14 @@ export default function Dashboard() {
                       Existencias: <strong className="text-amber-700">{m.existencia} {m.unidad}</strong> · mínimo {m.nivelMinimo}
                     </p>
                   </div>
-                  <span className="badge bg-amber-100 text-amber-700">RF14</span>
+                  <span className="badge bg-amber-100 text-amber-700">RF23</span>
                 </li>
               ))}
             </ul>
           )}
 
           <p className="mt-4 text-xs leading-relaxed text-slate-500">
-            Las alertas se generan automáticamente cuando la existencia alcanza el nivel mínimo definido en RF7.
+            Las alertas se generan automáticamente cuando la existencia alcanza el nivel mínimo definido en RF09.
           </p>
         </div>
       </div>
@@ -135,7 +135,7 @@ export default function Dashboard() {
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-slate-900">Incidencias de obra</h3>
-            <p className="text-xs text-slate-500">Novedades registradas en los proyectos · RF13</p>
+            <p className="text-xs text-slate-500">Novedades registradas en los proyectos · RF22</p>
           </div>
           <Link to="/incidencias" className="inline-flex items-center gap-1 text-sm font-semibold text-brand-600 hover:text-brand-700">
             Ver todas <ArrowRightIcon className="h-3.5 w-3.5" />

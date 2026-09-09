@@ -1,16 +1,16 @@
 import { WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 
 const RF_DESCRIPTIONS = {
-  RF1: 'Crear, autenticar, roles y permisos, estado de cuentas y recuperación. (RBAC · encriptación)',
-  'RF5 · RF6': 'Registrar trabajadores y maestros (contacto, especialidad, cargo, disponibilidad) y asignarlos a actividades con consulta histórica por proyecto y periodo.',
-  'RF7 · RF8 · RF9': 'Catálogo de materiales con código, categoría, unidad, existencias, costo de referencia y nivel mínimo; entregas, consumos y devoluciones al inventario.',
-  'RF10 · RF11': 'Catálogo de herramientas con estado y ubicación; entregas a trabajador/proyecto y devoluciones con condiciones.',
-  RF12: 'Servicios contratados: transporte, alquiler de maquinaria, electricidad, plomería; responsable, proyecto, fechas y valor.',
-  RF13: 'Novedades e imprevistos en obra (averías, accidentes, retrasos) vinculados al proyecto.',
-  RF14: 'Generar alertas cuando un material alcanza el nivel mínimo definido en RF7.',
-  RF15: 'Consolidar costos de personal, materiales y servicios por proyecto para análisis gerencial.',
-  RF17: 'Reportes filtrados por proyecto, periodo o trabajador, exportables a PDF y Excel.',
-  RF18: 'Trazabilidad de las operaciones principales y reconstrucción del historial por proyecto. (RN7 · RNF7)',
+  RF01: 'Crear usuarios, autenticar el acceso y administrar roles, permisos y estados de las cuentas. (RBAC · contraseñas cifradas)',
+  'RF06 · RF07': 'Registrar trabajadores y maestros (contacto, especialidad, cargo, disponibilidad) y asignarlos a actividades con consulta histórica por proyecto y periodo.',
+  'RF09 · RF10 · RF11': 'Catálogo de materiales con código, categoría, unidad, existencias, costo de referencia y nivel mínimo; entradas, salidas y consumos de inventario.',
+  'RF15 · RF16 · RF17': 'Catálogo de herramientas con estado operativo y disponibilidad; entregas a trabajador/proyecto y devoluciones con su condición.',
+  'RF19 · RF20': 'Proveedores y servicios contratados: transporte, alquiler de maquinaria, electricidad, plomería; responsable, proyecto, fechas y valor.',
+  RF22: 'Novedades e imprevistos en obra (averías, accidentes, retrasos) vinculados al proyecto.',
+  RF23: 'Generar alertas cuando un material alcanza el nivel mínimo definido en RF09.',
+  RF26: 'Consolidar costos de materiales y servicios externos por proyecto para análisis gerencial.',
+  'RF29 · RF30': 'Reportes filtrados por proyecto, periodo o trabajador, exportables a PDF y Excel.',
+  'RF31 · RF32': 'Trazabilidad de las operaciones principales y reconstrucción del historial por proyecto. (RN07 · RNF07)',
 }
 
 export default function ModulePlaceholder({ title, rf }) {
