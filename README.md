@@ -1,111 +1,104 @@
 # SCOPI — Sistema de Control de Obras, Personal e Inventarios
 
-Sistema web para el **control integral de proyectos de construcción** del caso de estudio **Constructora XYZ** (microempresa de Cúcuta): planear, ejecutar y dar trazabilidad a proyectos de vivienda, coordinando personal, materiales, herramientas, proveedores y costos, con alertas e indicadores para la toma de decisiones
+Sistema de información web para la **gestión, control y trazabilidad** de los
+proyectos de construcción, inventarios, personal y servicios externos de la
+**Constructora XYZ** (microempresa de Cúcuta, Norte de Santander).
 
-> Proyecto académico · clase «Control integral de proyectos de construcción» · equipo de 5 estudiantes.
+> Proyecto académico · Análisis y Diseño de Sistemas · Universidad Francisco de
+> Paula Santander · equipo de 6 estudiantes.
+
+El alcance, los requerimientos y las reglas de negocio provienen del enunciado
+oficial de la asignatura. La numeración de este repositorio es la del
+enunciado: **RF01–RF32**, **RN01–RN10** y **RNF01–RNF15**, más los aportes del
+equipo (RF33–RF36, RN11–RN14), siempre marcados como tales.
 
 ## Stack
 
 | Capa | Tecnología |
 |---|---|
-| Frontend | React 18 + Vite + TailwindCSS + React Router (mismo stack del repo `Sistema-de-gestion-y-seguimiento`) |
-| Backend *(pendiente)* | Node.js + Express, JWT (a definir en el sprint 0) |
-| Base de datos *(pendiente)* | SQL — modelo diseñado desde cero para cubrir los 18 RF (ver brecha abajo) |
+| Frontend | React 18 · Vite 5 · TailwindCSS 3 · React Router 6 · Recharts |
+| Backend | Node.js · Express 4 · JWT · bcrypt · mysql2 |
+| Base de datos | MySQL 8 (objetivo) — verificado también en MariaDB 10.11 |
 
-## Estructura del repositorio
+## Puesta en marcha
 
-Misma organización que el repo `Sistema-de-gestion-y-seguimiento` (front/back separados):
+Requiere Node.js 18+ y MySQL 8 (o MariaDB 10.11+).
+
+```bash
+# 1. Base de datos: esquema y usuarios de prueba
+mysql -u root -p < docs/schema.sql
+mysql -u root -p scopi < docs/seed_usuarios_prueba.sql
+
+# 2. Backend
+cd backend
+cp .env.example .env        # ajustar credenciales y JWT_SECRET
+npm install
+node scripts/seed.js        # genera los hashes bcrypt reales
+npm run dev                 # http://localhost:3005
+
+# 3. Frontend (en otra terminal)
+cd frontend
+npm install
+npm run dev                 # http://localhost:5173
+```
+
+`node scripts/seed.js` es obligatorio: el SQL siembra un hash de marcador y sin
+este paso ningún usuario puede iniciar sesión.
+
+### Usuarios de prueba
+
+Contraseña `Prueba123!` para los cinco. Cada rol ve un menú distinto.
+
+| Usuario | Rol | Alcance |
+|---|---|---|
+| `admin` | ADMINISTRADOR | todo el sistema |
+| `gerente` | GERENTE | seguimiento, costos, reportes |
+| `maestro` | MAESTRO_OBRA | proyectos, materiales, incidencias |
+| `bodega` | ENCARGADO_BODEGA | materiales, herramientas, alertas |
+| `trabajador` | TRABAJADOR | solo el tablero |
+
+## Estado actual
+
+Sprint 1 en curso. **HU-01 (RF01) está completa**: autenticación con JWT,
+identificación del rol y menú por rol, más la pantalla de gestión de usuarios
+(crear con rol asignado, bloquear y activar).
+
+Los demás módulos son marcadores de posición: el menú y las rutas existen, pero
+el contenido llega en los sprints 2 a 4. El tablero muestra datos de
+demostración (`frontend/src/lib/mockData.js`), no datos reales.
+
+Reglas de negocio aplicadas hoy en la base de datos: RN01, RN02, RN05, RN06,
+RN07, RN11 y RN14. El detalle de dónde vive cada regla está en
+`docs/REGLAS_DE_NEGOCIO.md`.
+
+## Estructura
 
 ```
 SCOPI/
-├── frontend/   # React 18 + Vite + Tailwind + React Router (este repo)
-└── backend/    # Node.js + Express + JWT (pendiente, sprint 0)
+├── backend/     # Express + JWT: autenticación, usuarios, bitácora
+├── frontend/    # React + Vite: interfaz por rol
+├── docs/        # requerimientos, reglas, casos de uso, esquema, diagramas
+└── tests/       # pruebas de navegador (Playwright)
 ```
 
-## Puesta en marcha (frontend)
+### Documentación
+
+| Archivo | Contenido |
+|---|---|
+| `docs/REQUERIMIENTOS.md` | RF01–RF36 y RNF01–RNF16 con su caso de uso y soporte en el modelo |
+| `docs/REGLAS_DE_NEGOCIO.md` | RN01–RN14 y dónde se aplica cada una |
+| `docs/CASOS_DE_USO.md` | los 29 casos de uso |
+| `docs/TRAZABILIDAD.md` | matriz problema → requerimiento → caso de uso → épica → HU → sprint |
+| `docs/MATRIZ_CARACTERIZACION.md` | entregable del OE1: 52 variables en 16 dimensiones |
+| `docs/schema.sql` | 27 tablas, 3 triggers de inventario, baja lógica |
+| `docs/bpmn/` | proceso actual (AS-IS) y propuesto (TO-BE) |
+| `docs/casos_de_uso/puml/` | los 29 diagramas UML |
+
+## Pruebas
+
+Con el backend y el frontend corriendo:
 
 ```bash
-cd frontend
-npm install
-npm run dev        # http://localhost:5173
+python3 tests/test_login_rbac.py     # login y menú por rol
+python3 tests/test_usuarios_cu01.py  # CU-01: crear, duplicado, bloquear, activar
 ```
-
-Demo: el login acepta cualquier correo (la autenticación real, RF1, llega con el backend).
-
-## Estructura del frontend
-
-```
-frontend/src/
-├── components/    # Layout, Sidebar, Topbar, StatCard
-├── context/       # AuthContext (login mock → JWT cuando exista backend)
-├── pages/         # Login, Dashboard, Proyectos, placeholders por módulo
-├── services/      # api.js — cliente axios (/api, token Bearer)
-└── lib/           # mockData.js — datos demo hasta tener backend
-```
-
-Los módulos del menú están mapeados a los requerimientos funcionales (RF). Cada página placeholder indica qué RF cubre y qué reglas de negocio la sostienen.
-
-## Requerimientos funcionales (RF1–RF18)
-
-1. **RF1** Gestión de usuarios — autenticación, roles, permisos, estado de cuentas, recuperación
-2. **RF2** Registrar proyectos — info general, ubicación, fechas, responsable, presupuesto, estado
-3. **RF3** Etapas y actividades — proyecto → etapas → actividades con responsables y fechas
-4. **RF4** Seguimiento de avance — % periódico + evidencias (fotos/documentos)
-5. **RF5** Personal — trabajadores y maestros (contacto, especialidad, cargo, disponibilidad)
-6. **RF6** Asignación y consulta histórica — trabajador↔actividad, por proyecto y periodo
-7. **RF7** Materiales — código, categoría, unidad, existencias, costo de referencia, nivel mínimo
-8. **RF8** Entregas y consumos de material — por proyecto/actividad/responsable
-9. **RF9** Devoluciones de material — al inventario, con motivo y responsable
-10. **RF10** Herramientas (registro) — código, descripción, estado, ubicación
-11. **RF11** Herramientas (entrega/devolución) — trabajador, proyecto, fecha, condiciones
-12. **RF12** Proveedores y servicios externos — transporte, alquiler, electricidad, plomería
-13. **RF13** Incidencias — averías, accidentes, retrasos vinculados al proyecto
-14. **RF14** Alertas de inventario — al alcanzar el nivel mínimo
-15. **RF15** Consolidación de costos — personal + materiales + servicios por proyecto
-16. **RF16** Indicadores y dashboard — calculados desde información transaccional
-17. **RF17** Reportes exportables — PDF/Excel, filtros por proyecto/periodo/trabajador
-18. **RF18** Trazabilidad — historial reconstruible de las operaciones por proyecto
-
-## Reglas de negocio (RN1–RN10)
-
-| RN | Regla |
-|---|---|
-| RN1 | No sale material si la cantidad solicitada supera las existencias |
-| RN2 | Toda salida de material queda asociada a un proyecto y responsable |
-| RN3 | Una herramienta entregada no puede aparecer como disponible |
-| RN4 | Toda devolución registra el estado de la herramienta |
-| RN5 | Las actividades pertenecen a una etapa y a un proyecto |
-| RN6 | Los consumos afectan automáticamente la existencia |
-| RN7 | Los movimientos de inventario no se eliminan físicamente; las correcciones mantienen trazabilidad |
-| RN8 | Las actividades vencidas se identifican como atrasadas |
-| RN9 | El avance del proyecto se deriva de sus actividades |
-| RN10 | Los indicadores se calculan desde información transaccional, nunca digitada |
-
-## No funcionales (RNF1–RNF11)
-
-Interfaz intuitiva (RNF1) · responsive (RNF2) · tiempos de respuesta adecuados (RNF3) · contraseñas encriptadas (RNF4) · RBAC (RNF5) · restricciones de BD anti-inconsistencia (RNF6) · auditoría de operaciones críticas (RNF7) · navegadores recientes (RNF8) · arquitectura extensible (RNF9) · respaldo/restauración documentado (RNF10) · documentación técnica + manual de usuario + manual del sistema (RNF11).
-
-## Brecha con la BD existente (`ingelectrica`)
-
-El repositorio `Sistema-de-gestion-y-seguimiento` (repo de Jimmy) sirve de referencia de stack, **no de esquema**: su base de datos no cubre el alcance de la clase. Análisis (`Brecha de Requerimientos`):
-
-- **No existen (7 RF):** RF7 materiales, RF9 devoluciones, RF10–RF11 herramientas, RF12 proveedores/servicios, RF13 incidencias, RF15 costos, RF16 indicadores.
-- **Parciales (3):** RF6 (asignación sin fechas/periodo), RNF4 (1 usuario con contraseña en texto plano), RNF6 (sin unicidad ni CHECKs).
-- **Rotos (3):** RN7 · RNF7 · RF18 — movimientos sin trazabilidad, sin auditoría.
-
-**Conclusión:** el modelo entidad-relación de SCOPI se diseña desde cero para cubrir los 18 RF, RN y RNF, reutilizando solo la arquitectura front/back del repo de Jimmy.
-
-## Metodología y entregables
-
-Diagnóstico (BPMN, actores, reglas, indicadores) → modelo de análisis (matriz de requerimientos, casos de uso, historias de usuario) → primer informe (arquitectura inicial, MER, modelo lógico, UML, prototipos) → desarrollo por **sprints Scrum** (BD temprana, módulos funcionando en cada entrega) → evaluación de funcionalidades.
-
-## Tareas pendientes del equipo
-
-- [ ] Entrevistar a una constructora real / ingeniero civil (p. ej. Ing. Jairo)
-- [ ] Diagnosticar y modelar el proceso actual (BPMN)
-- [ ] Catálogo de reglas de negocio e indicadores
-- [ ] Listado de requerimientos funcionales/no funcionales
-- [ ] Cronograma del mes con responsables
-- [ ] Arquitectura inicial + modelo entidad-relación
-- [ ] Base de datos temprana (sprint 0)
-- [ ] Módulos: proyectos, inventarios, herramientas, personal (sprints 1–2)

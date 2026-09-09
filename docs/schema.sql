@@ -436,7 +436,7 @@ CREATE TABLE `servicios_externos` (
 ) ENGINE=InnoDB;
 
 -- =============================================================================
--- MÓDULO 4: ALERTAS Y AUDITORÍA DE TRACABILIDAD
+-- MÓDULO 4: ALERTAS Y AUDITORÍA DE TRAZABILIDAD
 -- =============================================================================
 
 -- RF23, RF24, RF25: Alertas del sistema
