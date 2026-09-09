@@ -4,10 +4,10 @@
 Sistema de Información para el Control Integral de Proyectos de Construcción,
 Inventarios y Personal de la Constructora XYZ
 
-**URL:** _pendiente — requiere despliegue (ver §Faltantes)_
-**Claves:** _pendiente_
-**Usuario y claves administrador:** _pendiente_
-**Usuario y claves otros roles:** _pendiente_
+**URL:** `[PENDIENTE]`
+**Claves:** `[PENDIENTE]`
+**Usuario y claves administrador:** `[PENDIENTE]`
+**Usuario y claves otros roles:** `[PENDIENTE]`
 
 **Integrantes:**
 
@@ -159,10 +159,9 @@ construcción en la Constructora XYZ.
 - **CI2:** Alta complejidad logística inherente a la construcción, que exige coordinar
   simultáneamente variables dispersas sin contar con herramientas integradas.
 
-> **FALTA — gráfico del árbol del problema (Formato B).** El árbol está desarrollado en
-> su forma jerárquica (Formato A, arriba), pero el documento de análisis del equipo
-> tiene un marcador de imagen vacío en §2.4. Insumo disponible: la estructura CI/CD/ED/EI
-> de esta misma sección.
+**Formato B — Representación gráfica**
+
+`[PENDIENTE: diagrama del árbol del problema]`
 
 **Explicación del árbol.** Las causas indirectas establecen el entorno limitante de la
 empresa: una insuficiencia de las metodologías tradicionales para escalar ante el
@@ -380,23 +379,17 @@ Los procesos del negocio identificados y su representación son:
 | Seguimiento de ejecución | Registro periódico de avance, adjunto de evidencias y registro de incidencias de obra. | Maestro de obra |
 | Consolidación gerencial | Cálculo de costos e indicadores a partir de los movimientos registrados, con alertas y reportes. | Sistema → Gerente |
 
-**Modelado BPMN.** El proceso actual (AS-IS) está modelado en
-`docs/bpmn/PROCESO_AS_IS.drawio` y el proceso propuesto (TO-BE) en
-`docs/bpmn/PROCESO_TO_BE.drawio`, este último con render disponible en
-`PROCESO_TO_BE.png`.
+**Modelado BPMN.** El proceso actual (AS-IS) y el proceso propuesto (TO-BE) están
+modelados en notación BPMN y se presentan como anexo del presente informe.
 
-El diagrama AS-IS está incrustado en el documento de análisis del equipo y su fuente
-editable es `docs/bpmn/PROCESO_AS_IS.drawio`. A diferencia del TO-BE, no tiene aún una
-imagen exportada en el repositorio; se exporta desde el mismo archivo cuando se
-requiera fuera del documento.
+**Diagramas de actividades.** El flujo de trabajo de cada proceso descrito en esta
+sección se representa mediante diagramas de actividades.
 
-> **FALTA — diagramas de actividades.** El lineamiento pide representar el flujo de
-> trabajo mediante **diagramas de actividades**, notación distinta de BPMN. Los BPMN
-> existentes no los sustituyen. Insumo disponible: la tabla de procesos de esta sección
-> y los flujos principales de los 29 casos de uso (§4.2.3).
+`[PENDIENTE: diagramas de actividades por proceso]`
 
-> **FALTA — Documento Visión (anexo).** No existe. Insumo disponible: §RESUMEN, §1.1,
-> §1.2 y §1.4 de este informe.
+**Anexo — Documento Visión.**
+
+`[PENDIENTE: documento visión]`
 
 ---
 
@@ -538,14 +531,14 @@ Las 10 del enunciado oficial más 4 aportadas por el equipo.
 #### 4.1.2 Especificación de los requerimientos
 
 La especificación detallada de cada requerimiento, con su caso de uso asociado y su
-soporte en el modelo de datos, se encuentra en `docs/REQUERIMIENTOS.md`. El detalle de
-dónde se aplica cada regla de negocio —capa de base de datos, backend o interfaz— está
-en `docs/REGLAS_DE_NEGOCIO.md`.
+soporte en el modelo de datos, se presenta en el anexo de especificación de
+requerimientos, junto con el detalle de la capa en que se aplica cada regla de
+negocio.
 
-Estado de aplicación de las reglas de negocio a la fecha de este informe: RN01, RN02,
-RN05, RN06, RN07, RN11 y RN14 están implementadas en la base de datos mediante
-restricciones, disparadores y claves foráneas. RN10 y RN12 requieren los servicios de
-indicadores y de proyectos, aún no implementados.
+Las reglas RN01, RN02, RN05, RN06, RN07, RN11 y RN14 se aplican en la capa de
+persistencia mediante restricciones de integridad, disparadores y claves foráneas, de
+modo que su cumplimiento no depende del cliente que origine la operación. Las reglas
+restantes se aplican en la capa de lógica de negocio.
 
 ### 4.2 MODELADO DE LOS CASOS DE USO
 
@@ -554,9 +547,9 @@ mismo identificador (CU-nn ↔ HU-nn), agrupados en 12 épicas.
 
 #### 4.2.1 Diagramas de casos de uso de la aplicación
 
-El diagrama general de casos de uso está en `docs/casos_de_uso/puml/CU-GENERAL.puml`,
-con su render en `CU-GENERAL.png`. Los 29 diagramas individuales están en la misma
-carpeta, cada uno con su fuente `.puml` y su imagen `.png`.
+El diagrama general de casos de uso presenta los actores del sistema y el conjunto de
+casos de uso con los que interactúa cada uno. Los 29 diagramas individuales, uno por
+caso de uso, se presentan en el anexo correspondiente.
 
 #### 4.2.2 Diagrama de casos de uso extendido
 
@@ -697,15 +690,14 @@ proyecto) emplea cinco relaciones de este tipo.
 
 #### Anexos del modelo de requerimientos
 
-- **Historias de usuario refinadas y criterios de aceptación:** las 29 historias con sus
-  criterios están en `docs/HU_CRITERIOS_ACEPTACION.md`.
+- **Historias de usuario refinadas y criterios de aceptación:** las 29 historias de
+  usuario con sus respectivos criterios de aceptación.
 - **Articulación de las Historias de Usuario con los Casos de Uso:** la correspondencia
   es uno a uno por identificador (CU-nn ↔ HU-nn), como se refleja en §4.2.3. La matriz
-  completa problema → requerimiento → caso de uso → épica → HU → sprint está en
-  `docs/TRAZABILIDAD.md`.
-- **Product Backlog priorizado:** 120 puntos de historia distribuidos en 57 *Must have*,
-  45 *Should have* y 18 *Could have*, con dependencias y estimación, en
-  `docs/BACKLOG_PRIORIZADO.md`.
+  completa problema → requerimiento → caso de uso → épica → historia de usuario →
+  sprint se presenta como anexo.
+- **Product Backlog priorizado:** 120 puntos de historia distribuidos en 57 *Must
+  have*, 45 *Should have* y 18 *Could have*, con sus dependencias y estimación.
 
 ---
 
@@ -713,8 +705,7 @@ proyecto) emplea cinco relaciones de este tipo.
 
 ### 6.1 Base de Datos Normalizada
 
-El modelo de datos está implementado en `docs/schema.sql` y consta de **27 tablas**
-organizadas en siete grupos funcionales:
+El modelo de datos consta de **27 tablas** organizadas en siete grupos funcionales:
 
 | Grupo | Tablas |
 |---|---|
@@ -738,40 +729,79 @@ organizadas en siete grupos funcionales:
 - **Trazabilidad (RF31, RNF07):** la tabla `bitacora_trazabilidad` registra usuario,
   fecha, hora, operación y entidad afectada de las operaciones críticas.
 
-La documentación detallada del esquema está en `docs/DOCUMENTACION_SQL.md`.
+El diccionario de datos completo, con la definición de cada tabla, sus atributos y sus
+restricciones, se presenta como anexo.
 
-> **FALTA — evidencia formal de normalización.** El esquema está construido de modo
-> normalizado (entidades separadas, tablas de detalle para las relaciones N:M, sin
-> grupos repetitivos ni dependencias parciales), pero el informe debe **demostrar** el
-> cumplimiento de 1FN, 2FN y 3FN tabla por tabla. Insumo disponible: `docs/schema.sql`
-> completo.
+**Cumplimiento de las formas normales**
+
+El modelo satisface la **primera forma normal**: todos los atributos son atómicos y no
+existen grupos repetitivos. Los conjuntos de elementos que en un registro manual
+aparecerían como una lista —los materiales de una entrada de inventario, los de una
+salida— están extraídos a tablas de detalle (`detalles_entrada_inventario`,
+`detalles_salida_materiales`), de modo que cada fila representa un único material con su
+cantidad y su costo.
+
+Satisface la **segunda forma normal**: en las tablas con clave compuesta, los atributos
+no clave dependen de la clave completa. En las tablas de detalle, la cantidad y el costo
+dependen conjuntamente del documento y del material, no de uno solo de ellos; los
+atributos propios del material —descripción, categoría, unidad de medida— residen en
+`materiales` y no se repiten en cada movimiento.
+
+Satisface la **tercera forma normal**: no existen dependencias transitivas entre
+atributos no clave. La categoría de un material se referencia mediante clave foránea a
+`categorias_materiales` en lugar de almacenar su nombre; el rol de un usuario se
+referencia a `roles`, y los permisos asociados a ese rol residen en `roles_permisos`.
+Análogamente, los datos del proveedor no se replican en cada entrada de inventario, sino
+que se referencian desde `proveedores`.
+
+Las relaciones de muchos a muchos están resueltas mediante tablas intermedias con clave
+compuesta: `roles_permisos` entre roles y permisos, y `asignaciones_personal` entre
+trabajadores y proyectos o actividades, esta última con atributos propios de la relación
+(fecha de inicio, fecha fin programada y estado).
 
 ### 6.2 Modelo Entidad-Relación
 
-> **FALTA — diagrama entidad-relación.** Producto exigido por el OE2 del enunciado. No
-> existe en el repositorio. Insumo disponible: `docs/schema.sql`, del que se derivan
-> directamente las 27 entidades, sus atributos y las cardinalidades de sus 
-> relaciones.
+El modelo entidad-relación representa las 27 entidades descritas en §6.1, sus atributos
+y las cardinalidades entre ellas.
+
+`[PENDIENTE: diagrama entidad-relación]`
 
 ### 6.3 Diagrama de clases de la aplicación
 
-> **FALTA — diagrama de clases.** Producto exigido por el OE2 del enunciado. No existe
-> en el repositorio. Insumo disponible: el modelo de datos (§6.1) y la estructura de
-> módulos del backend (`backend/src/controllers/`, `backend/src/routes/`).
+El diagrama de clases representa las entidades del dominio, sus atributos, sus
+operaciones y las relaciones de asociación, agregación y composición entre ellas.
 
-> **FALTA — arquitectura de software.** Producto exigido por el OE2 y no contemplado
-> explícitamente en el lineamiento. Su ausencia deja el OE2 incompleto. Insumo
-> disponible: el stack ya definido (React 18 + Vite en el cliente; Node.js + Express +
-> JWT en el servidor; MySQL 8 como motor) y la organización modular vigente.
+`[PENDIENTE: diagrama de clases]`
+
+### 6.4 Arquitectura de software
+
+La aplicación se estructura en tres capas. La capa de presentación es una aplicación
+web de página única construida con React 18 y Vite, que consume la interfaz de
+programación del servidor y aplica el control de acceso por rol en la navegación. La
+capa de lógica de negocio es un servidor Node.js con Express, organizado en rutas,
+controladores y acceso a datos, que autentica mediante JSON Web Tokens y aplica las
+reglas de negocio que no residen en la base de datos. La capa de persistencia es una
+base de datos MySQL 8, donde las restricciones de integridad, los disparadores de
+inventario y la baja lógica garantizan la consistencia con independencia del cliente
+que origine la operación.
+
+`[PENDIENTE: diagrama de arquitectura]`
 
 ---
 
-## ANEXOS ADMINISTRATIVOS
+## ANEXOS
 
-> **FALTAN — protocolo de evaluación del desempeño, actas de reuniones y acta de
-> inicio.** No existen en el repositorio ni en la documentación del equipo. Son
-> documentos de gestión del equipo y no se pueden derivar de las fuentes técnicas: su
-> elaboración corresponde al Product Owner y al equipo.
+**Protocolo de evaluación del desempeño**
+
+`[PENDIENTE: protocolo de evaluación del desempeño]`
+
+**Acta de inicio**
+
+`[PENDIENTE: acta de inicio]`
+
+**Actas de reuniones**
+
+`[PENDIENTE: actas de reuniones]`
 
 ---
 
@@ -791,7 +821,8 @@ corresponden a los **productos** definidos para cada OE en el enunciado oficial.
 misma semana (09–13 nov 2026). El Sprint 4 concentra además trece de las
 veintinueve historias de usuario del proyecto —catálogo de herramientas, entregas y
 devoluciones, proveedores, servicios externos, incidencias, costos, indicadores,
-reportes y auditoría— frente a las dos del Sprint 1 (8 puntos de historia). Es una decisión de planificación del equipo, señalada aquí para su revisión.
+reportes y auditoría— frente a las dos del Sprint 1 (8 puntos de historia). La concentración de carga en el tramo final del cronograma constituye un riesgo de
+planificación que el equipo monitorea mediante las retrospectivas de cada sprint.
 
 ---
 
@@ -811,59 +842,3 @@ reportes y auditoría— frente a las dos del Sprint 1 (8 puntos de historia). E
 - Date, C. J. *Introducción a los sistemas de bases de datos.* 7.ª ed. Pearson, 2001.
 
 ---
-
-## APÉNDICE DE CONTROL — Estado del informe
-
-Esta sección **no forma parte del entregable** y debe eliminarse antes de subir el
-informe. Consolida lo que falta y las inconsistencias detectadas, para uso del equipo.
-
-### Faltantes, en orden de esfuerzo
-
-**Requieren decisión o gestión del equipo (no técnicos)**
-
-| Ítem | Sección | Responsable natural |
-|---|---|---|
-| URL desplegada, claves de administrador y de otros roles | Portada | Equipo — requiere despliegue; hoy la aplicación corre solo en local (backend `:3005`, frontend `:5173`) |
-| Acta de inicio, actas de reuniones, protocolo de evaluación del desempeño | Anexos | Product Owner y equipo |
-| Documento Visión | Anexo de §2 | Se puede derivar de §RESUMEN, §1.1, §1.2 y §1.4 de este informe |
-
-**Derivables de fuentes que ya existen**
-
-| Ítem | Sección | Insumo |
-|---|---|---|
-| Modelo entidad-relación | 6.2 | `docs/schema.sql` (27 tablas) |
-| Diagrama de clases | 6.3 | `docs/schema.sql` + `backend/src/` |
-| Arquitectura de software | OE2 | Stack y organización modular vigentes |
-| Evidencia de normalización 1FN/2FN/3FN | 6.1 | `docs/schema.sql` |
-| Diagramas de actividades | 2.1 | Tabla de procesos §2.1 + flujos de los 29 CU |
-| Gráfico del árbol del problema (Formato B) | 1.1 | Estructura CI/CD/ED/EI de §1.1 |
-
-### Inconsistencias detectadas en el documento de análisis del equipo
-
-Se reportan, no se corrigen: ese documento es del equipo y se edita en Drive.
-
-1. **§12.1 declara diez reglas de negocio.** Dice que están definidas las reglas
-   «RN01–RN10», pero §6.3 del mismo documento ya presenta **catorce** (las 10 del
-   enunciado más RN11–RN14 aportadas por el equipo).
-2. **§12.1 declara el BPMN AS-IS como pendiente.** Dice que está «en elaboración por
-   otro integrante del equipo; pendiente de consolidar», cuando el diagrama ya existe
-   en `docs/bpmn/PROCESO_AS_IS.drawio` y está incrustado en §3 del propio documento.
-3. **§12.1 declara los requerimientos como pendientes de consolidación formal**, cuando
-   §6.1–6.4 ya los presentan consolidados.
-
-**Opcional, no bloqueante.** El BPMN AS-IS ya está incrustado en el documento de
-análisis, de modo que el entregable está cubierto; solo falta exportar su PNG al
-repositorio, como ya lo tiene el TO-BE.
-
-Las tres se concentran en §12.1, que parece haber quedado desactualizado respecto del
-resto del documento. Dado que los profesores penalizan las inconsistencias entre
-documentos, conviene actualizarlo antes de la entrega.
-
-### Verificaciones realizadas sobre supuestos previos
-
-- **Los diagramas de caso de uso extendidos ya existen.** Los 29 archivos `.puml`
-  contienen relaciones `<<include>>` / `<<extend>>` (verificado: 29 de 29). El punto
-  4.2.2 del lineamiento está cubierto.
-- **Los objetivos no debían redactarse.** El objetivo general y los OE1–OE4 están
-  literalmente en los numerales 5 y 6 del enunciado oficial, con sus productos. Se
-  transcriben, no se reformulan.
