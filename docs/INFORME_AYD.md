@@ -407,8 +407,8 @@ provienen de un enunciado cerrado (RF01–RF32, RN01–RN10, RNF01–RNF15) y no
 sujetos a descubrimiento progresivo, lo que hace viable —y necesaria— una fase
 predictiva de planeación inicial que fije alcance y backlog. Por otro, la construcción
 sí se beneficia de ciclos cortos con incremento demostrable, porque los módulos son
-interdependientes y la integración temprana reduce el riesgo técnico identificado en
-§12.2 del documento de análisis.
+interdependientes y la integración temprana reduce el riesgo técnico de construirlos
+sobre un modelo de datos común sin una arquitectura consolidada.
 
 **Etapas del ciclo de vida y su correspondencia con los objetivos específicos**
 
@@ -720,14 +720,17 @@ El modelo de datos consta de **27 tablas** organizadas en siete grupos funcional
 **Mecanismos transversales implementados**
 
 - **Baja lógica (RN07, RF34):** los registros no se eliminan físicamente; se marcan como
-  inactivos. Las claves foráneas usan `RESTRICT`, conservando deliberadamente `CASCADE`
-  solo donde existe relación de composición (por ejemplo, los detalles respecto de su
-  documento de entrada o salida).
+  inactivos. Las claves foráneas emplean `RESTRICT` para impedir el borrado en cascada de
+  información operativa, y reservan `CASCADE` para las relaciones de composición, en las
+  que la parte carece de sentido sin el todo: los detalles respecto de su documento de
+  entrada o salida, las evidencias respecto de su registro de avance y los pares
+  rol-permiso.
 - **Control de existencias (RN01, RN06):** tres disparadores de inventario mantienen las
   existencias sincronizadas con los movimientos, y la restricción `chk_mat_existencia`
   impide que una existencia quede en negativo.
-- **Trazabilidad (RF31, RNF07):** la tabla `bitacora_trazabilidad` registra usuario,
-  fecha, hora, operación y entidad afectada de las operaciones críticas.
+- **Trazabilidad (RF31, RNF07):** la tabla `bitacora_trazabilidad` registra, para cada
+  operación crítica, el usuario que la ejecutó, la acción realizada, la tabla y el
+  registro afectados, la marca de tiempo y la dirección de origen.
 
 El diccionario de datos completo, con la definición de cada tabla, sus atributos y sus
 restricciones, se presenta como anexo.
@@ -741,9 +744,12 @@ salida— están extraídos a tablas de detalle (`detalles_entrada_inventario`,
 `detalles_salida_materiales`), de modo que cada fila representa un único material con su
 cantidad y su costo.
 
-Satisface la **segunda forma normal**: en las tablas con clave compuesta, los atributos
-no clave dependen de la clave completa. En las tablas de detalle, la cantidad y el costo
-dependen conjuntamente del documento y del material, no de uno solo de ellos; los
+Satisface la **segunda forma normal**: no existen dependencias parciales de la clave. El
+modelo emplea claves primarias sustitutas de un solo atributo en la mayoría de las
+tablas, con lo que la dependencia parcial queda descartada por construcción; la única
+clave compuesta del modelo, la de `roles_permisos`, corresponde a una tabla sin
+atributos no clave. En las tablas de detalle, la cantidad y el costo dependen
+conjuntamente del documento y del material, y no de uno solo de ellos, mientras que los
 atributos propios del material —descripción, categoría, unidad de medida— residen en
 `materiales` y no se repiten en cada movimiento.
 
@@ -754,10 +760,12 @@ referencia a `roles`, y los permisos asociados a ese rol residen en `roles_permi
 Análogamente, los datos del proveedor no se replican en cada entrada de inventario, sino
 que se referencian desde `proveedores`.
 
-Las relaciones de muchos a muchos están resueltas mediante tablas intermedias con clave
-compuesta: `roles_permisos` entre roles y permisos, y `asignaciones_personal` entre
-trabajadores y proyectos o actividades, esta última con atributos propios de la relación
-(fecha de inicio, fecha fin programada y estado).
+Las relaciones de muchos a muchos están resueltas mediante tablas intermedias:
+`roles_permisos` entre roles y permisos, con clave primaria compuesta por ambas
+referencias; y `asignaciones_personal` entre trabajadores y proyectos o actividades,
+que al tener atributos propios de la relación —fecha de inicio, fecha fin programada,
+rol en el proyecto y estado— constituye una entidad asociativa con identificador
+propio.
 
 ### 6.2 Modelo Entidad-Relación
 
