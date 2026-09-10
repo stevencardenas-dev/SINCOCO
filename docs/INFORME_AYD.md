@@ -540,6 +540,43 @@ persistencia mediante restricciones de integridad, disparadores y claves foráne
 modo que su cumplimiento no depende del cliente que origine la operación. Las reglas
 restantes se aplican en la capa de lógica de negocio.
 
+#### 4.1.3 Catálogo de alertas
+
+El sistema detecta automáticamente las situaciones que requieren atención definidas en
+el enunciado oficial. Cada alerta se asocia al requerimiento que la origina y queda
+registrada con su estado de atención (RF36).
+
+| Alerta | Condición que la dispara | RF |
+|---|---|---|
+| Inventario bajo | La existencia de un material alcanza su nivel mínimo establecido. | RF23 |
+| Actividades vencidas | Una actividad supera su fecha programada sin estar terminada. | RF25 |
+| Herramientas pendientes | Una herramienta entregada supera el plazo previsto de devolución. | RF24 |
+| Proyectos atrasados | El avance consolidado de un proyecto queda por debajo de lo programado. | RF25 |
+| Servicios pendientes | Un servicio externo contratado no registra ejecución dentro de sus fechas. | RF21 |
+| Desviaciones relevantes | El costo consolidado de un proyecto se aparta del presupuesto de referencia. | RF26 |
+
+#### 4.1.4 Catálogo de indicadores
+
+Los indicadores se calculan a partir de la información transaccional registrada, sin
+digitación manual, conforme a la regla de negocio RN10. Se presentan gráficamente en el
+dashboard gerencial (RF28).
+
+| Indicador | Dimensión |
+|---|---|
+| Porcentaje de avance por proyecto | Proyectos |
+| Actividades programadas vs. terminadas | Proyectos |
+| Porcentaje de actividades atrasadas | Proyectos |
+| Consumo de materiales por proyecto | Inventarios |
+| Costo de materiales por proyecto | Inventarios |
+| Materiales con existencia crítica | Inventarios |
+| Herramientas disponibles | Herramientas |
+| Herramientas prestadas | Herramientas |
+| Herramientas pendientes de devolución | Herramientas |
+| Costo de servicios externos | Terceros |
+| Número de trabajadores por proyecto | Personal |
+| Utilización de personal | Personal |
+| Incidencias por proyecto | Seguimiento |
+
 ### 4.2 MODELADO DE LOS CASOS DE USO
 
 El sistema se modela mediante **29 casos de uso**, uno por historia de usuario y con el
