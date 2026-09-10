@@ -39,19 +39,17 @@ que la numeración quede completa y se vea qué se está esperando.
 
 | Falta | Sección | De dónde sale |
 |---|---|---|
-| Modelo entidad-relación | 6.2 | `docs/schema.sql` — 27 tablas ya definidas |
-| Diagrama de clases | 6.3 | `docs/schema.sql` + los módulos del backend |
+| Modelo entidad-relación | 6.2 | La base de datos ya está definida: 27 tablas |
+| Diagrama de clases | 6.3 | La base de datos y los módulos ya implementados |
 | Arquitectura de software | 6 / OE2 | El stack ya está decidido y en uso |
-| Evidencia de normalización 1FN/2FN/3FN | 6.1 | `docs/schema.sql` |
 | Diagramas de actividades | 2.1 | Los procesos de §2.1 y los flujos de los 29 CU |
 | Gráfico del árbol del problema | 1.1 | La estructura CI/CD/ED/EI ya escrita en §1.1 |
 
-Nota: el **BPMN AS-IS no falta** — el diagrama terminado está incrustado en §3 del
-documento de análisis, y su fuente editable está en `docs/bpmn/PROCESO_AS_IS.drawio`. Lo
-único pendiente es exportar su PNG al repositorio, como ya lo tiene el TO-BE.
+Nota: el **BPMN AS-IS no falta** — el diagrama terminado está incrustado en el numeral 3
+del documento de análisis.
 
-Nota: los **diagramas de caso de uso extendidos tampoco faltan** — los 29 archivos
-`.puml` ya usan `<<include>>` y `<<extend>>`. El punto 4.2.2 del lineamiento está
+Nota: los **diagramas de caso de uso extendidos tampoco faltan** — los 29 diagramas ya
+incluyen las relaciones «include» y «extend». El punto 4.2.2 del lineamiento está
 cubierto.
 
 ## Coherencia con el documento de análisis — ya corregida
