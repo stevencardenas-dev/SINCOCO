@@ -1,6 +1,6 @@
 # PRIMER INFORME DE ANÁLISIS Y DISEÑO DE SISTEMAS
 
-**NOMBRE DEL PROYECTO:** SCOPI — Sistema de Control de Obras, Personal e Inventarios
+**NOMBRE DEL PROYECTO:** SINCOCO — Sistema de Información para el Control Integral de Proyectos de Construcción, Inventarios y Personal
 Sistema de Información para el Control Integral de Proyectos de Construcción,
 Inventarios y Personal de la Constructora XYZ
 
@@ -38,7 +38,7 @@ es una desarticulación operativa que impide conocer oportunamente el estado rea
 cada obra, el consumo efectivo de materiales, la ubicación de las herramientas o los
 recursos invertidos frente al avance reportado.
 
-Este proyecto propone SCOPI, un sistema de información web que centraliza la
+Este proyecto propone SINCOCO, un sistema de información web que centraliza la
 información operacional de la constructora y gestiona el ciclo completo de ejecución de
 sus proyectos, relacionando proyecto, etapas, actividades, responsables, personal,
 materiales, herramientas, servicios externos, costos, avances, incidencias e

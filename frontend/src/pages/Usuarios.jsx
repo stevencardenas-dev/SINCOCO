@@ -21,7 +21,6 @@ const ROL_LABEL = {
   GERENTE: 'Gerente',
   MAESTRO_OBRA: 'Maestro de obra',
   ENCARGADO_BODEGA: 'Encargado de bodega',
-  TRABAJADOR: 'Trabajador',
 }
 
 const VACIO = { username: '', email: '', password: '', rol_id: '' }

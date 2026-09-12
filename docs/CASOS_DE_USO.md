@@ -121,9 +121,11 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 ## Épica 8: Costos e indicadores
 
 ### CU-15 (HU-15): Consolidar costos del proyecto
-- **Actor:** Sistema
-- **Flujo principal:** al registrarse movimientos de materiales/herramientas/servicios, el sistema recalcula el costo total del proyecto.
+- **Actor:** ninguno — comportamiento automático del sistema (ver nota al final).
+- **Disparador:** el registro de un movimiento de materiales, herramientas o servicios.
+- **Flujo principal:** el sistema recalcula el costo total del proyecto.
 - **Restricción:** no permite edición manual del costo consolidado.
+- **Se consulta desde:** CU-16 (dashboard) y CU-25 (reportes).
 
 ### CU-16 (HU-16): Visualizar dashboard de seguimiento
 - **Actor:** Gerente
@@ -138,8 +140,9 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 - **Flujo principal:** consulta usuario, acción, fecha y entidad afectada de operaciones críticas.
 
 ### CU-18 (HU-18): Conservar historial (eliminación lógica)
-- **Actor:** Sistema
-- **Flujo principal:** al eliminar un registro, se marca como inactivo en vez de borrarse físicamente.
+- **Actor:** ninguno — comportamiento automático del sistema (ver nota al final).
+- **Disparador:** cualquier actor solicita eliminar un registro.
+- **Flujo principal:** el registro se marca como inactivo en vez de borrarse físicamente.
 
 ---
 
@@ -159,12 +162,14 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 ## Épica 11: Alertas del sistema
 
 ### CU-23 (HU-23): Alertar stock mínimo
-- **Actor:** Sistema → Encargado de bodega
-- **Flujo principal:** al llegar la existencia al nivel mínimo, se genera alerta visible en el dashboard.
+- **Actor:** Encargado de bodega (receptor de la alerta).
+- **Disparador:** la existencia de un material alcanza su nivel mínimo.
+- **Flujo principal:** el sistema genera la alerta y el encargado de bodega la consulta en el dashboard.
 
 ### CU-24 (HU-24): Alertar actividades atrasadas y herramientas pendientes
-- **Actor:** Sistema → Gerente
-- **Flujo principal:** detecta actividades vencidas no finalizadas y herramientas fuera de plazo; las lista para el gerente.
+- **Actor:** Gerente (receptor de la alerta).
+- **Disparador:** existen actividades vencidas no finalizadas o herramientas fuera de plazo.
+- **Flujo principal:** el sistema las detecta y el gerente consulta el listado.
 
 ---
 
@@ -181,3 +186,20 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 - **Precondición:** el material existe en el almacén de origen con existencia suficiente.
 - **Flujo principal:** selecciona almacén de origen, almacén de destino, material y cantidad; el sistema descuenta del origen y suma al destino.
 - **Flujo alterno:** cantidad solicitada mayor a la existencia en el almacén de origen → rechazado.
+
+---
+
+## Nota sobre el actor "Sistema"
+
+CU-15 y CU-18 no tienen actor. Un actor es una entidad **externa** que busca un
+objetivo en el sistema; el sistema no es externo a sí mismo, así que no puede
+ser su propio actor. Ambos son comportamiento automático disparado por otro
+caso de uso, y en el modelo de datos viven como restricciones y triggers, no
+como una interacción (`docs/schema.sql`: baja lógica por RN07, triggers de
+inventario por RN06).
+
+En CU-23 y CU-24 el actor es quien **recibe** la alerta —encargado de bodega y
+gerente—, porque es quien obtiene el valor. Que el disparo sea automático se
+documenta en el **disparador**, no convirtiendo al sistema en actor.
+
+Por eso ninguno de los cuatro aparece como actor en el diagrama general.

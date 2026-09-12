@@ -20,7 +20,6 @@ skinparam ranksep 55
 title Diagrama de caso de uso: Devolver materiales sobrantes
 left to right direction
 actor "Encargado de bodega" as B
-actor "Maestro de obra" as M
 
 rectangle "Devolver materiales sobrantes" {
   usecase "Vincular a solicitud/salida previa del proyecto" as UC1
@@ -30,7 +29,7 @@ rectangle "Devolver materiales sobrantes" {
   usecase "Actualizar existencia disponible" as UC5
 }
 
-M --> UC1
+B --> UC1
 B --> UC2
 B --> UC3
 B --> UC4

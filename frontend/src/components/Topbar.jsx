@@ -23,7 +23,6 @@ const ROLE_LABELS = {
   GERENTE: 'Gerente',
   MAESTRO_OBRA: 'Maestro de obra',
   ENCARGADO_BODEGA: 'Encargado de bodega',
-  TRABAJADOR: 'Trabajador',
 }
 
 export default function Topbar({ onMenuClick }) {
@@ -31,7 +30,7 @@ export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
-  const title = TITLES[pathname] ?? 'SCOPI'
+  const title = TITLES[pathname] ?? 'SINCOCO'
 
   const handleLogout = () => {
     logout()

@@ -14,7 +14,6 @@ ESPERADO = {
  'gerente':    ['Dashboard','Proyectos','Personal','Alertas','Proveedores','Incidencias','Costos','Reportes'],
  'maestro':    ['Dashboard','Proyectos','Materiales','Incidencias'],
  'bodega':     ['Dashboard','Materiales','Herramientas','Alertas'],
- 'trabajador': ['Dashboard'],
 }
 
 with sync_playwright() as p:
@@ -50,9 +49,9 @@ with sync_playwright() as p:
 
     # acceso directo por URL a una ruta prohibida
     pg = b.new_page(viewport={"width":1440,"height":900}); pg.goto('http://localhost:5173/login'); pg.wait_for_load_state('networkidle')
-    pg.fill('#username','trabajador'); pg.fill('#password','Prueba123!'); pg.click('button[type=submit]')
+    pg.fill('#username','bodega'); pg.fill('#password','Prueba123!'); pg.click('button[type=submit]')
     pg.wait_for_load_state('networkidle'); pg.wait_for_timeout(300)
     pg.goto('http://localhost:5173/usuarios'); pg.wait_for_load_state('networkidle'); pg.wait_for_timeout(800)
-    print(f"trabajador -> /usuarios  termina en {pg.url.split('5173')[1]}  {'BLOQUEADO OK' if pg.url.endswith('/') else 'ACCESO INDEBIDO'}")
+    print(f"bodega -> /usuarios  termina en {pg.url.split('5173')[1]}  {'BLOQUEADO OK' if pg.url.endswith('/') else 'ACCESO INDEBIDO'}")
     pg.close()
     b.close()

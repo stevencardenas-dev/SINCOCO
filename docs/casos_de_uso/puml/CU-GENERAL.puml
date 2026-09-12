@@ -27,7 +27,6 @@ left to right direction
 actor Administrador as ADM
 actor "Maestro\nde obra" as MAE
 actor "Encargado\nde bodega" as BOD
-actor Trabajador as TRA
 actor Gerente as GER
 
 rectangle "Administración y configuración" as R1 {
@@ -57,15 +56,13 @@ MAE --> U4
 MAE --> U5
 BOD --> U5
 BOD --> U6
-TRA --> U6
 GER --> U8
 GER --> U9
 GER --> U10
 
 ADM -[hidden]down- MAE
 MAE -[hidden]down- BOD
-BOD -[hidden]down- TRA
-TRA -[hidden]down- GER
+BOD -[hidden]down- GER
 R1 -[hidden]down- R2
 R2 -[hidden]down- R3
 

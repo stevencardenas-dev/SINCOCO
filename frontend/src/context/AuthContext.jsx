@@ -13,14 +13,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const stored = localStorage.getItem('scopi_user')
-    const token = localStorage.getItem('scopi_token')
+    const stored = localStorage.getItem('sincoco_user')
+    const token = localStorage.getItem('sincoco_token')
     if (stored && token) {
       try {
         setUser(JSON.parse(stored))
       } catch {
-        localStorage.removeItem('scopi_user')
-        localStorage.removeItem('scopi_token')
+        localStorage.removeItem('sincoco_user')
+        localStorage.removeItem('sincoco_token')
       }
     }
     setLoading(false)
@@ -32,8 +32,8 @@ export function AuthProvider({ children }) {
   const login = async (username, password) => {
     try {
       const { data } = await api.post('/auth/login', { username, password })
-      localStorage.setItem('scopi_token', data.token)
-      localStorage.setItem('scopi_user', JSON.stringify(data.user))
+      localStorage.setItem('sincoco_token', data.token)
+      localStorage.setItem('sincoco_user', JSON.stringify(data.user))
       setUser(data.user)
       return { ok: true }
     } catch (err) {
@@ -42,8 +42,8 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => {
-    localStorage.removeItem('scopi_token')
-    localStorage.removeItem('scopi_user')
+    localStorage.removeItem('sincoco_token')
+    localStorage.removeItem('sincoco_user')
     setUser(null)
   }
 

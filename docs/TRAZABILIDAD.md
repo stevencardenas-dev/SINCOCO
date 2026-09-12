@@ -1,5 +1,5 @@
 ---
-title: "SCOPI — Ítem 11: Matriz de Trazabilidad"
+title: "SINCOCO — Ítem 11: Matriz de Trazabilidad"
 lang: es
 ---
 

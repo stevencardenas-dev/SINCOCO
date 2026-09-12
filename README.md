@@ -1,4 +1,4 @@
-# SCOPI — Sistema de Control de Obras, Personal e Inventarios
+# SINCOCO — Sistema de Información para el Control Integral de Proyectos de Construcción, Inventarios y Personal
 
 Sistema de información web para la **gestión, control y trazabilidad** de los
 proyectos de construcción, inventarios, personal y servicios externos de la
@@ -27,7 +27,7 @@ Requiere Node.js 18+ y MySQL 8 (o MariaDB 10.11+).
 ```bash
 # 1. Base de datos: esquema y usuarios de prueba
 mysql -u root -p < docs/schema.sql
-mysql -u root -p scopi < docs/seed_usuarios_prueba.sql
+mysql -u root -p sincoco < docs/seed_usuarios_prueba.sql
 
 # 2. Backend
 cd backend
@@ -74,7 +74,7 @@ RN07, RN11 y RN14. El detalle de dónde vive cada regla está en
 ## Estructura
 
 ```
-SCOPI/
+SINCOCO/
 ├── backend/     # Express + JWT: autenticación, usuarios, bitácora
 ├── frontend/    # React + Vite: interfaz por rol
 ├── docs/        # requerimientos, reglas, casos de uso, esquema, diagramas

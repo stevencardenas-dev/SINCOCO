@@ -39,8 +39,20 @@
 
 ---
 
-## 5. Personal / Trabajador
-**Funciones principales:**
-* **Perfil:** Estar registrado en el sistema con su perfil, cargo y especialidad.
-* **Asignaciones:** Recibir asignaciones a proyectos o actividades.
-* **Uso de Equipos:** Recibir herramientas prestadas para su uso en obra y devolverlas posteriormente.
+## Actores del negocio que NO usan el sistema
+
+### Personal / Trabajador operativo
+Participa en el proceso de negocio, pero **no es actor del sistema**: no tiene
+usuario ni inicia sesión. Todo lo que le concierne lo registra otro actor.
+
+* **Asignaciones:** el administrador lo asigna a proyectos y actividades; el
+  trabajador las recibe de forma presencial, no por la aplicación.
+* **Uso de equipos:** recibe herramientas y las devuelve, pero es el encargado
+  de bodega quien registra la entrega y la devolución. En la base de datos el
+  trabajador es el *destinatario* del movimiento
+  (`salidas_herramienta.entregado_a_trabajador_id`,
+  `devoluciones_herramienta.devuelto_por_trabajador_id`), nunca su autor.
+
+Por eso su ficha existe en la tabla `trabajadores` —los movimientos de
+herramienta la referencian— pero no tiene fila en `usuarios` ni rol asociado,
+y no aparece como actor en el diagrama general de casos de uso.
