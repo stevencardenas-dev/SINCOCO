@@ -20,8 +20,7 @@ const ADMIN = 'ADMINISTRADOR'
 const GERENTE = 'GERENTE'
 const MAESTRO = 'MAESTRO_OBRA'
 const BODEGA = 'ENCARGADO_BODEGA'
-const TRABAJADOR = 'TRABAJADOR'
-const TODOS = [ADMIN, GERENTE, MAESTRO, BODEGA, TRABAJADOR]
+const TODOS = [ADMIN, GERENTE, MAESTRO, BODEGA]
 
 /**
  * RNF05 · RBAC: cada opción declara qué roles la ven. Los roles salen del JWT
@@ -86,7 +85,7 @@ export default function Sidebar({ open, onClose }) {
             S
           </div>
           <div>
-            <p className="text-base font-bold leading-tight tracking-tight text-white">SCOPI</p>
+            <p className="text-base font-bold leading-tight tracking-tight text-white">SINCOCO</p>
             <p className="text-[11px] font-medium text-slate-400">Control de proyectos</p>
           </div>
         </NavLink>

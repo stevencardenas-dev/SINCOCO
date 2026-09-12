@@ -17,4 +17,4 @@ app.use((err, req, res, next) => {
 })
 
 const port = process.env.PORT || 3000
-app.listen(port, () => console.log(`SCOPI backend en http://localhost:${port}`))
+app.listen(port, () => console.log(`SINCOCO backend en http://localhost:${port}`))

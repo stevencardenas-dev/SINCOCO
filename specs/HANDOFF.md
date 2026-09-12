@@ -1,4 +1,4 @@
-# SCOPI — Handoff
+# SINCOCO — Handoff
 
 Última sesión: 2026-09-08. Todo commiteado y pusheado (`abbd0a4`).
 
@@ -38,7 +38,7 @@ y de proyectos.
 
 ```bash
 mysql -u root -p < docs/schema.sql
-mysql -u root -p scopi < docs/seed_usuarios_prueba.sql
+mysql -u root -p sincoco < docs/seed_usuarios_prueba.sql
 cd backend && npm install && node scripts/seed.js && node src/server.js  # 3005
 cd frontend && npm install && npx vite                                    # 5173
 ```

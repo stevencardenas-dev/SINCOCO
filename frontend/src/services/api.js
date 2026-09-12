@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 /**
- * Cliente HTTP de SCOPI. El proxy de Vite lo enruta al backend Express
+ * Cliente HTTP de SINCOCO. El proxy de Vite lo enruta al backend Express
  * (ver vite.config.js).
  */
 const api = axios.create({
@@ -10,7 +10,7 @@ const api = axios.create({
 
 // Interceptor para adjuntar el JWT (RF1 · RNF5)
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('scopi_token')
+  const token = localStorage.getItem('sincoco_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -23,8 +23,8 @@ api.interceptors.response.use(
   (err) => {
     const esLogin = err.config?.url?.includes('/auth/login')
     if (err.response?.status === 401 && !esLogin) {
-      localStorage.removeItem('scopi_token')
-      localStorage.removeItem('scopi_user')
+      localStorage.removeItem('sincoco_token')
+      localStorage.removeItem('sincoco_user')
       window.location.href = '/login'
     }
     return Promise.reject(err)

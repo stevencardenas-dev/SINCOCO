@@ -13,7 +13,6 @@ const USUARIOS = [
   { username: 'gerente', rol: 'GERENTE' },
   { username: 'maestro', rol: 'MAESTRO_OBRA' },
   { username: 'bodega', rol: 'ENCARGADO_BODEGA' },
-  { username: 'trabajador', rol: 'TRABAJADOR' },
 ]
 
 const hash = await bcrypt.hash(PASSWORD, 10)

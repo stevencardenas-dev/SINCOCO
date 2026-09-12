@@ -32,8 +32,8 @@ export default function Login() {
             S
           </div>
           <div>
-            <p className="text-lg font-bold text-white">SCOPI</p>
-            <p className="text-xs text-slate-400">Sistema de Control de Obras, Personal e Inventarios</p>
+            <p className="text-lg font-bold text-white">SINCOCO</p>
+            <p className="text-xs text-slate-400">Sistema de Información para el Control Integral de Proyectos de Construcción, Inventarios y Personal</p>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ export default function Login() {
                 S
               </div>
               <div>
-                <p className="text-lg font-bold text-slate-900">SCOPI</p>
+                <p className="text-lg font-bold text-slate-900">SINCOCO</p>
                 <p className="text-xs text-slate-500">Control de proyectos de construcción</p>
               </div>
             </div>
@@ -138,7 +138,7 @@ export default function Login() {
           </form>
 
           <p className="mt-6 rounded-xl bg-brand-50 px-4 py-3 text-xs leading-relaxed text-brand-700">
-            <strong>Usuarios de prueba:</strong> admin · gerente · maestro · bodega · trabajador —
+            <strong>Usuarios de prueba:</strong> admin · gerente · maestro · bodega —
             contraseña <code>Prueba123!</code>. Cada rol ve un menú distinto (RF01 · RNF05).
           </p>
         </div>

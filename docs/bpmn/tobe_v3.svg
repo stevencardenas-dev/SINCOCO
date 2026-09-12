@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="3430" height="1015" viewBox="0 0 3430 1015" font-family="Helvetica,Arial,sans-serif">
 <defs><marker id="ar" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L0,6.4 L9,3.2 z" fill="#333"/></marker></defs>
 <rect width="3430" height="1015" fill="#fff"/>
-<text x="70" y="52" font-size="21" font-weight="bold">Proceso TO-BE — Ejecución de obra con SCOPI</text>
+<text x="70" y="52" font-size="21" font-weight="bold">Proceso TO-BE — Ejecución de obra con SINCOCO</text>
 <rect x="70" y="80" width="3300" height="875" fill="none" stroke="#000" stroke-width="2"/>
 <rect x="70" y="80" width="36" height="175" fill="#f0f0f0" stroke="#000" stroke-width="1.2"/>
 <text x="88.0" y="167.5" font-size="14" font-weight="bold" text-anchor="middle" dominant-baseline="middle" transform="rotate(-90 88.0 167.5)">GERENTE</text>
@@ -20,7 +20,7 @@
 <circle cx="149.0" cy="167.5" r="23.0" fill="#d5e8d4" stroke="#82b366" stroke-width="2.4"/>
 <rect x="201" y="133.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
 <text x="288.5" y="165.0" font-size="14" text-anchor="middle">Registrar proyecto</text>
-<text x="288.5" y="182.0" font-size="14" text-anchor="middle">en SCOPI</text>
+<text x="288.5" y="182.0" font-size="14" text-anchor="middle">en SINCOCO</text>
 <rect x="406" y="133.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
 <text x="493.5" y="165.0" font-size="14" text-anchor="middle">Asignar maestro</text>
 <text x="493.5" y="182.0" font-size="14" text-anchor="middle">responsable</text>
@@ -32,7 +32,7 @@
 <text x="903.5" y="357.0" font-size="14" text-anchor="middle">desde el sistema</text>
 <rect x="1021" y="658.5" width="185" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>
 <text x="1113.5" y="690.0" font-size="14" text-anchor="middle">Recibir solicitud</text>
-<text x="1113.5" y="707.0" font-size="14" text-anchor="middle">registrada en SCOPI</text>
+<text x="1113.5" y="707.0" font-size="14" text-anchor="middle">registrada en SINCOCO</text>
 <polygon points="1273.0,665.5 1300.0,692.5 1273.0,719.5 1246.0,692.5" fill="#f8cecc" stroke="#b85450" stroke-width="2.2"/>
 <path d="M1263.0,682.5 L1283.0,702.5 M1283.0,682.5 L1263.0,702.5" stroke="#b85450" stroke-width="2.6"/>
 <rect x="1341" y="612.5" width="175" height="68" rx="10" fill="#fff2cc" stroke="#d6b656" stroke-width="1.9"/>

@@ -19,7 +19,7 @@ with sync_playwright() as pw:
 
     # flujo principal: crear con rol
     pg.click('text=Nuevo usuario'); pg.wait_for_selector('#u-username')
-    pg.fill('#u-username','carlos.test'); pg.fill('#u-email','carlos.test@scopi.test')
+    pg.fill('#u-username','carlos.test'); pg.fill('#u-email','carlos.test@sincoco.test')
     pg.fill('#u-password','Test1234!'); pg.select_option('#u-rol', label='Maestro de obra')
     pg.click('button:has-text("Crear usuario")')
     pg.wait_for_selector('[role=status]', timeout=8000)
@@ -31,8 +31,8 @@ with sync_playwright() as pw:
 
     # flujo alterno: duplicado
     pg.click('text=Nuevo usuario'); pg.wait_for_selector('#u-username')
-    pg.fill('#u-username','carlos.test'); pg.fill('#u-email','otro@scopi.test')
-    pg.fill('#u-password','Test1234!'); pg.select_option('#u-rol', label='Trabajador')
+    pg.fill('#u-username','carlos.test'); pg.fill('#u-email','otro@sincoco.test')
+    pg.fill('#u-password','Test1234!'); pg.select_option('#u-rol', label='Encargado de bodega')
     pg.click('button:has-text("Crear usuario")')
     pg.wait_for_selector('[role=alert]', timeout=8000)
     print("duplicado ->", pg.locator('[role=alert]').inner_text())
