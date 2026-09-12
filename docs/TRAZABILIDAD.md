@@ -15,7 +15,7 @@ La columna *Proceso* corresponde a las cinco dimensiones de alcance definidas
 en el enunciado del proyecto: Gestión de proyectos, Gestión de recursos
 humanos, Gestión de inventarios, Gestión de terceros y Gestión analítica.
 
-**Cobertura: 29 historias de usuario · 29 casos de uso · RF01–RF36 · 12 causas del árbol del problema · 4 sprints.**
+**Cobertura: 30 historias de usuario · 30 casos de uso · RF01–RF36 · 12 causas del árbol del problema · 4 sprints.**
 
 ## 11.1 Matriz
 
@@ -34,7 +34,8 @@ humanos, Gestión de inventarios, Gestión de terceros y Gestión analítica.
 | ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF11 | CU-26 | 4. Inventario de materiales | HU-26 | Sprint 3 |
 | ED2: incertidumbre sobre el consumo real de materiales | Gestión de inventarios | RF12 | CU-20 | 4. Inventario de materiales | HU-20 | Sprint 3 |
 | ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF13 | CU-09 | 4. Inventario de materiales | HU-09 | Sprint 3 |
-| ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF14 + RF35 | CU-29 | 4. Inventario de materiales | HU-29 | Sprint 3 |
+| ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF14 | CU-29 | 4. Inventario de materiales | HU-29 | Sprint 3 |
+| ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF35 | CU-30 | 5. Inventario de herramientas | HU-30 | Sprint 2 |
 | ED2: incertidumbre sobre el consumo real de materiales | Gestión de inventarios | RF11 | CU-08 | 4. Inventario de materiales | HU-08 | Sprint 3 |
 | CI1: mecanismos tradicionales no escalan ante el volumen | Gestión analítica | RF23 | CU-23 | 11. Alertas del sistema | HU-23 | Sprint 3 |
 | ED1: pérdida de trazabilidad en movimientos de inventario | Gestión de inventarios | RF15 | CU-10 | 5. Inventario de herramientas | HU-10 | Sprint 4 |
@@ -56,7 +57,7 @@ humanos, Gestión de inventarios, Gestión de terceros y Gestión analítica.
 | Sprint | Historias de usuario | Objetivo del sprint |
 |---|---|---|
 | Sprint 1 | HU-01, HU-02 | Gestión de usuarios/roles y registro de proyectos |
-| Sprint 2 | HU-03, HU-04, HU-05, HU-06, HU-21, HU-22 | Estructura del proyecto, personal y seguimiento de avance |
+| Sprint 2 | HU-03, HU-04, HU-05, HU-06, HU-21, HU-22, HU-30 | Estructura del proyecto, personal, seguimiento de avance y solicitud de herramientas |
 | Sprint 3 | HU-07, HU-08, HU-09, HU-19, HU-20, HU-23, HU-26, HU-29 | Catálogo y control de materiales |
 | Sprint 4 | HU-10, HU-11, HU-12, HU-13, HU-14, HU-15, HU-16, HU-17, HU-18, HU-24, HU-25, HU-27, HU-28 | Herramientas, terceros, costos e indicadores |
 
@@ -78,8 +79,8 @@ La matriz permite verificar, en ambos sentidos, que no hay elementos sueltos:
 |---|---|---|
 | RF33 — Notificaciones del sistema | Sin caso de uso asignado | Backlog del equipo |
 | RF34 — Conservación de historial | HU-18 / CU-18 | Backlog del equipo |
-| RF35 — Trazabilidad de movimientos de material | HU-29 / CU-29 | Reunión con Ing. Civil |
-| RF36 — Gestión de alertas atendidas | HU-23, HU-24 / CU-23, CU-24 | Modelo de datos |
+| RF35 — Soliciar herramientas a inventario | HU-30 / CU-30 | Primera entrega |
+| RF36 — Solicitar de materiales a inventario | HU-08 / CU-08 | Primera entrega |
 
 ### Lectura de la matriz
 

@@ -187,6 +187,12 @@ Derivados de las historias de usuario del `PRODUCT BACKLOG`. Un caso de uso por 
 - **Flujo principal:** selecciona almacén de origen, almacén de destino, material y cantidad; el sistema descuenta del origen y suma al destino.
 - **Flujo alterno:** cantidad solicitada mayor a la existencia en el almacén de origen → rechazado.
 
+### CU-30 (HU-30): Solicitar herramientas
+- **Actor:** Maestro de obra
+- **Precondición:** existen herramientas con disponibilidad real en el catálogo.
+- **Flujo principal:** registra la solicitud indicando el trabajador destinatario, el proyecto y la fecha requerida; la solicitud queda pendiente de aprobación por bodega.
+- **Flujo alterno:** bodega rechaza la solicitud con observación obligatoria y el sistema notifica al solicitante; si la fecha requerida es futura, la solicitud permanece pendiente hasta esa fecha.
+
 ---
 
 ## Nota sobre el actor "Sistema"

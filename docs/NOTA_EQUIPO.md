@@ -11,7 +11,7 @@ El informe cubre todas las secciones del lineamiento, en su numeración. Los obj
 —general y OE1 a OE4— están **transcritos literalmente del enunciado del profesor**
 (numerales 5 y 6): no se reformularon, porque cualquier variación se lee como
 inconsistencia. El planteamiento del problema con su árbol, el alcance, las
-limitaciones, los requerimientos (RF01–RF36, RN01–RN14, RNF01–RNF15) y los 29 casos de
+limitaciones, los requerimientos (RF01–RF36, RN01–RN14, RNF01–RNF15) y los 30 casos de
 uso provienen del documento de análisis del equipo.
 
 Se redactaron para este informe: el resumen, la justificación, la descripción de los
