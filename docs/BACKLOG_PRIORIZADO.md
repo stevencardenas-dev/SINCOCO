@@ -48,8 +48,9 @@ relativa entre HU de este mismo backlog, no en horas.
 | HU-23 | Alerta de stock mínimo | HU-07, HU-19 | 3 |
 | HU-24 | Alerta de atrasos y herramientas pendientes | HU-03, HU-11 | 5 |
 | HU-29 | Traslado de materiales entre almacenes | HU-07, HU-19 | 5 |
+| HU-30 | Solicitud de herramientas | HU-10, HU-04 | 5 |
 
-**Subtotal Should have: 45 puntos**
+**Subtotal Should have: 50 puntos**
 
 ### Could have — mejora la experiencia, aplazable sin bloquear el negocio
 
@@ -72,7 +73,7 @@ vacía para dejar explícito que la ausencia no es un olvido.
 
 ## Resumen y lectura para planificación
 
-- **Total backlog: 112 puntos** (49 Must + 45 Should + 18 Could).
+- **Total backlog: 117 puntos** (49 Must + 50 Should + 18 Could).
 - Las dependencias muestran que **HU-01 (usuarios/roles) es prerequisito transitivo
   de casi todo el backlog** — debe resolverse en el primer sprint de desarrollo.
 - **HU-15 (consolidación de costos)** es el nodo de mayor fan-in (HU-19, HU-26,

@@ -217,3 +217,11 @@
   * El traslado descuenta la cantidad del almacén de origen y la suma al almacén de destino.
   * No se puede trasladar más cantidad de la existente en el almacén de origen.
   * El traslado queda registrado con responsable y fecha para trazabilidad.
+
+### HU-30: Solicitud de herramientas
+* **Descripción:** Como maestro de obra, quiero solicitar herramientas para mis trabajadores al inventario para gestionar el préstamo más eficientemente
+* **Criterios de Aceptación:**
+  * La solicitud debe mostrar únicamente herramientas con disponibilidad real en el catálogo.
+  * Debe registrar la herramienta, el trabajador destinatario, el proyecto, la fecha de solicitud y la fecha requerida.
+  * El estado de la solicitud debe transitar entre pendiente, aprobada, rechazada y atendida.
+  * Todo rechazo debe registrar una observación obligatoria que justifique la decisión.

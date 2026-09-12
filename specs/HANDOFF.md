@@ -1,6 +1,14 @@
 # SINCOCO — Handoff
 
-Última sesión: 2026-09-08. Todo commiteado y pusheado (`abbd0a4`).
+Última sesión: 2026-09-12. Commiteado localmente (`7cc4c7d` + cambios de
+documentación sin commitear). **No pusheado.**
+
+> **El código está desactualizado respecto a la documentación.** La sesión del
+> 2026-09-12 trabajó sobre la primera entrega y movió el modelo (nombre del
+> sistema, esquema de 27 → 33 tablas, CU-30 nuevo, RF35/RF36 redefinidos). El
+> backend y el frontend siguen implementando el modelo anterior: solo `auth` y
+> `usuarios`, contra un esquema que ahora tiene 6 tablas más. La documentación
+> es la que va adelante; el código todavía no la alcanza.
 
 ## Qué es esto
 
@@ -12,29 +20,75 @@ penaliza.
 
 ## Jerarquía de autoridad — importa
 
-1. **`~/CONTROL INTEGRAL DE PROYECTOS DE CONSTRUCCIÓN.docx.odt`** — el
-   enunciado del profesor. Define **RF01–RF32, RN01–RN10, RNF01–RNF15**. Su
-   numeración y redacción son canónicas; no se renumeran.
-2. **El documento de análisis en Drive** (`.docx`, ID
-   `16NaEyEIh6L-ti7M3Oz86Ui0Y9OOncQh7`) — entregable compartido del equipo, se
-   edita en Google Docs. Extiende el enunciado con RF33–RF36 y RN11–RN14,
-   siempre marcando el origen.
+1. **`~/1.PRIMERA ENTREGA-20260912T182509Z-1-001.zip`** — la primera entrega
+   (17 archivos, 2026-09-12). Es la fuente vigente para **HU, CU, RF y
+   esquema**: `TRAZABILIDAD_RELOADED ++.txt` (30 HU ↔ 30 CU, RF01–RF36, con
+   escenarios y criterios) y `DumpSINCOCO.sql` (33 tablas, 4 triggers). Manda
+   sobre el enunciado donde se contradigan.
+2. **`~/CONTROL INTEGRAL DE PROYECTOS DE CONSTRUCCIÓN.docx.odt`** — el
+   enunciado del profesor. Sigue siendo canónico para **RNF01–RNF15 y
+   RN01–RN10**, que la entrega no numera. La numeración RF01–RF32 del enunciado
+   se conserva.
 3. **`docs/*.md`** — lo más derivado. Si contradice a los anteriores, el
    equivocado es este.
 
+**Los RNF y las RN no están en la hoja de trazabilidad, pero sí en la entrega:**
+`ACTA DE REUNION 1.docx` (02/09/26) recoge al tutor priorizando diseño
+responsivo, seguridad/RBAC, trazabilidad de operaciones críticas, usabilidad y
+disponibilidad, más cuatro reglas de negocio; `EP0- SINCOCO vision.docx` §8–§9
+añade eliminación lógica y alertas predictivas. No borrar RNF/RN alegando que
+"no están en la entrega": están, en prosa.
+
 ## Estado
+
+### Documentación (va adelante)
+
+Sesión 2026-09-12, alineada con la primera entrega:
+
+- **Renombrado SCOPI → SINCOCO** en código, documentación, UI y base de datos.
+- **`docs/schema.sql` reemplazado** por `DumpSINCOCO.sql` de la entrega: 33
+  tablas (antes 27), 4 triggers. Contenido idéntico al dump salvo el
+  encabezado `CREATE DATABASE`/`USE`, que el dump no traía. Tablas nuevas:
+  `clientes`, `ordenes_compra`, `detalles_orden_compra`,
+  `solicitudes_materiales`, `detalles_solicitud_materiales`,
+  `solicitudes_herramientas`.
+- **CU-30 / HU-30 "Solicitar herramientas"** añadido a los 6 documentos que lo
+  omitían, con diagrama nuevo `casos_de_uso/puml/CU-30.puml`.
+- **RF35 y RF36 redefinidos** según la entrega: RF35 = "Soliciar herramientas a
+  inventario" (CU-30), RF36 = "Solicitar de materiales a inventario" (CU-08).
+  Los conceptos anteriores del repo —trazabilidad de movimientos de material y
+  gestión de alertas atendidas— **se quedaron sin número de RF**, aunque
+  `alertas.atendida` sigue existiendo en el esquema.
+- **CU-09**: se eliminó el actor "Maestro de obra"; la entrega lista solo
+  "Encargado de bodega".
+- Conteos corregidos a 30 CU / 30 HU; backlog Should-have 45 → 50, total
+  112 → 117.
+
+Auditoría al cierre: ningún documento contradice la entrega en identificadores
+ni en nombres de CU.
+
+### Código (va atrás)
 
 **HU-01 (RF01) completa.** Login con JWT, rol en el token, menú y rutas por
 rol, pantalla de gestión de usuarios (crear con rol, bloquear, activar).
 
-Backend: solo `auth` y `usuarios`. 27 tablas modeladas, 2 recursos expuestos.
-El frontend fuera de login/usuarios muestra datos de `lib/mockData.js`.
+Backend: solo `auth` y `usuarios`. **33 tablas modeladas, 2 recursos
+expuestos.** El frontend fuera de login/usuarios muestra datos de
+`lib/mockData.js`.
+
+**Deuda que abrió esta sesión:** las 6 tablas nuevas no tienen ni modelo ni
+endpoint ni pantalla. CU-30 está documentado y diagramado, pero no existe en el
+código. Nadie ha ejecutado el esquema nuevo contra la base real.
 
 Reglas aplicadas en la BD: RN01, RN02, RN05, RN06, RN07, RN11, RN14.
 **RN10 y RN12 no están en ninguna capa** — requieren servicios de indicadores
 y de proyectos.
 
 ## Cómo levantarlo
+
+> Nada de esto se ejecutó en la sesión del 2026-09-12: `schema.sql` es nuevo y
+> la base real todavía se llama `scopi`. Ver «Bloqueante para levantar el
+> proyecto» antes de seguir estos pasos.
 
 ```bash
 mysql -u root -p < docs/schema.sql
@@ -54,16 +108,38 @@ en navegador, no solo con `vite build`.
 ## Punteros
 
 - `docs/REGLAS_DE_NEGOCIO.md` — anexo al final: dónde vive cada RN y qué falta
+- `~/SINCOCO_Seccion4.odt` — §4 del informe, generada y sin pegar
+- `docs/casos_de_uso/puml/` — 30 diagramas + CU-GENERAL
 - `docs/REQUERIMIENTOS.md:1-20` — por qué la numeración es la del enunciado
-- `docs/schema.sql:1-12` — RN07: baja lógica + RESTRICT, y qué CASCADE se
-  conservan a propósito (composición)
-- `docs/schema.sql` (final) — los 3 triggers de inventario (RN06) y el CHECK
-  `chk_mat_existencia` (RN01, error 3819)
+- `docs/schema.sql:1-12` — cabecera: de dónde viene el dump y qué se le cambió.
+  **Ojo:** el comentario que explicaba RN07 (baja lógica, RESTRICT vs CASCADE)
+  estaba en el `schema.sql` anterior y se perdió al adoptar el dump; la
+  justificación sigue en `docs/REGLAS_DE_NEGOCIO.md`.
+- `docs/schema.sql` (final) — los **4** triggers de inventario (RN06) y el
+  CHECK `chk_mat_existencia` (RN01, error 3819). El cuarto,
+  `trg_salida_descuenta_existencia_y_alerta`, lo trajo el dump.
 - `backend/src/db/bitacora.js` — RF31/RNF07
 - `frontend/src/components/Sidebar.jsx` — matriz rol → opciones
 - `frontend/src/App.jsx` — `RutaPorRol`, guardas de ruta
 
 ## Decisiones
+
+### De la sesión 2026-09-12
+
+- **La entrega manda sobre el repositorio en HU/CU/RF/esquema**, pero **no se
+  borró nada que la entrega no mencione**. La hoja de trazabilidad solo cubre
+  HU↔CU↔RF; los RNF y las RN viven en el acta de reunión y en el documento de
+  visión, dentro de la misma entrega. Interpretar "solo lo que dice la entrega"
+  como "borrar los RNF" habría eliminado requisitos del enunciado del tutor.
+- **Nombres de CU: se usa el verbo** ("CU-01: Registrar usuario y asignar rol"),
+  no el sustantivo de módulo ("Gestión de usuarios"). La entrega trae los dos
+  —hoja 1 y hoja 2 difieren en 28 de 30— y los 29 diagramas `.puml` ya usaban
+  el verbo.
+- **`CU-GENERAL.png` se restauró desde git.** El renombrado con `sed` lo
+  corrompió por tratarlo como texto. Cuidado al hacer búsquedas y reemplazos
+  masivos: excluir binarios.
+
+### Anteriores
 
 - **Motor objetivo MySQL 8**, aunque la máquina corre MariaDB 10.11
   (`/usr/bin/mysql` es el cliente de MariaDB). Verificar en MySQL 8 vía Docker
@@ -79,12 +155,63 @@ en navegador, no solo con `vite build`.
 
 ## Pendiente
 
+### Bloqueante para levantar el proyecto
+
+- **La base de datos real todavía se llama `scopi`.** El código ya espera
+  `sincoco`. `backend/.env` (ignorado por git, no lo tocó esta sesión) sigue
+  con `DB_USER=scopi` / `DB_NAME=scopi`. Migrar:
+
+  ```bash
+  sudo mysql -N -e "SELECT CONCAT('RENAME TABLE scopi.',table_name,' TO sincoco.',table_name,';') FROM information_schema.tables WHERE table_schema='scopi';"
+  ```
+
+  Ejecutar la salida, crear el usuario `sincoco`, y actualizar `backend/.env`.
+- **`docs/schema.sql` nunca se ejecutó.** El dump viene de MySQL 8.0.39 en
+  Windows; la máquina corre MariaDB 10.11. Verificar antes de confiar en él:
+
+  ```bash
+  sudo mysql < <(sed 's/`sincoco`/`sincoco_test`/g' docs/schema.sql) \
+    && sudo mysql -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='sincoco_test'; DROP DATABASE sincoco_test;"
+  ```
+
+  Debe dar 33.
+
+### Documentación
+
+- **§4 del informe está sin pegar.** Generado en
+  `~/SINCOCO_Seccion4.odt` (4.1.1 matriz de 36 RF, 4.1.2 las 30
+  especificaciones, 4.2.1 inventario de CU, 4.2.2 tabla CU → anexo, 4.2.3 los
+  30 con escenarios). Falta copiarlo al informe. **4.1 pide requerimientos no
+  funcionales y la sección generada no los trae**: los RNF están en
+  `docs/REQUERIMIENTOS.md`, hay que integrarlos a mano.
+- **`CU-GENERAL` cubre 11 casos de uso, no 30.** Es una vista resumen y es
+  anterior a CU-30, así que no lo incluye.
+- **Dos contradicciones dentro de la propia entrega**, sin resolver:
+  duración del sprint (`EP0- vision` dice "ciclos de una semana"; el acta de
+  inicio y el informe dicen 3 semanas) y Scrum Master (`EP0- vision` nombra a
+  "Nelson Beltrán - Docente"; el acta nombra al Ing. Jairo Rodríguez como tutor
+  y no lista Scrum Master). El repositorio sigue al acta.
+- **`solicitudes_herramientas.estado`**: el criterio 3 de HU-30 dice
+  "atendida"; el enum del esquema dice `ENTREGADA`. Los diagramas siguen al
+  esquema. Alguien debe unificar la redacción.
+
+### Equipo
+
 - **Avisar a Kevin**: se hizo force-push (`abbd0a4`); su clon necesita
   `git fetch origin && git reset --hard origin/main`. Luego borrar la rama
   `respaldo-antes-force`.
+- **El remoto sigue siendo `stevencardenas-dev/SCOPI`.** Renombrar el
+  repositorio en GitHub es decisión de Kevin; después cada clon necesita
+  `git remote set-url origin <nuevo>`.
+- **`DumpSINCOCO.sql` se exportó desde una base llamada `scopi`.** Quien lo
+  generó todavía tiene el nombre viejo en local; su próximo export deshace el
+  renombrado.
+### Desarrollo
+
 - Módulo de inventario en el backend: es el de mejor relación esfuerzo/valor,
   porque RN01 y RN06 ya se cumplen solas en la BD. Cubre HU-07 a HU-09, HU-19,
-  HU-20, HU-26, HU-29.
+  HU-20, HU-26, HU-29 — y ahora también HU-30, que necesita
+  `solicitudes_herramientas`.
 - El documento compartido: Sprint 4 tiene 57 puntos frente a 8 del Sprint 1, y
   coincide en la misma semana con la Fase de Cierre (09–13 nov). Es decisión
   del equipo, no un error.
@@ -93,8 +220,13 @@ en navegador, no solo con `vite build`.
   la primera pantalla que dé de baja algo lo va a exponer.
 - `JWT_SECRET=change_me` en `backend/.env`.
 
+
 ## Lecciones de la sesión pasada
 
+- **Leer la fuente completa antes de afirmar que algo falta.** Esta sesión
+  afirmó tres veces que la entrega no tenía requerimientos no funcionales,
+  habiendo leído solo la hoja de trazabilidad. Estaban en el acta de reunión y
+  en el documento de visión. Por poco se borran 16 RNF y 14 RN.
 - **Contar no es leer.** Verifiqué que los 29 CU existían y di el documento por
   coherente; al leerlos aparecieron contradicciones reales (CU-08 descontaba
   inventario en la solicitud, CU-15 consolidaba costos de herramientas que no

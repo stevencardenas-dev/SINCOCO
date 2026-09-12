@@ -99,8 +99,8 @@ la numeración del documento de análisis de negocio
 |----|---|---|---|
 | RF33 *(equipo)* | Notificaciones del sistema: notificar eventos relevantes (asignaciones, incidencias, plazos) a los usuarios interesados. | Backlog del equipo | — |
 | RF34 *(equipo)* | Conservación de historial: no eliminar físicamente los movimientos (asignaciones, solicitudes, entregas); deben conservarse para historial. Eleva RN07 a requerimiento. | Backlog del equipo | CU-18 |
-| RF35 *(equipo)* | Trazabilidad de movimientos de material: reconstruir el recorrido completo de un material (entrada, salida, traslado, consumo, devolución) con responsable y fecha en cada paso. | Reunión Ing. Civil | CU-19, CU-20, CU-29 |
-| RF36 *(equipo)* | Gestión de alertas atendidas: marcar una alerta como atendida, registrando quién la atendió y cuándo. | Implementación (`alertas.atendida`) | CU-23, CU-24 |
+| RF35 *(equipo)* | Soliciar herramientas a inventario: el maestro de obra solicita herramientas del catálogo para sus trabajadores, indicando proyecto y fecha requerida, para su aprobación por bodega. | Primera entrega | CU-30 |
+| RF36 *(equipo)* | Solicitar de materiales a inventario: el maestro de obra registra la solicitud de materiales requeridos para una actividad, con cantidades y observaciones, para su aprobación y despacho por bodega. | Primera entrega | CU-08 |
 
 ---
 

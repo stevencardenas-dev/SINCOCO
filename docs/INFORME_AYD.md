@@ -484,8 +484,8 @@ con su origen explícito, para que quede claro qué es del enunciado y qué aña
 |---|---|---|---|---|
 | RF33 | Notificaciones del sistema | El sistema debe notificar eventos relevantes (asignaciones, incidencias, plazos) a los usuarios interesados. | Backlog del equipo | — (sin CU: fuera del alcance de los 4 sprints) |
 | RF34 | Conservación de historial (no eliminación física) | El sistema no debe eliminar físicamente los movimientos (asignaciones, solicitudes, entregas); deben conservarse para historial. | Backlog del equipo (eleva RN07 a requerimiento) | CU-18 |
-| RF35 | Trazabilidad de movimientos de material | Reconstruir el recorrido completo de un material: entrada, salida, traslado, consumo y devolución, con responsable y fecha en cada paso. | Reunión Ing. Civil | CU-29, CU-19, CU-20 |
-| RF36 | Gestión de alertas atendidas | Marcar una alerta como atendida, registrando quién la atendió y cuándo, para no perder el histórico de alertas resueltas. | Implementación (alertas.atendida) | CU-23, CU-24 |
+| RF35 | Soliciar herramientas a inventario | El maestro de obra solicita herramientas del catálogo para sus trabajadores, indicando proyecto y fecha requerida, para su aprobación por bodega. | Primera entrega | CU-30 |
+| RF36 | Solicitar de materiales a inventario | El maestro de obra registra la solicitud de materiales requeridos para una actividad, con cantidades y observaciones, para su aprobación y despacho por bodega. | Primera entrega | CU-08 |
 
 **Reglas de negocio (RN01–RN14)**
 
@@ -579,7 +579,7 @@ dashboard gerencial (RF28).
 
 ### 4.2 MODELADO DE LOS CASOS DE USO
 
-El sistema se modela mediante **29 casos de uso**, uno por historia de usuario y con el
+El sistema se modela mediante **30 casos de uso**, uno por historia de usuario y con el
 mismo identificador (CU-nn ↔ HU-nn), agrupados en 12 épicas.
 
 #### 4.2.1 Diagramas de casos de uso de la aplicación
@@ -669,6 +669,13 @@ proyecto) emplea cinco relaciones de este tipo.
 - **CU-27 (HU-27) — Consultar historial de movimientos de herramienta.** *Actor:*
   Encargado de bodega. *Flujo principal:* consulta el listado cronológico de
   entregas/devoluciones/estados de una herramienta.
+- **CU-30 (HU-30) — Solicitar herramientas.** *Actor:* Maestro de obra.
+  *Precondición:* existen herramientas con disponibilidad real en el catálogo.
+  *Flujo principal:* registra la solicitud indicando el trabajador destinatario, el
+  proyecto y la fecha requerida; la solicitud queda pendiente de aprobación por
+  bodega. *Flujo alterno:* bodega rechaza con observación obligatoria y el sistema
+  notifica al solicitante; si la fecha requerida es futura, la solicitud permanece
+  pendiente hasta esa fecha.
 
 **Épica 6: Proveedores y servicios externos**
 
@@ -727,7 +734,7 @@ proyecto) emplea cinco relaciones de este tipo.
 
 #### Anexos del modelo de requerimientos
 
-- **Historias de usuario refinadas y criterios de aceptación:** las 29 historias de
+- **Historias de usuario refinadas y criterios de aceptación:** las 30 historias de
   usuario con sus respectivos criterios de aceptación.
 - **Articulación de las Historias de Usuario con los Casos de Uso:** la correspondencia
   es uno a uno por identificador (CU-nn ↔ HU-nn), como se refleja en §4.2.3. La matriz
