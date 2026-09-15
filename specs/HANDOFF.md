@@ -5,11 +5,9 @@
 local, sin repo propio en GitHub.
 
 > Durante esta sesión se creó y se pusheó a `Masterkillerr/SINCOCO` (privado)
-> antes de conocer esa instrucción. El remote ya se eliminó y `main` no hace
-> seguimiento de nada. **Queda pendiente borrar el repositorio en GitHub**: el
-> token de `gh` no tiene el scope `delete_repo`
-> (`gh auth refresh -h github.com -s delete_repo && gh repo delete
-> Masterkillerr/SINCOCO --yes`, o desde Settings → Danger Zone).
+> antes de conocer esa instrucción. **Ya está revertido por completo:** el
+> repositorio se borró de GitHub (404 confirmado), el remote se eliminó y
+> `main` no hace seguimiento de ninguna rama.
 
 El remote `origin` sigue apuntando al repo del equipo
 (`stevencardenas-dev/SCOPI.git`); nunca se le hizo push.
