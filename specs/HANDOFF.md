@@ -1,7 +1,9 @@
 # SINCOCO — Handoff
 
-Última sesión: 2026-09-15. Commiteado localmente (`6886d87`, `2b046bb`,
-`5515d60`, `489c5b2`). **No pusheado.**
+Última sesión: 2026-09-15. **Pusheado** a
+`git@github.com:Masterkillerr/SINCOCO.git` (remote `sincoco`, privado). El
+remote `origin` sigue apuntando al repo viejo del equipo
+(`stevencardenas-dev/SCOPI.git`); no se tocó.
 
 > **El código está desactualizado respecto a la documentación.** La sesión del
 > 2026-09-12 trabajó sobre la primera entrega y movió el modelo (nombre del
@@ -91,13 +93,15 @@ y de proyectos.
 
 ## Cómo levantarlo
 
-> Nada de esto se ejecutó en la sesión del 2026-09-12: `schema.sql` es nuevo y
-> la base real todavía se llama `scopi`. Ver «Bloqueante para levantar el
-> proyecto» antes de seguir estos pasos.
+> Ejecutado y verificado el 2026-09-15: la base `sincoco` ya existe con las 33
+> tablas y los datos migrados, y ambos gates pasan. Los dos primeros comandos
+> solo hacen falta para rehacerla desde cero.
 
 ```bash
-mysql -u root -p < docs/schema.sql
-mysql -u root -p sincoco < docs/seed_usuarios_prueba.sql
+# solo si hay que recrear la base (el sed es por MariaDB, ver §Base de datos)
+sed 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' docs/schema.sql | sudo mysql
+sudo mysql sincoco < docs/seed_usuarios_prueba.sql
+
 cd backend && npm install && node scripts/seed.js && node src/server.js  # 3005
 cd frontend && npm install && npx vite                                    # 5173
 ```
@@ -203,15 +207,27 @@ actores humanos coinciden con §5 de la visión; se añadió el actor **Sistema*
 que la entrega asigna a CU-15, CU-18, CU-23 y CU-24), `schema.sql` (= dump) y
 `README.md`.
 
-### Bloqueante para levantar el proyecto
+### Base de datos — resuelto 2026-09-15
 
-- **La base de datos real todavía se llama `scopi`.** El código ya espera
-  `sincoco`. `backend/.env` (ignorado por git, no lo tocó esta sesión) sigue
-  con `DB_USER=scopi` / `DB_NAME=scopi`. Migrar:
+`sincoco` existe y es la que usa la aplicación: 33 tablas, 4 triggers, cargada
+desde `docs/schema.sql`. Se migraron los datos reales de `scopi` (5 roles, 5
+trabajadores, 5 usuarios, bitácora). `backend/.env` apunta a `sincoco` con el
+usuario `sincoco`. Ambos gates pasan contra ella.
 
-  ```bash
-  sudo mysql -N -e "SELECT CONCAT('RENAME TABLE scopi.',table_name,' TO sincoco.',table_name,';') FROM information_schema.tables WHERE table_schema='scopi';"
-  ```
+**`scopi` se dejó intacta como respaldo** (27 tablas, esquema viejo), más un
+dump en `/tmp/claude-1000/scopi_backup_20260915.sql` y el `.env` anterior en
+`/tmp/claude-1000/env.scopi.bak`. Borrar `scopi` cuando haya confianza — pero
+ojo: `/tmp` no sobrevive un reinicio, así que mover los respaldos antes.
+
+**El servidor es MariaDB 10.11, no MySQL 8.** El dump de la entrega usa
+`utf8mb4_0900_ai_ci` (colación exclusiva de MySQL 8) en el preámbulo de los
+triggers, y MariaDB la rechaza con error 1273. `docs/schema.sql` **no se
+modificó** —es el dump oficial y debe seguir idéntico—; se carga traduciendo al
+vuelo:
+
+```bash
+sed 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' docs/schema.sql | sudo mysql
+```
 
   Ejecutar la salida, crear el usuario `sincoco`, y actualizar `backend/.env`.
 - **`docs/schema.sql` nunca se ejecutó.** El dump viene de MySQL 8.0.39 en
