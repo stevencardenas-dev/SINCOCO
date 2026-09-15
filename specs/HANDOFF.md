@@ -85,7 +85,8 @@ expuestos.** El frontend fuera de login/usuarios muestra datos de
 
 **Deuda que abrió esta sesión:** las 6 tablas nuevas no tienen ni modelo ni
 endpoint ni pantalla. CU-30 está documentado y diagramado, pero no existe en el
-código. Nadie ha ejecutado el esquema nuevo contra la base real.
+código. (El esquema nuevo **sí** está ya ejecutado contra la base real desde el
+2026-09-15: MySQL 8 en Docker, 33 tablas, gates verdes.)
 
 Reglas aplicadas en la BD: RN01, RN02, RN05, RN06, RN07, RN11, RN14.
 **RN10 y RN12 no están en ninguna capa** — requieren servicios de indicadores
@@ -93,14 +94,15 @@ y de proyectos.
 
 ## Cómo levantarlo
 
-> Ejecutado y verificado el 2026-09-15: la base `sincoco` ya existe con las 33
-> tablas y los datos migrados, y ambos gates pasan. Los dos primeros comandos
-> solo hacen falta para rehacerla desde cero.
+> Ejecutado y verificado el 2026-09-15 sobre **MySQL 8.0.46 en Docker**: la base
+> `sincoco` existe con las 33 tablas y los datos, y ambos gates pasan. El
+> contenedor arranca solo (`--restart unless-stopped`); los dos primeros
+> comandos solo hacen falta para rehacer la base desde cero.
 
 ```bash
-# solo si hay que recrear la base (el sed es por MariaDB, ver §Base de datos)
-sed 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' docs/schema.sql | sudo mysql
-sudo mysql sincoco < docs/seed_usuarios_prueba.sql
+docker start mysql   # si no está arriba; publica 127.0.0.1:3306
+mysql -h 127.0.0.1 -uroot -p < docs/schema.sql   # sin sed: MySQL 8 lo acepta tal cual
+mysql -h 127.0.0.1 -uroot -p sincoco < docs/seed_usuarios_prueba.sql
 
 cd backend && npm install && node scripts/seed.js && node src/server.js  # 3005
 cd frontend && npm install && npx vite                                    # 5173
@@ -169,10 +171,14 @@ en navegador, no solo con `vite build`.
 
 ### Anteriores
 
-- **Motor objetivo MySQL 8**, aunque la máquina corre MariaDB 10.11
-  (`/usr/bin/mysql` es el cliente de MariaDB). Verificar en MySQL 8 vía Docker
-  (`mysql:8.0`) antes de afirmar compatibilidad. MariaDB rechaza
-  `DROP FOREIGN KEY` + `ADD CONSTRAINT` del mismo nombre en un solo `ALTER`.
+- ~~**Motor objetivo MySQL 8**, aunque la máquina corre MariaDB 10.11~~
+  **Resuelto el 2026-09-15:** el desarrollo corre sobre MySQL 8.0.46 en Docker,
+  el mismo motor del dump. MariaDB quedó parada y deshabilitada. La sospecha de
+  esta nota era correcta: MariaDB no solo rechaza `DROP FOREIGN KEY` +
+  `ADD CONSTRAINT` en un mismo `ALTER`, sino también la colación
+  `utf8mb4_0900_ai_ci` del dump. `/usr/bin/mysql` sigue siendo el cliente de
+  MariaDB, así que conviene conectar con `-h 127.0.0.1` para no caer en el
+  socket local.
 - **Sin migraciones** mientras no haya despliegue real: la base se recrea desde
   `schema.sql`. Se eliminó la migración 001 por eso.
 - **El paso de aprobación de solicitudes se eliminó** (2026-09-08, decisión de
@@ -209,25 +215,26 @@ que la entrega asigna a CU-15, CU-18, CU-23 y CU-24), `schema.sql` (= dump) y
 
 ### Base de datos — resuelto 2026-09-15
 
-`sincoco` existe y es la que usa la aplicación: 33 tablas, 4 triggers, cargada
-desde `docs/schema.sql`. Se migraron los datos reales de `scopi` (5 roles, 5
-trabajadores, 5 usuarios, bitácora). `backend/.env` apunta a `sincoco` con el
-usuario `sincoco`. Ambos gates pasan contra ella.
+**El motor es MySQL 8.0.46 en Docker** (contenedor `mysql`, volumen
+`mysql-data`, publicado en `127.0.0.1:3306`, `--restart unless-stopped`). Es el
+mismo motor del que salió `DumpSINCOCO.sql`, así que **`docs/schema.sql` carga
+sin modificaciones**: 33 tablas, 4 triggers y 10 CHECK, sin un solo error.
 
-**`scopi` se dejó intacta como respaldo** (27 tablas, esquema viejo), más un
-dump en `/tmp/claude-1000/scopi_backup_20260915.sql` y el `.env` anterior en
-`/tmp/claude-1000/env.scopi.bak`. Borrar `scopi` cuando haya confianza — pero
-ojo: `/tmp` no sobrevive un reinicio, así que mover los respaldos antes.
+`backend/.env` no necesitó cambios (`localhost:3306`, usuario `sincoco`);
+`pool.js` no fija puerto y toma el 3306 por defecto. Datos migrados: 5 roles,
+5 trabajadores, 5 usuarios, bitácora. Ambos gates pasan.
 
-**El servidor es MariaDB 10.11, no MySQL 8.** El dump de la entrega usa
-`utf8mb4_0900_ai_ci` (colación exclusiva de MySQL 8) en el preámbulo de los
-triggers, y MariaDB la rechaza con error 1273. `docs/schema.sql` **no se
-modificó** —es el dump oficial y debe seguir idéntico—; se carga traduciendo al
-vuelo:
+**MariaDB del sistema quedó parada y deshabilitada** (`systemctl disable
+mariadb`) para liberar el 3306. Fue un desvío: la sesión migró primero a
+MariaDB 10.11, que rechaza `utf8mb4_0900_ai_ci` (error 1273) porque esa
+colación es exclusiva de MySQL 8, y hubo que traducirla con `sed`. Ese parche
+ya no se usa y no debe reintroducirse: si `schema.sql` necesita `sed` para
+cargar, es señal de que se está apuntando al motor equivocado.
 
-```bash
-sed 's/utf8mb4_0900_ai_ci/utf8mb4_unicode_ci/g' docs/schema.sql | sudo mysql
-```
+Respaldos en **`~/backups-sincoco/`** (no en `/tmp`, que no sobrevive un
+reinicio): `mariadb_scopi_sincoco_20260915.sql` (volcado completo de ambas
+bases en MariaDB) y `datos_sincoco.sql` (solo los INSERT de las 4 tablas con
+datos). Los ficheros de MariaDB siguen en disco; borrar cuando sobre.
 
   Ejecutar la salida, crear el usuario `sincoco`, y actualizar `backend/.env`.
 - **`docs/schema.sql` nunca se ejecutó.** El dump viene de MySQL 8.0.39 en
