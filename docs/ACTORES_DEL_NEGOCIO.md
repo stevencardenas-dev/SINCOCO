@@ -39,6 +39,28 @@
 
 ---
 
+## 5. Sistema (actor no humano)
+
+El *Protocolo de Especificación de Requerimientos* de la primera entrega
+asigna al **Sistema** como actor de cuatro casos de uso, en los que la acción
+se dispara sola —por una regla o por un evento— y no por alguien que abre una
+pantalla:
+
+* **CU-15 · Consolidar costos del proyecto:** recalcula el costo real a partir
+  de los movimientos de materiales y de los servicios externos registrados.
+* **CU-18 · Conservar historial (eliminación lógica):** impide el borrado
+  físico y conserva la traza de los movimientos.
+* **CU-23 · Alertar stock mínimo** (junto al encargado de bodega): genera la
+  alerta cuando un material alcanza su nivel mínimo.
+* **CU-24 · Alertar actividades atrasadas y herramientas pendientes** (junto al
+  gerente): genera las alertas de vencimiento.
+
+No tiene usuario ni inicia sesión: es el disparador automático de esos flujos.
+Se documenta como actor porque así lo especifica la entrega y porque determina
+que estas funciones no dependen de que alguien las ejecute a mano.
+
+---
+
 ## Actores del negocio que NO usan el sistema
 
 ### Personal / Trabajador operativo

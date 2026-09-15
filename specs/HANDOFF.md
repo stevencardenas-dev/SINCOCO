@@ -179,16 +179,27 @@ en navegador, no solo con `vite build`.
 
 ### Documentación vs. Primera Entrega (sesión 2026-09-15)
 
-- **`INFORME_AYD.md` ~L869–876 narra el plan de sprints viejo.** Ver Decisiones.
-  Requiere reescritura manual: las fechas de calendario no salen de la entrega.
-  `INFORME_AYD.docx`/`.pdf` arrastran lo mismo.
-- **Sin revisar contra la entrega:** `REQUERIMIENTOS.md`, `PRODUCT_BACKLOG.md`,
-  `REGLAS_DE_NEGOCIO.md`, `ACTORES_DEL_NEGOCIO.md`, `SEGUIMIENTO_HU.md`. Las
-  estimaciones de `BACKLOG_PRIORIZADO.md` sí se verificaron: coinciden.
-- **`EP0- SINCOCO vision.docx` y las dos actas no se contrastaron** con ningún
-  archivo del repositorio.
-- **Sin contrastar:** `ANEXOS/DIAGRAMAS BASE DE DATOS/` (MER, BDD normalizada,
-  diagrama de clases) contra `docs/casos_de_uso/` y el esquema.
+Revisión completa hecha. Lo que queda:
+
+- **`INFORME_AYD.docx` y `.pdf` están desactualizados** respecto al `.md`: no
+  llevan la corrección del cronograma. Hay que regenerarlos desde el Markdown.
+  (Además había un `.~lock.INFORME_AYD.docx#` sin commitear: LibreOffice tenía
+  el archivo abierto.)
+- **Los BPMN y diagramas previos del equipo siguen en el repositorio**, junto a
+  los oficiales en `docs/bpmn/entrega/` y `docs/modelo_datos/entrega/`. Decidir
+  si se borran los viejos.
+- **El MER de la entrega no dibuja `roles_permisos` como entidad** (32 de 33
+  tablas); aparece como relación N:M. `BDD normalizada` sí cubre las 33. No
+  parece defecto, pero conviene confirmarlo con el equipo.
+
+Ya verificado y consistente: `TRAZABILIDAD.md`, `HU_CRITERIOS_ACEPTACION.md`,
+`CASOS_DE_USO.md`, `PRODUCT_BACKLOG.md` (narrativas), `BACKLOG_PRIORIZADO.md`
+(estimaciones y MoSCoW sin conflicto con las prioridades de la entrega),
+`REGLAS_DE_NEGOCIO.md` y `REQUERIMIENTOS.md` (las 4 RN y los 5 RNF del acta
+están cubiertos), `SEGUIMIENTO_HU.md` (30 HU), `ACTORES_DEL_NEGOCIO.md` (los 4
+actores humanos coinciden con §5 de la visión; se añadió el actor **Sistema**,
+que la entrega asigna a CU-15, CU-18, CU-23 y CU-24), `schema.sql` (= dump) y
+`README.md`.
 
 ### Bloqueante para levantar el proyecto
 
