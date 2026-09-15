@@ -85,9 +85,9 @@ SINCOCO/
 
 | Archivo | Contenido |
 |---|---|
-| `docs/REQUERIMIENTOS.md` | RF01–RF36 y RNF01–RNF16 con su caso de uso y soporte en el modelo |
+| `docs/REQUERIMIENTOS.md` | RF01–RF36 y RNF01–RNF17 con su caso de uso y soporte en el modelo |
 | `docs/REGLAS_DE_NEGOCIO.md` | RN01–RN14 y dónde se aplica cada una |
-| `docs/CASOS_DE_USO.md` | los 29 casos de uso |
+| `docs/CASOS_DE_USO.md` | los 30 casos de uso |
 | `docs/TRAZABILIDAD.md` | matriz problema → requerimiento → caso de uso → épica → HU → sprint |
 | `docs/MATRIZ_CARACTERIZACION.md` | entregable del OE1: 52 variables en 16 dimensiones |
 | `docs/schema.sql` | 27 tablas, 3 triggers de inventario, baja lógica |
