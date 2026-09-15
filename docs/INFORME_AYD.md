@@ -866,15 +866,22 @@ corresponden a los **productos** definidos para cada OE en el enunciado oficial.
 |---|---|---|---|
 | Fase 0 — inicio del semestre | **OE1 · Caracterizar** | Levantamiento de requisitos con la constructora; caracterización de procesos y actores; modelado del proceso actual y propuesto; definición del catálogo de reglas de negocio e indicadores; especificación de requerimientos funcionales y no funcionales. | Diagnóstico del proceso actual; identificación de actores; diagramas AS-IS; diagramas TO-BE; catálogo de reglas de negocio; matriz de caracterización; catálogo de indicadores; requerimientos funcionales; requerimientos no funcionales. |
 | Fase 0 y transversal a los sprints | **OE2 · Diseñar** | Definición de la arquitectura; diseño del modelo de datos y su normalización; elaboración de los diagramas UML; diseño del modelo de roles y permisos, del dashboard, de las alertas y de los mecanismos de trazabilidad; prototipado de interfaces. | Arquitectura de software; modelo entidad-relación; modelo lógico de datos; diagramas UML; prototipos de interfaces; modelo de roles y permisos; diseño del dashboard; modelo de alertas; diseño de trazabilidad. |
-| Sprint 1: 07–11 sep 2026 · Sprint 2: 28 sep–02 oct 2026 · Sprint 3: 19–23 oct 2026 · Sprint 4: 09–13 nov 2026 | **OE3 · Desarrollar** | Sprint 1: gestión de usuarios/roles y registro de proyectos (RF01–RF02). Sprint 2: estructura del proyecto, personal y asignación de responsables. Sprint 3: catálogo y control de materiales (entradas, salidas, consumos). Sprint 4: catálogo de herramientas, servicios externos, costos e indicadores. Cada sprint incluye Planning, desarrollo, pruebas, Review y Retrospectiva. | Aplicación web funcional; base de datos; módulos integrados; dashboard; reportes; alertas; bitácora de operaciones. |
-| Fase de cierre: 09–13 nov 2026 | **OE4 · Validar** | Ejecución del plan de pruebas en sus distintos niveles; escenarios de uso representativos de los procesos de la constructora; ajustes derivados de los hallazgos; elaboración de manuales y despliegue de la versión final. | Plan de pruebas; pruebas unitarias; pruebas de integración; pruebas funcionales; pruebas de aceptación; informe de resultados; manual técnico; manual de usuario; versión desplegada del sistema. |
+| Semanas 4–6: Sprint 1 · 7–9: Sprint 2 · 10–12: Sprint 3 · 13–15: Sprint 4 | **OE3 · Desarrollar** | Sprint 1: usuarios y roles, registro de proyectos, plan de trabajo, personal y conservación de historial (HU-01 a HU-04, HU-18). Sprint 2: asignación de responsables, catálogos de materiales y herramientas, proveedores y servicios externos, incidencias, avance y auditoría (HU-05, 07, 10, 13, 14, 17, 21, 28, 30). Sprint 3: solicitudes y devoluciones, entregas de herramientas, ingreso a inventario, evidencias, traslados y alertas de gestión (HU-06, 08, 11, 12, 19, 22, 24, 29). Sprint 4: consumo real, salidas efectivas, historial de herramientas, costos, indicadores, reportes y alertas de stock (HU-09, 15, 16, 20, 23, 25, 26, 27). Cada sprint incluye Planning, desarrollo, pruebas, Review y Retrospectiva. | Aplicación web funcional; base de datos; módulos integrados; dashboard; reportes; alertas; bitácora de operaciones. |
+| Semanas 16–18: Fase de cierre | **OE4 · Validar** | Ejecución del plan de pruebas en sus distintos niveles; escenarios de uso representativos de los procesos de la constructora; ajustes derivados de los hallazgos; elaboración de manuales y despliegue de la versión final. | Plan de pruebas; pruebas unitarias; pruebas de integración; pruebas funcionales; pruebas de aceptación; informe de resultados; manual técnico; manual de usuario; versión desplegada del sistema. |
 
-**Nota sobre el cronograma.** El Sprint 4 y la Fase de Cierre están programados en la
-misma semana (09–13 nov 2026). El Sprint 4 concentra además trece de las
-veintinueve historias de usuario del proyecto —catálogo de herramientas, entregas y
-devoluciones, proveedores, servicios externos, incidencias, costos, indicadores,
-reportes y auditoría— frente a las dos del Sprint 1 (8 puntos de historia). La concentración de carga en el tramo final del cronograma constituye un riesgo de
-planificación que el equipo monitorea mediante las retrospectivas de cada sprint.
+**Nota sobre el cronograma.** La distribución de las 30 historias de usuario entre
+los cuatro sprints es la del anexo *Historias de Usuario Refinadas* de la primera
+entrega: 5 HU y 19 puntos en el Sprint 1, 9 HU y 33 puntos en el Sprint 2, 8 HU y
+31 puntos en el Sprint 3, y 8 HU y 42 puntos en el Sprint 4, para un total de 125
+puntos de historia.
+
+El reparto por número de historias es razonablemente parejo a partir del Sprint 2,
+pero la carga por puntos no lo es: el Sprint 4 concentra 42 de los 125 puntos —un
+34 % del esfuerzo estimado— porque agrupa las historias de mayor tamaño del
+proyecto (consolidación de costos, dashboard de indicadores y reportes, de 8 puntos
+cada una). Esa concentración en el tramo final, sumada a la proximidad con la fase
+de cierre (semanas 16–18), constituye un riesgo de planificación que el equipo
+monitorea mediante las retrospectivas de cada sprint.
 
 ---
 
