@@ -23,22 +23,30 @@ const ROL_LABEL = {
   ENCARGADO_BODEGA: 'Encargado de bodega',
 }
 
-const VACIO = { username: '', email: '', password: '', rol_id: '' }
+const VACIO = { username: '', email: '', password: '', rol_id: '', trabajador_id: '' }
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState([])
   const [roles, setRoles] = useState([])
+  const [trabajadores, setTrabajadores] = useState([])
   const [cargando, setCargando] = useState(true)
   const [form, setForm] = useState(VACIO)
   const [abierto, setAbierto] = useState(false)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
+  // CU-01 Alt 3: id del usuario cuyo rol se está editando en la tabla.
+  const [editandoRol, setEditandoRol] = useState(null)
 
   const cargar = async () => {
-    const [u, r] = await Promise.all([api.get('/usuarios'), api.get('/usuarios/roles')])
+    const [u, r, t] = await Promise.all([
+      api.get('/usuarios'),
+      api.get('/usuarios/roles'),
+      api.get('/usuarios/trabajadores-disponibles'),
+    ])
     setUsuarios(u.data)
     setRoles(r.data)
+    setTrabajadores(t.data)
     setCargando(false)
   }
 
@@ -55,7 +63,11 @@ export default function Usuarios() {
     setAviso('')
     setGuardando(true)
     try {
-      await api.post('/usuarios', { ...form, rol_id: Number(form.rol_id) })
+      await api.post('/usuarios', {
+        ...form,
+        rol_id: Number(form.rol_id),
+        trabajador_id: Number(form.trabajador_id),
+      })
       setForm(VACIO)
       setAbierto(false)
       setAviso(`Usuario "${form.username}" creado con cuenta activa.`)
@@ -64,6 +76,28 @@ export default function Usuarios() {
       setError(err.response?.data?.error ?? 'No se pudo crear el usuario.')
     } finally {
       setGuardando(false)
+    }
+  }
+
+  // CU-01 Alt 3: asignar un rol distinto a un usuario existente. Los permisos
+  // se actualizan según el rol nuevo; el historial ya registrado no se altera.
+  const cambiarRol = async (usuario, rol_id) => {
+    setError('')
+    setAviso('')
+    if (!rol_id || Number(rol_id) === usuario.rol_id) {
+      setEditandoRol(null)
+      return
+    }
+    try {
+      const { data } = await api.patch(`/usuarios/${usuario.id}/rol`, { rol_id: Number(rol_id) })
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === usuario.id ? { ...u, rol_id: data.rol_id, rol: data.rol } : u)),
+      )
+      setAviso(`${usuario.username}: rol cambiado a ${ROL_LABEL[data.rol] ?? data.rol}.`)
+    } catch (err) {
+      setError(err.response?.data?.error ?? `No se pudo cambiar el rol de ${usuario.username}.`)
+    } finally {
+      setEditandoRol(null)
     }
   }
 
@@ -171,6 +205,30 @@ export default function Usuarios() {
                 ))}
               </select>
             </div>
+            <div>
+              <label htmlFor="u-trabajador" className="label">
+                Trabajador
+              </label>
+              <select
+                id="u-trabajador"
+                className="input"
+                value={form.trabajador_id}
+                onChange={(e) => setForm({ ...form, trabajador_id: e.target.value })}
+                required
+              >
+                <option value="">Seleccione un trabajador…</option>
+                {trabajadores.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombres} {t.apellidos} — {t.numero_documento}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {trabajadores.length === 0
+                  ? 'No hay trabajadores sin cuenta disponibles.'
+                  : 'Cada cuenta se vincula a un trabajador y solo puede tener una.'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -212,7 +270,33 @@ export default function Usuarios() {
                   <tr key={u.id}>
                     <td className="px-5 py-4 font-medium text-slate-800">{u.username}</td>
                     <td className="px-5 py-4 text-slate-600">{u.email}</td>
-                    <td className="px-5 py-4 text-slate-600">{ROL_LABEL[u.rol] ?? u.rol}</td>
+                    <td className="px-5 py-4 text-slate-600">
+                      {editandoRol === u.id ? (
+                        <select
+                          className="input py-1 text-sm"
+                          aria-label={`Rol de ${u.username}`}
+                          defaultValue={u.rol_id}
+                          autoFocus
+                          onBlur={() => setEditandoRol(null)}
+                          onChange={(e) => cambiarRol(u, e.target.value)}
+                        >
+                          {roles.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {ROL_LABEL[r.nombre] ?? r.nombre}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded px-1 text-left hover:bg-slate-100 hover:underline"
+                          title="Cambiar rol"
+                          onClick={() => setEditandoRol(u.id)}
+                        >
+                          {ROL_LABEL[u.rol] ?? u.rol}
+                        </button>
+                      )}
+                    </td>
                     <td className="px-5 py-4">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
