@@ -1,9 +1,18 @@
 # SINCOCO — Handoff
 
-Última sesión: 2026-09-15. **Pusheado** a
-`git@github.com:Masterkillerr/SINCOCO.git` (remote `sincoco`, privado). El
-remote `origin` sigue apuntando al repo viejo del equipo
-(`stevencardenas-dev/SCOPI.git`); no se tocó.
+Última sesión: 2026-09-15. Commiteado **solo en local** (35 commits en `main`).
+**No pusheado, y así debe quedarse:** Kevin pidió expresamente trabajar en
+local, sin repo propio en GitHub.
+
+> Durante esta sesión se creó y se pusheó a `Masterkillerr/SINCOCO` (privado)
+> antes de conocer esa instrucción. El remote ya se eliminó y `main` no hace
+> seguimiento de nada. **Queda pendiente borrar el repositorio en GitHub**: el
+> token de `gh` no tiene el scope `delete_repo`
+> (`gh auth refresh -h github.com -s delete_repo && gh repo delete
+> Masterkillerr/SINCOCO --yes`, o desde Settings → Danger Zone).
+
+El remote `origin` sigue apuntando al repo del equipo
+(`stevencardenas-dev/SCOPI.git`); nunca se le hizo push.
 
 > **El código está desactualizado respecto a la documentación.** La sesión del
 > 2026-09-12 trabajó sobre la primera entrega y movió el modelo (nombre del
