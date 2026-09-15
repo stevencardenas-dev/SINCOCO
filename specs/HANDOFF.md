@@ -1,7 +1,7 @@
 # SINCOCO — Handoff
 
-Última sesión: 2026-09-12. Commiteado localmente (`7cc4c7d` + cambios de
-documentación sin commitear). **No pusheado.**
+Última sesión: 2026-09-15. Commiteado localmente (`6886d87`, `2b046bb`,
+`5515d60`, `489c5b2`). **No pusheado.**
 
 > **El código está desactualizado respecto a la documentación.** La sesión del
 > 2026-09-12 trabajó sobre la primera entrega y movió el modelo (nombre del
@@ -133,12 +133,14 @@ en navegador, no solo con `vite build`.
 
 - **Los sprints de la entrega ganan sobre los del informe (§10).** 18 de las 30
   HU tenían un sprint distinto en `TRAZABILIDAD.md` que en la entrega. Se
-  realineó todo a la entrega, porque es el material de evaluación. Consecuencia
-  no resuelta: `INFORME_AYD.md` (~L869–876) todavía narra el plan viejo y
-  afirma que el Sprint 4 concentra trece HU y el Sprint 1 solo dos; con el plan
-  de la entrega son 8 y 5. **Ese párrafo y su cronograma con fechas hay que
-  rehacerlos a mano** — tiene fechas de calendario que ningún documento de la
-  entrega fija, así que no se tocó.
+  realineó todo a la entrega, porque es el material de evaluación.
+- **El cronograma del informe se rehízo con las semanas de `EP0- SINCOCO
+  vision.docx` §10** (sprints en semanas 4-6, 7-9, 10-12, 13-15; cierre en
+  16-18). Las fechas anteriores (`Sprint 1: 07–11 sep 2026` … `Sprint 4:
+  09–13 nov 2026`) no salían de ningún documento de la entrega y además
+  solapaban el Sprint 4 con la fase de cierre en la misma semana. La visión sí
+  fija una estructura de semanas, así que se adoptó esa en vez de inventar
+  fechas de calendario.
 - **No se borraron los BPMN previos del equipo.** Los oficiales entraron en
   `docs/bpmn/entrega/` con un README que fija la precedencia. Si se confirma
   que los sueltos ya no sirven, se borran; no era decisión de esta sesión.
