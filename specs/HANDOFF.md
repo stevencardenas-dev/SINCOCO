@@ -20,11 +20,16 @@ penaliza.
 
 ## Jerarquía de autoridad — importa
 
-1. **`~/1.PRIMERA ENTREGA-20260912T182509Z-1-001.zip`** — la primera entrega
-   (17 archivos, 2026-09-12). Es la fuente vigente para **HU, CU, RF y
-   esquema**: `TRAZABILIDAD_RELOADED ++.txt` (30 HU ↔ 30 CU, RF01–RF36, con
-   escenarios y criterios) y `DumpSINCOCO.sql` (33 tablas, 4 triggers). Manda
-   sobre el enunciado donde se contradigan.
+1. **`~/1.PRIMERA ENTREGA-20260915T180612Z-1-001.zip`** — la primera entrega
+   (23 archivos, recibida 2026-09-15; reemplaza al zip `...20260912T182509Z...`
+   de 17 archivos). **Es el material frente al cual los profesores evalúan la
+   aplicación**, y por tanto la fuente vigente para **HU, CU, RF y esquema**:
+   `ANEXOS/Historias Usuario Refinadas.docx` (30 HU con épica, prioridad,
+   estimación, sprint y criterios), `ANEXOS/Protocolo de Especificación de
+   Requerimientos.docx` (30 CU con flujos principales y 40 alternativos),
+   `ANEXOS/Matriz Articulacion HU-CU.docx` (HU-NN ↔ CU-NN 1:1),
+   `ANEXOS/BPMN_s/` (5 procesos AS-IS/TO-BE) y `DumpSINCOCO.sql` (33 tablas).
+   Manda sobre el enunciado donde se contradigan.
 2. **`~/CONTROL INTEGRAL DE PROYECTOS DE CONSTRUCCIÓN.docx.odt`** — el
    enunciado del profesor. Sigue siendo canónico para **RNF01–RNF15 y
    RN01–RN10**, que la entrega no numera. La numeración RF01–RF32 del enunciado
@@ -124,6 +129,23 @@ en navegador, no solo con `vite build`.
 
 ## Decisiones
 
+### De la sesión 2026-09-15
+
+- **Los sprints de la entrega ganan sobre los del informe (§10).** 18 de las 30
+  HU tenían un sprint distinto en `TRAZABILIDAD.md` que en la entrega. Se
+  realineó todo a la entrega, porque es el material de evaluación. Consecuencia
+  no resuelta: `INFORME_AYD.md` (~L869–876) todavía narra el plan viejo y
+  afirma que el Sprint 4 concentra trece HU y el Sprint 1 solo dos; con el plan
+  de la entrega son 8 y 5. **Ese párrafo y su cronograma con fechas hay que
+  rehacerlos a mano** — tiene fechas de calendario que ningún documento de la
+  entrega fija, así que no se tocó.
+- **No se borraron los BPMN previos del equipo.** Los oficiales entraron en
+  `docs/bpmn/entrega/` con un README que fija la precedencia. Si se confirma
+  que los sueltos ya no sirven, se borran; no era decisión de esta sesión.
+- **`docs/schema.sql` ya era `DumpSINCOCO.sql`**, verificado línea por línea
+  (solo difieren CRLF y el encabezado `CREATE DATABASE`/`USE`, documentado en
+  el propio archivo). No se tocó.
+
 ### De la sesión 2026-09-12
 
 - **La entrega manda sobre el repositorio en HU/CU/RF/esquema**, pero **no se
@@ -154,6 +176,19 @@ en navegador, no solo con `vite build`.
 - **Sin atribución de IA en los commits.** Hook global en `~/.git-hooks/`.
 
 ## Pendiente
+
+### Documentación vs. Primera Entrega (sesión 2026-09-15)
+
+- **`INFORME_AYD.md` ~L869–876 narra el plan de sprints viejo.** Ver Decisiones.
+  Requiere reescritura manual: las fechas de calendario no salen de la entrega.
+  `INFORME_AYD.docx`/`.pdf` arrastran lo mismo.
+- **Sin revisar contra la entrega:** `REQUERIMIENTOS.md`, `PRODUCT_BACKLOG.md`,
+  `REGLAS_DE_NEGOCIO.md`, `ACTORES_DEL_NEGOCIO.md`, `SEGUIMIENTO_HU.md`. Las
+  estimaciones de `BACKLOG_PRIORIZADO.md` sí se verificaron: coinciden.
+- **`EP0- SINCOCO vision.docx` y las dos actas no se contrastaron** con ningún
+  archivo del repositorio.
+- **Sin contrastar:** `ANEXOS/DIAGRAMAS BASE DE DATOS/` (MER, BDD normalizada,
+  diagrama de clases) contra `docs/casos_de_uso/` y el esquema.
 
 ### Bloqueante para levantar el proyecto
 
