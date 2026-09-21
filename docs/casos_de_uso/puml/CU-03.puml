@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Definir plan de trabajo (etapas y actividades)
+left to right direction
+actor Administrador as A
+
+rectangle "Definir plan de trabajo" {
+  usecase "Crear etapa con orden y fechas programadas" as UC1
+  usecase "Validar que el proyecto exista" as UC2
+  usecase "Crear actividad dentro de una etapa" as UC3
+  usecase "Validar etapa válida y perteneciente al proyecto" as UC4
+  usecase "Asignar responsable a la actividad" as UC5
+  usecase "Registrar fechas programadas de la actividad" as UC6
+}
+
+A --> UC1
+A --> UC3
+UC1 ..> UC2 : <<include>>
+UC3 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<extend>>
+UC3 ..> UC6 : <<include>>
+
+note right of UC4
+  Flujo alterno: actividad sin etapa
+  válida → rechazado (schema FK etapa_id)
+end note
+@enduml
