@@ -1,0 +1,42 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Registrar devolución de herramienta
+left to right direction
+actor "Encargado de bodega" as B
+
+rectangle "Registrar devolución de herramienta" {
+  usecase "Registrar fecha real de devolución" as UC1
+  usecase "Registrar estado de devolución (incl. dañada/perdida)" as UC2
+  usecase "Comparar estado entrega vs devolución" as UC3
+  usecase "Cambiar disponibilidad a DISPONIBLE" as UC4
+  usecase "Registrar novedad si hay daño o pérdida" as UC5
+}
+
+B --> UC1
+B --> UC2
+UC2 ..> UC3 : <<include>>
+UC1 ..> UC4 : <<include>>
+UC3 ..> UC5 : <<extend>>
+
+note bottom of UC5
+  estado_prestamo = CON_NOVEDAD
+  (schema: prestamos_herramientas)
+end note
+@enduml

@@ -1,0 +1,44 @@
+@startuml
+skinparam backgroundColor white
+skinparam usecase {
+  BackgroundColor #FEFECE
+  BorderColor #A80036
+  ArrowColor #A80036
+}
+skinparam actor {
+  BorderColor #A80036
+  BackgroundColor #FEFECE
+}
+skinparam note {
+  BackgroundColor #FFFFCC
+  BorderColor #999999
+}
+skinparam ArrowFontSize 11
+skinparam shadowing false
+skinparam nodesep 35
+skinparam ranksep 55
+title Diagrama de caso de uso: Mantener catálogo de materiales
+left to right direction
+actor "Encargado de bodega" as B
+
+rectangle "Mantener catálogo de materiales" {
+  usecase "Crear material (código, categoría, unidad, costo)" as UC1
+  usecase "Editar material" as UC2
+  usecase "Consultar material por código o categoría" as UC3
+  usecase "Definir nivel mínimo de stock" as UC4
+  usecase "Validar código único" as UC5
+  usecase "Dar de baja material (inactivar)" as UC6
+}
+
+B --> UC1
+B --> UC2
+B --> UC3
+B --> UC6
+UC1 ..> UC4 : <<include>>
+UC1 ..> UC5 : <<include>>
+
+note right of UC4
+  El nivel mínimo alimenta
+  CU-23: Alertar stock mínimo
+end note
+@enduml
