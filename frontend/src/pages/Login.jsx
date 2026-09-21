@@ -23,12 +23,12 @@ export default function Login() {
   return (
     <div className="flex min-h-screen">
       {/* Brand panel */}
-      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-slate-900 p-12 lg:flex">
-        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-brand-600/30 blur-3xl" />
-        <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-amber-500/20 blur-3xl" />
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-black p-12 lg:flex">
+        <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
+        <div className="absolute -bottom-40 -left-24 h-96 w-96 rounded-full bg-accent-400/20 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-xl font-extrabold text-white shadow-lg shadow-brand-600/40">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-xl font-extrabold text-black">
             S
           </div>
           <div>
@@ -63,11 +63,10 @@ export default function Login() {
       </div>
 
       {/* Form panel */}
-      <div className="flex w-full items-center justify-center bg-slate-50 px-6 py-12 lg:w-1/2">
+      <div className="flex w-full items-center justify-center bg-white px-6 py-12 lg:w-1/2">
         <div className="w-full max-w-sm">
-          <div className="mb-8 lg:hidden">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-xl font-extrabold text-white">
+          <div className="mb-8 lg:hidden">            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-black text-xl font-extrabold text-white">
                 S
               </div>
               <div>
@@ -114,7 +113,7 @@ export default function Login() {
 
             <div className="flex items-center justify-between text-sm">
               <label className="flex items-center gap-2 text-slate-600">
-                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500" />
+                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-accent-400" />
                 Recordarme
               </label>
               <a href="#" className="font-semibold text-brand-600 hover:text-brand-700">

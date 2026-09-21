@@ -74,14 +74,14 @@ export default function Sidebar({ open, onClose }) {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-slate-900 transition-transform duration-200 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-black transition-transform duration-200 lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
       {/* Brand */}
       <div className="flex items-center justify-between px-6 py-5">
         <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-lg font-extrabold text-white shadow-lg shadow-brand-600/30">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-extrabold text-black">
             S
           </div>
           <div>
@@ -115,7 +115,7 @@ export default function Sidebar({ open, onClose }) {
                     className={({ isActive }) =>
                       `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
                         isActive
-                          ? 'bg-brand-600 text-white'
+                          ? 'bg-white text-black'
                           : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                       }`
                     }

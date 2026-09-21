@@ -37,7 +37,7 @@ export default function Dashboard() {
       <div>
         <p className="text-sm text-slate-500">{hoyCapitalizado}</p>
         <div className="mt-1 flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-black">
             <SunIcon className="h-5 w-5" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">Buen día, {user?.username ?? 'Usuario'}</h2>
@@ -72,7 +72,7 @@ export default function Dashboard() {
               <AreaChart data={avanceSeries} margin={{ top: 8, right: 8, left: -14, bottom: 0 }}>
                 <defs>
                   <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4f46e5" stopOpacity={0.25} />
+                    <stop offset="0%" stopColor="#171717" stopOpacity={0.25} />
                     <stop offset="100%" stopColor="#4f46e5" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1">
@@ -87,8 +87,8 @@ export default function Dashboard() {
                   contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
                   formatter={(v) => [`${v}%`]}
                 />
-                <Area type="monotone" dataKey="Los Álamos" stroke="#4f46e5" strokeWidth={2.5} fill="url(#gA)" />
-                <Area type="monotone" dataKey="El Portal" stroke="#f59e0b" strokeWidth={2.5} fill="url(#gB)" />
+                <Area type="monotone" dataKey="Los Álamos" stroke="#171717" strokeWidth={2.5} fill="url(#gA)" />
+                <Area type="monotone" dataKey="El Portal" stroke="#eab308" strokeWidth={2.5} fill="url(#gB)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

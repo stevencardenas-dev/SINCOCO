@@ -7,7 +7,7 @@
     @apply antialiased;
   }
   body {
-    @apply bg-slate-50 font-sans text-slate-800;
+    @apply bg-white font-sans text-slate-800;
   }
 }
 
@@ -16,13 +16,13 @@
     @apply rounded-2xl border border-slate-200 bg-white shadow-card;
   }
   .btn-primary {
-    @apply inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+    @apply inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2;
   }
   .btn-ghost {
-    @apply inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2;
+    @apply inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30;
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm outline-none transition focus:border-accent-400 focus:ring-2 focus:ring-accent-400/40;
   }
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;

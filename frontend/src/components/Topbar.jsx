@@ -57,13 +57,13 @@ export default function Topbar({ onMenuClick }) {
             <input
               type="search"
               placeholder="Buscar proyecto, material, trabajador…"
-              className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/30"
+              className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-accent-400 focus:bg-white focus:ring-2 focus:ring-accent-400/40"
             />
           </div>
 
           {/* User */}
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 py-1.5 pl-1.5 pr-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-xs font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-xs font-bold text-white">
               {user?.username?.[0]?.toUpperCase() ?? 'U'}
             </div>
             <div className="hidden leading-tight sm:block">
