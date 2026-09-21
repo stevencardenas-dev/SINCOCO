@@ -63,6 +63,11 @@ Sprint 1 en curso. **HU-01 (RF01) está completa**: autenticación con JWT,
 identificación del rol y menú por rol, más la pantalla de gestión de usuarios
 (crear con rol asignado, bloquear y activar).
 
+**HU-02 (RF02) está integrada en su núcleo**: registro de proyectos con
+arquitectura en capas (`POST /api/proyectos`) y listado de proyectos en el
+frontend consumiendo la API real. El formulario de registro (CU-02) y el
+catálogo de clientes quedan para los próximos sprints.
+
 Los demás módulos son marcadores de posición: el menú y las rutas existen, pero
 el contenido llega en los sprints 2 a 4. El tablero muestra datos de
 demostración (`frontend/src/lib/mockData.js`), no datos reales.
@@ -75,11 +80,15 @@ RN07, RN11 y RN14. El detalle de dónde vive cada regla está en
 
 ```
 SINCOCO/
-├── backend/     # Express + JWT: autenticación, usuarios, bitácora
+├── backend/     # Express + JWT (ESM, en capas): auth, usuarios, proyectos
 ├── frontend/    # React + Vite: interfaz por rol
 ├── docs/        # requerimientos, reglas, casos de uso, esquema, diagramas
-└── tests/       # pruebas de navegador (Playwright)
+└── tests/       # pruebas de API: login/RBAC, usuarios (CU-01), proyectos (CU-02)
 ```
+
+> El backend canónico es `backend/`. La primera implementación de HU-02
+> (`BACK-END/`, CommonJS, sin autenticación) fue retirada: su funcionalidad
+> vive en `backend/` con más reglas de negocio y pruebas.
 
 ### Documentación
 
@@ -101,4 +110,5 @@ Con el backend y el frontend corriendo:
 ```bash
 python3 tests/test_login_rbac.py     # login y menú por rol
 python3 tests/test_usuarios_cu01.py  # CU-01: crear, duplicado, bloquear, activar
+python3 tests/test_proyectos_hu02.py # CU-02: registro de proyectos (requiere seed de cliente)
 ```
