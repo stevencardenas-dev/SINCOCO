@@ -5,7 +5,7 @@ Estado real vive en Jira. Esta tabla es un espejo rápido — actualizar el camp
 | HU | Descripción corta | Módulo / branch | Estado |
 |----|---|---|---|
 | HU-01 | Usuarios y roles | | Pendiente |
-| HU-02 | Registro de proyectos | | Pendiente |
+| HU-02 | Registro de proyectos | backend en capas + listado frontend (sin formulario) | En curso |
 | HU-03 | Plan de trabajo (etapas/actividades) | | Pendiente |
 | HU-04 | Registro de personal | | Pendiente |
 | HU-05 | Asignación de responsables | | Pendiente |
