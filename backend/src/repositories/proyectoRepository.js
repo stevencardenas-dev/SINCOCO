@@ -32,16 +32,18 @@ export async function findById(id) {
 }
 
 /**
- * Lista proyectos activos, más recientes primero (módulo de proyectos).
+ * Lista proyectos, más recientes primero (módulo de proyectos).
+ * Por defecto solo activos; `incluirInactivos` trae también los dados de baja
+ * (HU-18: filtro explícito para consultar registros archivados).
  */
-export async function listarActivos() {
+export async function listarActivos(incluirInactivos = false) {
   const [rows] = await pool.query(
     `SELECT p.*, c.razon_social_nombre AS cliente_nombre,
             TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS responsable_nombre
      FROM proyectos p
      JOIN clientes c ON c.id = p.cliente_id
      JOIN trabajadores t ON t.id = p.responsable_id
-     WHERE p.activo = 1
+     ${incluirInactivos ? '' : 'WHERE p.activo = 1'}
      ORDER BY p.creado_en DESC, p.id DESC`,
   )
   return rows.map(Proyecto.fromRow)

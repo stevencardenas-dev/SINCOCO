@@ -9,6 +9,8 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Proyectos = lazy(() => import('./pages/Proyectos.jsx'))
 const ModulePlaceholder = lazy(() => import('./pages/ModulePlaceholder.jsx'))
 const Usuarios = lazy(() => import('./pages/Usuarios.jsx'))
+const Personal = lazy(() => import('./pages/Personal.jsx'))
+const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -50,8 +52,17 @@ export default function App() {
               </RutaPorRol>
             }
           />
-          {/* RF5–RF6 */}
-          <Route path="personal" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Personal" rf="RF06 · RF07" /></RutaPorRol>} />
+          {/* RF03–RF04 · HU-03 */}
+          <Route
+            path="proyectos/:id"
+            element={
+              <RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}>
+                <PlanProyecto />
+              </RutaPorRol>
+            }
+          />
+          {/* RF06–RF07 · HU-04 */}
+          <Route path="personal" element={<RutaPorRol roles={[ADMIN, GERENTE]}><Personal /></RutaPorRol>} />
           {/* RF7–RF9 */}
           <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" rf="RF09 · RF10 · RF11" /></RutaPorRol>} />
           {/* RF10–RF11 */}
