@@ -224,7 +224,7 @@ export default function Proyectos() {
             </div>
             <div>
               <label htmlFor="p-presupuesto" className="label">Presupuesto inicial (COP)</label>
-              <input id="p-presupuesto" type="number" min="1" step="1000"
+              <input id="p-presupuesto" type="number" min="1" step="any"
                 className={campo('presupuesto_inicial')} value={form.presupuesto_inicial}
                 onChange={(e) => setForm({ ...form, presupuesto_inicial: e.target.value })} required />
             </div>
