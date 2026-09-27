@@ -84,7 +84,13 @@ def limpiar():
     )
     sql("DELETE FROM actividades WHERE nombre LIKE 'TEST-%'")
     sql("DELETE FROM etapas_proyecto WHERE nombre LIKE 'TEST-%'")
-    sql("DELETE FROM proyectos WHERE codigo LIKE 'TEST-%'")
+    # Además de los proyectos de prueba, se quitan los que apunten a un
+    # trabajador de prueba: de lo contrario la FK del responsable (RESTRICT)
+    # impide borrar ese trabajador y contamina la corrida siguiente.
+    sql(
+        "DELETE FROM proyectos WHERE codigo LIKE 'TEST-%' "
+        "OR responsable_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%')"
+    )
     sql("DELETE FROM trabajadores WHERE numero_documento LIKE 'TEST-%'")
     sql("DELETE FROM clientes WHERE numero_documento LIKE 'TEST-%'")
 
