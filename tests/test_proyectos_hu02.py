@@ -13,6 +13,9 @@ import subprocess
 import urllib.error
 import urllib.request
 
+# Utilidades compartidas para garantizar las precondiciones de datos.
+from api_helper import http as _http, scalar as _scalar
+
 BASE = 'http://localhost:3005'
 
 # Acceso a la base para sembrar/limpiar casos de prueba, con las mismas
@@ -56,6 +59,18 @@ estado, login = http('POST', '/api/auth/login', {'username': 'admin', 'password'
 assert estado == 200, f'login admin fallo: {estado} {login}'
 token = login['token']
 print('login admin ->', estado)
+
+# Precondición: /api/usuarios/trabajadores-disponibles solo lista trabajadores
+# sin cuenta. Se asegura que exista al menos uno para elegir el responsable.
+if _scalar(
+    'SELECT COUNT(*) FROM trabajadores t LEFT JOIN usuarios u ON u.trabajador_id = t.id '
+    'WHERE u.id IS NULL AND t.activo = 1'
+) == '0':
+    _http('POST', '/api/trabajadores', {
+        'numero_documento': 'TEST-HU-HU02', 'tipo_documento': 'CC',
+        'nombres': 'Responsable', 'apellidos': 'De prueba',
+        'cargo': 'Maestro de obra', 'especialidad': 'Estructuras',
+    }, token=token)
 
 # ids de referencia
 estado, trabajadores = http('GET', '/api/usuarios/trabajadores-disponibles', token=token)
