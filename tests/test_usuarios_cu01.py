@@ -4,6 +4,24 @@
 # CU-01 (HU-01): registrar usuario y asignar rol; bloquear/activar.
 from playwright.sync_api import sync_playwright
 
+# Precondiciones de datos: esta prueba crea un usuario y lo vincula a un
+# trabajador (usuarios.trabajador_id es UNIQUE). Se elimina el usuario de una
+# corrida anterior —lo que libera su trabajador— y, si aun así no hay ninguno
+# libre, se registra uno de prueba.
+from api_helper import login as _login_api, http as _http, scalar as _scalar, sql as _sql
+
+_token = _login_api('admin')
+_sql("DELETE FROM usuarios WHERE username='carlos.test'")
+if _scalar(
+    'SELECT COUNT(*) FROM trabajadores t LEFT JOIN usuarios u ON u.trabajador_id = t.id '
+    'WHERE u.id IS NULL AND t.activo = 1'
+) == '0':
+    _http('POST', '/api/trabajadores', {
+        'numero_documento': 'TEST-HU-CU01', 'tipo_documento': 'CC',
+        'nombres': 'Trabajador', 'apellidos': 'Sin cuenta',
+        'cargo': 'Operario', 'especialidad': 'General',
+    }, token=_token)
+
 def login(pg, u, p='Prueba123!'):
     pg.goto('http://localhost:5173/login'); pg.wait_for_load_state('networkidle')
     pg.fill('#username', u); pg.fill('#password', p)
