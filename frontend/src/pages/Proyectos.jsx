@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FolderIcon, ArrowPathIcon, PlusIcon, BuildingOffice2Icon } from '@heroicons/react/24/outline'
+import { Link } from 'react-router-dom'
+import { FolderIcon, ArrowPathIcon, PlusIcon, BuildingOffice2Icon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
@@ -291,6 +292,7 @@ export default function Proyectos() {
                   <th className="px-5 py-3.5 font-semibold">Presupuesto</th>
                   <th className="px-5 py-3.5 font-semibold">Estado</th>
                   <th className="px-5 py-3.5 font-semibold">Avance</th>
+                  <th className="px-5 py-3.5 font-semibold">Plan</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -325,6 +327,11 @@ export default function Proyectos() {
                           </div>
                           <span className="text-xs font-semibold tabular-nums text-slate-600">{avance}%</span>
                         </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
+                          <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
+                        </Link>
                       </td>
                     </tr>
                   )
