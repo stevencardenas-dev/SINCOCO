@@ -3,6 +3,8 @@ import {
   obtenerTrabajador,
   registrarTrabajador,
   actualizarTrabajador,
+  darDeBajaTrabajador,
+  reactivarTrabajador,
 } from '../services/trabajadorService.js'
 import { RegistrarTrabajadorDto } from '../dtos/trabajador/RegistrarTrabajadorDto.js'
 
@@ -46,6 +48,26 @@ export async function actualizar(req, res, next) {
       ip: req.ip,
     })
     return res.json({ message: 'Trabajador actualizado', trabajador })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/trabajadores/:id/baja -> HU-18: baja lógica. */
+export async function baja(req, res, next) {
+  try {
+    const resultado = await darDeBajaTrabajador(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Trabajador dado de baja', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/trabajadores/:id/reactivar -> HU-18. */
+export async function reactivarCtrl(req, res, next) {
+  try {
+    const resultado = await reactivarTrabajador(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Trabajador reactivado', ...resultado })
   } catch (error) {
     return next(error)
   }

@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
   crear, listar, cambiarEstado, listarRoles,
-  listarTrabajadoresSinCuenta, cambiarRol,
+  listarTrabajadoresSinCuenta, cambiarRol, baja, reactivarCtrl,
 } from '../controllers/usuariosController.js'
 
 // HU-01 · criterio 4: el acceso se decide por los permisos del rol
@@ -17,5 +17,9 @@ router.get('/trabajadores-disponibles', requirePermiso('usuarios.crear'), listar
 router.post('/', requirePermiso('usuarios.crear'), crear)
 router.patch('/:id/estado', requirePermiso('usuarios.cambiar_estado'), cambiarEstado)
 router.patch('/:id/rol', requirePermiso('usuarios.cambiar_rol'), cambiarRol)
+
+// HU-18: baja lógica y reactivación de cuentas (usa el permiso de estado).
+router.patch('/:id/baja', requirePermiso('usuarios.cambiar_estado'), baja)
+router.patch('/:id/reactivar', requirePermiso('usuarios.cambiar_estado'), reactivarCtrl)
 
 export default router

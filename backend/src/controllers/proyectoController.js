@@ -1,4 +1,6 @@
-import { registrarProyecto, listarProyectos } from '../services/proyectoService.js'
+import {
+  registrarProyecto, listarProyectos, darDeBajaProyecto, reactivarProyecto,
+} from '../services/proyectoService.js'
 import { RegistrarProyectoDto } from '../dtos/proyecto/RegistrarProyectoDto.js'
 
 /**
@@ -27,11 +29,33 @@ export async function registrar(req, res, next) {
 /**
  * GET /api/proyectos
  * Lista los proyectos activos para el módulo de proyectos.
+ * `?incluirInactivos=1` incluye los dados de baja (HU-18).
  */
 export async function listar(req, res, next) {
   try {
-    const proyectos = await listarProyectos()
+    const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
+    const proyectos = await listarProyectos({ incluirInactivos })
     return res.json(proyectos)
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/proyectos/:id/baja -> HU-18: baja lógica. */
+export async function baja(req, res, next) {
+  try {
+    const resultado = await darDeBajaProyecto(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Proyecto dado de baja', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/proyectos/:id/reactivar -> HU-18. */
+export async function reactivarCtrl(req, res, next) {
+  try {
+    const resultado = await reactivarProyecto(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Proyecto reactivado', ...resultado })
   } catch (error) {
     return next(error)
   }

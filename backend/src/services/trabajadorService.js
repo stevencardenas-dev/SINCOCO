@@ -1,5 +1,6 @@
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
+import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -124,4 +125,35 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
   })
 
   return trabajadorRepository.findById(id)
+}
+
+/**
+ * HU-18 · criterio 4: un trabajador dado de baja lógica (activo = 0, con fecha
+ * de baja) no puede asignarse a nuevos proyectos o actividades. El proyecto lo
+ * valida al registrar (`proyectoService`); aquí se registra la baja.
+ */
+export async function darDeBajaTrabajador(id, ctx = {}) {
+  const trabajador = await trabajadorRepository.findById(id)
+  if (!trabajador) throw new AppError('Trabajador no encontrado', 404)
+
+  const afectadas = await darDeBaja({ tabla: 'trabajadores', id, usuarioId: ctx.usuarioId })
+  if (!afectadas) throw new AppError('El trabajador ya estaba dado de baja', 409)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'trabajadores',
+    registroId: Number(id), detalles: { numero_documento: trabajador.numero_documento }, ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 0 }
+}
+
+/** HU-18: reactivar un trabajador dado de baja. */
+export async function reactivarTrabajador(id, ctx = {}) {
+  const afectadas = await reactivar({ tabla: 'trabajadores', id })
+  if (!afectadas) throw new AppError('El trabajador no está dado de baja', 409)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'trabajadores',
+    registroId: Number(id), ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 1 }
 }

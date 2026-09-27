@@ -43,11 +43,13 @@ export default function Proyectos() {
   const [clienteAbierto, setClienteAbierto] = useState(false)
   const [clienteForm, setClienteForm] = useState(CLIENTE_VACIO)
   const [errorCampo, setErrorCampo] = useState(null)
+  // HU-18: por defecto no se muestran los proyectos dados de baja.
+  const [incluirInactivos, setIncluirInactivos] = useState(false)
 
   const cargar = () => {
     setError(null)
     api
-      .get('/proyectos')
+      .get('/proyectos', { params: incluirInactivos ? { incluirInactivos: 1 } : {} })
       .then((res) => setProyectos(res.data))
       .catch(() => setError('No se pudieron cargar los proyectos. Verifique que el backend esté disponible.'))
 
@@ -60,8 +62,21 @@ export default function Proyectos() {
     }
   }
 
-  // Carga inicial; el listado se refresca al volver a la pestaña.
-  useEffect(cargar, [])
+  // Carga inicial y al cambiar el filtro de inactivos.
+  useEffect(cargar, [incluirInactivos])
+
+  // HU-18: baja lógica y reactivación de proyectos (nunca borrado físico).
+  const cambiarBaja = async (p) => {
+    setError(null)
+    setAviso('')
+    try {
+      await api.patch(`/proyectos/${p.id}/${p.activo ? 'baja' : 'reactivar'}`)
+      setAviso(`${p.nombre}: ${p.activo ? 'dado de baja' : 'reactivado'}.`)
+      cargar()
+    } catch (err) {
+      setError(err.response?.data?.error ?? 'No se pudo cambiar el estado del proyecto.')
+    }
+  }
 
   const crear = async (e) => {
     e.preventDefault()
@@ -124,6 +139,9 @@ export default function Proyectos() {
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
         )}
+        <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
+          {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
+        </button>
         <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
           <ArrowPathIcon className="h-4 w-4" /> Actualizar
         </button>
@@ -293,6 +311,7 @@ export default function Proyectos() {
                   <th className="px-5 py-3.5 font-semibold">Estado</th>
                   <th className="px-5 py-3.5 font-semibold">Avance</th>
                   <th className="px-5 py-3.5 font-semibold">Plan</th>
+                  <th className="px-5 py-3.5 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -332,6 +351,17 @@ export default function Proyectos() {
                         <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
                           <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
                         </Link>
+                      </td>
+                      <td className="px-5 py-4 text-right">
+                        {esAdmin && (
+                          <button
+                            className="btn-ghost text-xs"
+                            onClick={() => cambiarBaja(p)}
+                            aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
+                          >
+                            {p.activo ? 'Dar de baja' : 'Reactivar'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )
