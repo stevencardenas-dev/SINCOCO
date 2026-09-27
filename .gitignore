@@ -35,6 +35,9 @@ pnpm-debug.log*
 # Python (pruebas de API)
 __pycache__/
 *.py[cod]
+.venv/
+# Capturas que generan las pruebas de interfaz
+tests/_*.png
 
 # Herramientas locales
 .freebuff/
