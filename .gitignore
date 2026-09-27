@@ -32,6 +32,10 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# Python (pruebas de API)
+__pycache__/
+*.py[cod]
+
 # Herramientas locales
 .freebuff/
 
