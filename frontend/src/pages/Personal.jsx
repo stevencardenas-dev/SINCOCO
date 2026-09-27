@@ -40,16 +40,31 @@ export default function Personal() {
   const [form, setForm] = useState(VACIO)
   const [abierto, setAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
+  // HU-18: por defecto no se muestran los registros dados de baja.
+  const [incluirInactivos, setIncluirInactivos] = useState(false)
 
   const cargar = () => {
     setError('')
     api
-      .get('/trabajadores')
+      .get('/trabajadores', { params: incluirInactivos ? { incluirInactivos: 1 } : {} })
       .then((res) => setPersonal(res.data))
       .catch(() => setError('No se pudo cargar el personal.'))
   }
 
-  useEffect(cargar, [])
+  useEffect(cargar, [incluirInactivos])
+
+  // HU-18: baja lógica y reactivación (nunca borrado físico).
+  const cambiarBaja = async (t) => {
+    setError('')
+    setAviso('')
+    try {
+      await api.patch(`/trabajadores/${t.id}/${t.activo ? 'baja' : 'reactivar'}`)
+      setAviso(`${t.nombres} ${t.apellidos}: ${t.activo ? 'dado de baja' : 'reactivado'}.`)
+      cargar()
+    } catch (err) {
+      setError(err.response?.data?.error ?? 'No se pudo cambiar el estado del trabajador.')
+    }
+  }
 
   const crear = async (e) => {
     e.preventDefault()
@@ -82,6 +97,9 @@ export default function Personal() {
             <PlusIcon className="h-5 w-5" /> Nuevo trabajador
           </button>
         )}
+        <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
+          {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
+        </button>
         <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
           <ArrowPathIcon className="h-4 w-4" /> Actualizar
         </button>
@@ -189,6 +207,7 @@ export default function Personal() {
                   <th className="px-5 py-3.5 font-semibold">Especialidad</th>
                   <th className="px-5 py-3.5 font-semibold">Estado</th>
                   <th className="px-5 py-3.5 font-semibold">Disponibilidad</th>
+                  <th className="px-5 py-3.5 font-semibold">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -209,6 +228,17 @@ export default function Personal() {
                       </span>
                     </td>
                     <td className="px-5 py-4 text-slate-600">{t.disponible ? 'Disponible' : 'No disponible'}</td>
+                    <td className="px-5 py-4 text-right">
+                      {esAdmin && (
+                        <button
+                          className="btn-ghost text-xs"
+                          onClick={() => cambiarBaja(t)}
+                          aria-label={t.activo ? `Dar de baja a ${t.nombres}` : `Reactivar a ${t.nombres}`}
+                        >
+                          {t.activo ? 'Dar de baja' : 'Reactivar'}
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

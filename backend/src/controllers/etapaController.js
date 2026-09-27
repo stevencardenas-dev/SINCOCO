@@ -1,4 +1,4 @@
-import { listarEtapas, registrarEtapa } from '../services/etapaService.js'
+import { listarEtapas, registrarEtapa, darDeBajaEtapa, reactivarEtapa } from '../services/etapaService.js'
 import { RegistrarEtapaDto } from '../dtos/etapa/RegistrarEtapaDto.js'
 import { AppError } from '../utils/AppError.js'
 
@@ -21,6 +21,26 @@ export async function registrar(req, res, next) {
     const dto = RegistrarEtapaDto.fromRequestBody(req.body)
     const etapa = await registrarEtapa(dto, { usuarioId: req.user.id, ip: req.ip })
     return res.status(201).json({ message: 'Etapa registrada correctamente', etapa })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/etapas/:id/baja -> HU-18. */
+export async function baja(req, res, next) {
+  try {
+    const resultado = await darDeBajaEtapa(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Etapa dada de baja', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/etapas/:id/reactivar -> HU-18. */
+export async function reactivarCtrl(req, res, next) {
+  try {
+    const resultado = await reactivarEtapa(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Etapa reactivada', ...resultado })
   } catch (error) {
     return next(error)
   }

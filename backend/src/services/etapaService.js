@@ -1,6 +1,7 @@
 import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
+import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -86,4 +87,31 @@ export async function registrarEtapa(dto, ctx = {}) {
   })
 
   return etapaRepository.findById(id)
+}
+
+/** HU-18: dar de baja lógica una etapa. */
+export async function darDeBajaEtapa(id, ctx = {}) {
+  const etapa = await etapaRepository.findById(id)
+  if (!etapa) throw new AppError('Etapa no encontrada', 404)
+
+  const afectadas = await darDeBaja({ tabla: 'etapas_proyecto', id, usuarioId: ctx.usuarioId })
+  if (!afectadas) throw new AppError('La etapa ya estaba dada de baja', 409)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'etapas_proyecto',
+    registroId: Number(id), detalles: { nombre: etapa.nombre }, ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 0 }
+}
+
+/** HU-18: reactivar una etapa dada de baja. */
+export async function reactivarEtapa(id, ctx = {}) {
+  const afectadas = await reactivar({ tabla: 'etapas_proyecto', id })
+  if (!afectadas) throw new AppError('La etapa no está dada de baja', 409)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'etapas_proyecto',
+    registroId: Number(id), ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 1 }
 }
