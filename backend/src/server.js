@@ -6,6 +6,8 @@ import usuariosRoutes from './routes/usuarios.js'
 import proyectosRoutes from './routes/proyectos.js'
 import clientesRoutes from './routes/clientes.js'
 import trabajadoresRoutes from './routes/trabajadores.js'
+import etapasRoutes from './routes/etapas.js'
+import actividadesRoutes from './routes/actividades.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 const app = express()
@@ -17,6 +19,8 @@ app.use('/api/usuarios', usuariosRoutes)
 app.use('/api/proyectos', proyectosRoutes)
 app.use('/api/clientes', clientesRoutes)
 app.use('/api/trabajadores', trabajadoresRoutes)
+app.use('/api/etapas', etapasRoutes)
+app.use('/api/actividades', actividadesRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Recurso no encontrado' })
