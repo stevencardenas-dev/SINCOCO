@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt'
 import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
+import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 
 // HU-01: crear usuario con rol asignado
 export async function crear(req, res) {
@@ -46,17 +47,43 @@ export async function crear(req, res) {
   }
 }
 
-// HU-01: listar usuarios (solo lo visible según su rol lo permite)
+// HU-01: listar usuarios (solo lo visible según su rol lo permite).
+// HU-18: por defecto solo los activos; ?incluirInactivos=1 trae los archivados.
 export async function listar(req, res) {
+  const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
   const [rows] = await pool.query(
-    `SELECT u.id, u.username, u.email, u.estado, u.rol_id, r.nombre AS rol,
+    `SELECT u.id, u.username, u.email, u.estado, u.rol_id, u.activo, r.nombre AS rol,
             TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS trabajador
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
      LEFT JOIN trabajadores t ON t.id = u.trabajador_id
+     ${incluirInactivos ? '' : 'WHERE u.activo = 1'}
      ORDER BY u.id`,
   )
   res.json(rows)
+}
+
+// HU-18: dar de baja lógica una cuenta (activo = 0 y estado INACTIVO), sin
+// borrarla: el historial y la bitácora se conservan.
+export async function baja(req, res) {
+  const afectadas = await darDeBaja({ tabla: 'usuarios', id: req.params.id, usuarioId: req.user.id })
+  if (!afectadas) return res.status(409).json({ error: 'La cuenta ya estaba dada de baja' })
+  await registrar({
+    usuarioId: req.user.id, accion: 'DAR_DE_BAJA', tabla: 'usuarios',
+    registroId: Number(req.params.id), ip: req.ip,
+  })
+  res.json({ id: Number(req.params.id), activo: 0 })
+}
+
+// HU-18: reactivar una cuenta dada de baja.
+export async function reactivarCtrl(req, res) {
+  const afectadas = await reactivar({ tabla: 'usuarios', id: req.params.id })
+  if (!afectadas) return res.status(409).json({ error: 'La cuenta no está dada de baja' })
+  await registrar({
+    usuarioId: req.user.id, accion: 'REACTIVAR', tabla: 'usuarios',
+    registroId: Number(req.params.id), ip: req.ip,
+  })
+  res.json({ id: Number(req.params.id), activo: 1 })
 }
 
 // CU-01 precondición: el rol a asignar ya existe. El formulario necesita la
