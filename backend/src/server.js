@@ -4,6 +4,7 @@ import 'dotenv/config'
 import authRoutes from './routes/auth.js'
 import usuariosRoutes from './routes/usuarios.js'
 import proyectosRoutes from './routes/proyectos.js'
+import clientesRoutes from './routes/clientes.js'
 import trabajadoresRoutes from './routes/trabajadores.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
@@ -14,6 +15,7 @@ app.use(express.json())
 app.use('/api/auth', authRoutes)
 app.use('/api/usuarios', usuariosRoutes)
 app.use('/api/proyectos', proyectosRoutes)
+app.use('/api/clientes', clientesRoutes)
 app.use('/api/trabajadores', trabajadoresRoutes)
 
 app.use((req, res) => {
