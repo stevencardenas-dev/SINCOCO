@@ -1,0 +1,25 @@
+[Unit]
+Description=SINCOCO backend (Express + MySQL)
+Documentation=https://github.com/stevencardenas-dev/SINCOCO
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/sincoco/backend
+EnvironmentFile=/opt/sincoco/backend/.env
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+# La instancia es pequeña (1 GB); limitamos el heap de Node para dejar aire a
+# nginx y al propio sistema operativo.
+Environment=NODE_OPTIONS=--max-old-space-size=384
+StandardOutput=append:/opt/sincoco/logs/backend.log
+StandardError=append:/opt/sincoco/logs/backend-error.log
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

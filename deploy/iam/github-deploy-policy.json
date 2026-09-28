@@ -1,0 +1,45 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "SubirArtefactos",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:GetBucketLocation",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::sincoco-deploy-388371826611",
+        "arn:aws:s3:::sincoco-deploy-388371826611/*",
+        "arn:aws:s3:::sincoco-frontend-388371826611",
+        "arn:aws:s3:::sincoco-frontend-388371826611/*"
+      ]
+    },
+    {
+      "Sid": "InvalidarCache",
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetInvalidation"
+      ],
+      "Resource": "arn:aws:cloudfront::388371826611:distribution/E3ISG1W90B8Z49"
+    },
+    {
+      "Sid": "EjecutarInstalacionEnLaInstancia",
+      "Effect": "Allow",
+      "Action": "ssm:SendCommand",
+      "Resource": [
+        "arn:aws:ec2:us-east-2:388371826611:instance/i-0c50888c3b1ee7fe6",
+        "arn:aws:ssm:us-east-2::document/AWS-RunShellScript"
+      ]
+    },
+    {
+      "Sid": "LeerResultadoDeLaInstalacion",
+      "Effect": "Allow",
+      "Action": "ssm:GetCommandInvocation",
+      "Resource": "*"
+    }
+  ]
+}
