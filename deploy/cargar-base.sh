@@ -1,0 +1,71 @@
+#!/bin/bash
+# Carga el esquema y los datos iniciales en el RDS de SINCOCO.
+# Se ejecuta EN LA INSTANCIA (vía SSM): el RDS no es accesible desde Internet.
+#
+# A propósito NO se usa `set -x`: este script lee credenciales y el trace de
+# bash acabaría guardándolas en el historial de comandos de SSM.
+set -eo pipefail
+
+cd /tmp/sincoco-src
+
+# Las credenciales salen del .env que la instancia descargó de SSM; se pasan a
+# mysql por MYSQL_PWD para que no aparezcan ni en el historial ni en `ps`.
+set -a
+# shellcheck disable=SC1091
+. /opt/sincoco/backend/.env
+set +a
+export MYSQL_PWD="$DB_PASSWORD"
+MYSQL="mysql -h $DB_HOST -u $DB_USER"
+
+# --- 1. Esquema -----------------------------------------------------------
+# docs/schema.sql empieza con DROP TABLE de las 33 tablas, así que solo se
+# aplica en una base vacía. FORZAR_ESQUEMA=1 lo recarga (¡borra los datos!).
+if [ "${FORZAR_ESQUEMA:-0}" = "1" ] || ! $MYSQL "$DB_NAME" -e "SELECT 1 FROM usuarios LIMIT 1" >/dev/null 2>&1; then
+  # El dump se hizo con mysqldump en un servidor local y sus triggers llevan
+  # DEFINER=`root`@`localhost`. RDS no permite crear objetos con un DEFINER de
+  # otro usuario (haría falta SUPER o SET_USER_ID), así que se elimina esa
+  # cláusula: sin ella el trigger queda definido por quien lo crea, que es lo
+  # que queremos. Afecta a los 4 triggers de inventario del esquema.
+  sed 's|/\*!50017 DEFINER=[^*]*\*/||g' docs/schema.sql > /tmp/schema-rds.sql
+  echo "cargando esquema (DEFINER restantes: $(grep -c 'DEFINER' /tmp/schema-rds.sql))"
+  $MYSQL < /tmp/schema-rds.sql
+else
+  echo "el esquema ya existe: se omite (usa FORZAR_ESQUEMA=1 para recargarlo)"
+fi
+
+# --- 2. Roles, usuarios y trabajadores ------------------------------------
+# Va ANTES que la matriz de permisos: seed_permisos_prueba.sql construye
+# roles_permisos con un SELECT sobre `roles`, así que los roles deben existir.
+$MYSQL "$DB_NAME" < docs/seed_usuarios_prueba.sql
+
+# --- 3. Catálogo de permisos y matriz rol -> permisos (HU-01) -------------
+$MYSQL "$DB_NAME" < docs/seed_permisos_prueba.sql
+
+# --- 4. Cliente de ejemplo ------------------------------------------------
+$MYSQL "$DB_NAME" < docs/seed_proyectos_prueba.sql
+
+# --- 5. Contraseñas reales ------------------------------------------------
+# El SQL deja un hash de marcador: scripts/seed.js lo reemplaza por bcrypt.
+(cd /opt/sincoco/backend && sudo -u ubuntu node scripts/seed.js)
+
+# --- 6. Verificación ------------------------------------------------------
+$MYSQL "$DB_NAME" -e "
+  SELECT 'usuarios' t, COUNT(*) n FROM usuarios
+  UNION ALL SELECT 'roles', COUNT(*) FROM roles
+  UNION ALL SELECT 'permisos', COUNT(*) FROM permisos
+  UNION ALL SELECT 'roles_permisos', COUNT(*) FROM roles_permisos
+  UNION ALL SELECT 'trabajadores', COUNT(*) FROM trabajadores
+  UNION ALL SELECT 'clientes', COUNT(*) FROM clientes
+  UNION ALL SELECT 'triggers', COUNT(*) FROM information_schema.triggers
+    WHERE trigger_schema = 'sincoco';"
+
+echo "--- permisos por rol ---"
+$MYSQL "$DB_NAME" -e "
+  SELECT r.nombre rol, COUNT(rp.permiso_id) permisos
+  FROM roles r LEFT JOIN roles_permisos rp ON rp.rol_id = r.id
+  GROUP BY r.id, r.nombre ORDER BY permisos DESC;"
+
+unset MYSQL_PWD
+systemctl restart sincoco-backend
+sleep 3
+systemctl is-active sincoco-backend

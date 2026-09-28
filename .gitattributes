@@ -1,0 +1,6 @@
+# Los scripts de despliegue se ejecutan en Linux (GitHub Actions y la instancia
+# EC2). Aunque el equipo trabaje en Windows, estos archivos deben conservar
+# finales de línea LF: con CRLF, `#!/bin/bash` falla con "bad interpreter".
+*.sh text eol=lf
+deploy/nginx/*.conf text eol=lf
+deploy/systemd/*.service text eol=lf

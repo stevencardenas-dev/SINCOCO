@@ -1,0 +1,265 @@
+name: Desplegar SINCOCO en AWS
+
+# SOLO manual: se lanza con el botón "Run workflow" de la pestaña Actions.
+# A propósito no hay disparador `push` ni `pull_request`: ningún commit ni merge
+# a main publica en producción por sí solo. Cada despliegue queda registrado con
+# quién lo pidió, qué componente y el motivo declarado.
+on:
+  workflow_dispatch:
+    inputs:
+      componente:
+        description: 'Qué desplegar'
+        type: choice
+        options:
+          - todo
+          - backend
+          - frontend
+        default: todo
+      motivo:
+        description: 'Motivo del despliegue (queda en el historial de ejecuciones)'
+        type: string
+        required: false
+        default: ''
+      saltar_pruebas:
+        description: 'Desplegar aunque fallen las pruebas (solo emergencias)'
+        type: choice
+        options: ['no', 'si']
+        default: 'no'
+
+# No hay ninguna credencial de AWS guardada en GitHub: el workflow pide un token
+# OIDC y asume un rol en la cuenta. `id-token: write` es lo que lo habilita.
+permissions:
+  id-token: write
+  contents: read
+
+# Dos despliegues seguidos van de uno en uno; nunca se cancela el que está en
+# marcha, porque dejarlo a medias en la instancia sería peor que esperar.
+concurrency:
+  group: desplegar-sincoco
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ROLE: arn:aws:iam::388371826611:role/sincoco-github-deploy
+  BUCKET_DESPLIEGUE: sincoco-deploy-388371826611
+  BUCKET_FRONTEND: sincoco-frontend-388371826611
+  DISTRIBUCION: E3ISG1W90B8Z49
+  INSTANCIA: i-0c50888c3b1ee7fe6
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Puerta de entrada: levanta MySQL 8 y el backend desde cero y corre las
+  # pruebas de API de los criterios de aceptación del sprint 1 (HU-01, HU-03,
+  # HU-04 y HU-18). Nada se despliega si esto falla.
+  # ---------------------------------------------------------------------------
+  pruebas:
+    name: Pruebas de API (HU-01, HU-03, HU-04, HU-18)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: raiz
+          MYSQL_DATABASE: sincoco
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=24
+
+    steps:
+      - name: Comprobar que se despliega desde main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se despliega desde la rama main (se pidió $GITHUB_REF)."
+            exit 1
+          fi
+          echo "rama: $GITHUB_REF"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # tests/api_helper.py consulta la base con el binario `mysql`.
+      - name: Instalar el cliente de MySQL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client
+
+      - name: Cargar esquema y datos de prueba
+        env:
+          MYSQL_PWD: raiz
+        run: |
+          # RDS no acepta los DEFINER del dump; aquí se quitan igual que en producción.
+          sed 's|/\*!50017 DEFINER=[^*]*\*/||g' docs/schema.sql > /tmp/schema.sql
+          mysql -h 127.0.0.1 -u root < /tmp/schema.sql
+          # Los roles van antes que la matriz de permisos (roles_permisos se
+          # construye con un SELECT sobre roles).
+          mysql -h 127.0.0.1 -u root sincoco < docs/seed_usuarios_prueba.sql
+          mysql -h 127.0.0.1 -u root sincoco < docs/seed_permisos_prueba.sql
+          mysql -h 127.0.0.1 -u root sincoco < docs/seed_proyectos_prueba.sql
+
+      - name: Preparar el backend
+        working-directory: backend
+        run: |
+          npm ci
+          {
+            echo "PORT=3005"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_USER=root"
+            echo "DB_PASSWORD=raiz"
+            echo "DB_NAME=sincoco"
+            echo "JWT_SECRET=secreto-solo-para-el-pipeline"
+          } > .env
+          node scripts/seed.js   # reemplaza los hashes de marcador por bcrypt real
+
+      - name: Arrancar el backend
+        working-directory: backend
+        run: |
+          nohup node src/server.js > /tmp/backend.log 2>&1 &
+          for _ in $(seq 1 30); do
+            sleep 1
+            estado=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3005/api/usuarios)
+            [ "$estado" = "401" ] && break   # 401 sin token = backend vivo
+          done
+          echo "backend: $estado"
+          [ "$estado" = "401" ] || { cat /tmp/backend.log; exit 1; }
+
+      - name: Ejecutar las pruebas
+        working-directory: tests
+        run: |
+          for prueba in test_hu01_permisos.py test_hu03_plan.py test_hu04_personal.py test_hu18_baja_logica.py; do
+            echo "::group::$prueba"
+            python3 "$prueba"
+            echo "::endgroup::"
+          done
+
+  # ---------------------------------------------------------------------------
+  # CD del backend: empaqueta, sube a S3 y aplica la instalación en la EC2 por
+  # SSM (sin SSH). El .env de producción vive cifrado en Parameter Store y lo
+  # lee la propia instancia, así que aquí no hay secretos.
+  # ---------------------------------------------------------------------------
+  backend:
+    name: Backend (EC2 + RDS)
+    needs: [pruebas]
+    if: ${{ always()
+          && (needs.pruebas.result == 'success' || inputs.saltar_pruebas == 'si')
+          && (inputs.componente == 'todo' || inputs.componente == 'backend') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: sincoco-backend-${{ github.run_id }}
+
+      - name: Empaquetar el backend
+        run: |
+          tar -czf sincoco-backend.tar.gz \
+            --exclude='node_modules' --exclude='*/.env' --exclude='.env' \
+            --exclude='__pycache__' \
+            backend deploy docs/schema.sql docs/seed_permisos_prueba.sql \
+            docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql
+          ls -lh sincoco-backend.tar.gz
+
+      - name: Subir el paquete a S3
+        run: aws s3 cp sincoco-backend.tar.gz "s3://$BUCKET_DESPLIEGUE/sincoco-backend.tar.gz"
+
+      - name: Aplicar la instalación en la instancia
+        run: bash deploy/remoto.sh deploy/instalar-backend.sh
+
+  # ---------------------------------------------------------------------------
+  # CD del frontend: compila el SPA y lo publica. No se define VITE_API_URL a
+  # propósito: CloudFront sirve el API en el mismo origen (`/api/*`), así que el
+  # frontend usa rutas relativas y no hay CORS ni mixed content.
+  # ---------------------------------------------------------------------------
+  frontend:
+    name: Frontend (S3 + CloudFront)
+    needs: [pruebas]
+    if: ${{ always()
+          && (needs.pruebas.result == 'success' || inputs.saltar_pruebas == 'si')
+          && (inputs.componente == 'todo' || inputs.componente == 'frontend') }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Compilar el SPA
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: sincoco-frontend-${{ github.run_id }}
+
+      # Los assets llevan hash en el nombre: pueden cachearse un año entero.
+      - name: Publicar los assets
+        run: |
+          aws s3 sync frontend/dist "s3://$BUCKET_FRONTEND" --delete \
+            --exclude index.html \
+            --cache-control "public,max-age=31536000,immutable"
+
+      # El index nunca se cachea: es el que apunta a los assets nuevos.
+      - name: Publicar el index
+        run: |
+          aws s3 cp frontend/dist/index.html "s3://$BUCKET_FRONTEND/index.html" \
+            --cache-control "no-cache,must-revalidate" \
+            --content-type "text/html; charset=utf-8"
+
+      - name: Invalidar el index en CloudFront
+        run: |
+          id=$(aws cloudfront create-invalidation --distribution-id "$DISTRIBUCION" \
+            --paths '/' '/index.html' --query 'Invalidation.Id' --output text)
+          echo "invalidación creada: $id"
+
+  # ---------------------------------------------------------------------------
+  # Resumen en la propia ejecución: queda como registro de quién desplegó qué y
+  # por qué, sin depender de mirar los logs.
+  # ---------------------------------------------------------------------------
+  resumen:
+    name: Resumen
+    # pruebas va en la lista porque el resumen muestra su resultado: el contexto
+    # `needs` solo contiene los jobs declarados aquí.
+    needs: [pruebas, backend, frontend]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Escribir el resumen
+        run: |
+          {
+            echo "## Despliegue SINCOCO"
+            echo ""
+            echo "| Campo | Valor |"
+            echo "|---|---|"
+            echo "| Lo pidió | @${{ github.actor }} |"
+            echo "| Componente | ${{ inputs.componente }} |"
+            echo "| Motivo | ${{ inputs.motivo || '—' }} |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Pruebas | ${{ needs.pruebas.result || 'no ejecutadas' }} |"
+            echo "| Backend | ${{ needs.backend.result }} |"
+            echo "| Frontend | ${{ needs.frontend.result }} |"
+            echo ""
+            echo "Aplicación: https://d2u6xogluht7jo.cloudfront.net"
+          } >> "$GITHUB_STEP_SUMMARY"

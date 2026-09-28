@@ -1,11 +1,16 @@
 import axios from 'axios'
 
 /**
- * Cliente HTTP de SINCOCO. El proxy de Vite lo enruta al backend Express
- * (ver vite.config.js).
+ * Cliente HTTP de SINCOCO.
+ *
+ * La ruta relativa `/api` funciona en los dos entornos: en desarrollo porque
+ * Vite la reenvía al backend Express (ver vite.config.js) y en producción
+ * porque CloudFront sirve el API en el mismo origen (comportamiento `/api/*`
+ * apuntando a la EC2). VITE_API_URL está disponible por si algún día el API
+ * vive en otro dominio, pero no hace falta definirla en el despliegue actual.
  */
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 })
 
 // Interceptor para adjuntar el JWT (RF1 · RNF5)
