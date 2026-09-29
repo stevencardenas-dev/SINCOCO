@@ -10,6 +10,9 @@ import { AppError } from '../utils/AppError.js'
 const ESTADO_INICIAL = 'PLANIFICACION'
 const AVANCE_INICIAL = 0
 
+// presupuesto_inicial es decimal(15,2): 13 dígitos enteros como máximo.
+const PRESUPUESTO_MAXIMO = 9_999_999_999_999
+
 /**
  * Registra un nuevo proyecto (HU-02 · CU-02) aplicando los criterios de
  * aceptación de docs/HU_CRITERIOS_ACEPTACION.md:
@@ -27,9 +30,18 @@ const AVANCE_INICIAL = 0
  * `ctx` = { usuarioId, ip }, extraído del token por la capa HTTP.
  */
 export async function registrarProyecto(dto, ctx = {}) {
-  // Criterio 2: presupuesto numérico mayor a cero.
+  // Criterio 2: presupuesto numérico mayor a cero. Se valida el rango completo
+  // (0, 9.999.999.999.999]: por encima del tope la columna no puede
+  // representarlo, así que se rechaza antes de intentar la inserción.
   if (!(dto.presupuesto_inicial > 0)) {
     throw new AppError('El presupuesto inicial debe ser mayor que 0', 400, 'presupuesto_inicial')
+  }
+  if (dto.presupuesto_inicial > PRESUPUESTO_MAXIMO) {
+    throw new AppError(
+      `El presupuesto inicial supera el máximo permitido (${PRESUPUESTO_MAXIMO.toLocaleString('es-CO')})`,
+      400,
+      'presupuesto_inicial',
+    )
   }
 
   // Criterio 3: fecha de inicio estrictamente anterior a la de fin.

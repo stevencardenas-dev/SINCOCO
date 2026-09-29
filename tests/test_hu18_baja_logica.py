@@ -66,6 +66,32 @@ estado, r = http('PATCH', f'/api/proyectos/{proyecto_id}/reactivar', token=admin
 assert estado == 200 and r['activo'] == 1
 print('reactivar proyecto ->', estado, r)
 
+# Cada baja y cada reactivación debe quedar en la bitácora de trazabilidad, con
+# su usuario, su tabla, el registro afectado y la fecha (HU-17).
+estado, log = http('GET', '/api/auditoria?limite=200', token=admin)
+assert estado == 200, f'no se pudo consultar la bitácora: {estado} {log}'
+eventos = {
+    (f['tabla_afectada'], f['registro_id'], f['accion'])
+    for f in log['filas']
+    if f['tabla_afectada'] in ('trabajadores', 'proyectos')
+}
+for esperado in (
+    ('trabajadores', trabajador_id, 'DAR_DE_BAJA'),
+    ('trabajadores', trabajador_id, 'REACTIVAR'),
+    ('proyectos', proyecto_id, 'DAR_DE_BAJA'),
+    ('proyectos', proyecto_id, 'REACTIVAR'),
+):
+    assert esperado in eventos, f'falta en la bitácora el evento {esperado}'
+
+fila = next(
+    f for f in log['filas']
+    if f['tabla_afectada'] == 'proyectos' and f['registro_id'] == proyecto_id
+    and f['accion'] == 'DAR_DE_BAJA'
+)
+assert fila['username'] == 'admin', f'la baja debe quedar a nombre de quien la ejecutó: {fila}'
+assert fila['fecha_registro'], f'la baja debe quedar con fecha: {fila}'
+print('bitácora -> baja y reactivación de trabajador y proyecto registradas, con usuario y fecha')
+
 # Doble baja -> 409 (no cambia nada dos veces).
 http('PATCH', f'/api/proyectos/{proyecto_id}/baja', token=admin)
 estado, r = http('PATCH', f'/api/proyectos/{proyecto_id}/baja', token=admin)

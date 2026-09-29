@@ -134,6 +134,20 @@ estado, r = http('POST', '/api/proyectos', dict(PROYECTO, codigo='PRJ-HU02-ALT3'
 assert estado == 400, f'se esperaba 400 por presupuesto, llego {estado}: {r}'
 print('presupuesto 0 ->', estado, r['error'])
 
+# criterio: presupuesto fuera del rango de decimal(15,2) -> 400
+estado, r = http('POST', '/api/proyectos', dict(PROYECTO, codigo='PRJ-HU02-ALT6',
+                                                presupuesto_inicial=10**15), token=token)
+assert estado == 400 and r.get('campo') == 'presupuesto_inicial', \
+    f'se esperaba 400 por presupuesto fuera de rango, llego {estado}: {r}'
+print('presupuesto fuera de rango ->', estado, r['error'])
+
+# criterio: campos obligatorios faltantes -> 400 nombrando los que faltan
+sin_campos = {k: v for k, v in PROYECTO.items() if k not in ('ubicacion', 'responsable_id')}
+estado, r = http('POST', '/api/proyectos', sin_campos, token=token)
+assert estado == 400 and 'ubicacion' in r['error'] and 'responsable_id' in r['error'], \
+    f'se esperaba 400 nombrando los campos faltantes, llego {estado}: {r}'
+print('campos obligatorios ->', estado, r['error'])
+
 # criterio: codigo unico -> 409
 estado, r = http('POST', '/api/proyectos', PROYECTO, token=token)
 assert estado == 409, f'se esperaba 409 por codigo, llego {estado}: {r}'

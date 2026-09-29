@@ -8,7 +8,7 @@
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
 #   ADMIN 20 · GERENTE 5 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
 #   (20 desde que HU-17 añadió `auditoria.listar`.)
-from api_helper import http, login, scalar
+from api_helper import PREFIJO, crear_trabajador, http, login, scalar, sql
 
 # La matriz del seed, por rol. Con 'incluirInactivos' se evita depender de datos.
 ESPERADO_GET = {
@@ -49,5 +49,45 @@ for ruta in ('/api/usuarios', '/api/clientes', '/api/trabajadores', '/api/proyec
     estado, _ = http('GET', ruta)
     assert estado == 401, f'{ruta} sin token: se esperaba 401, llego {estado}'
 print('sin token -> 401 en todas las rutas protegidas')
+
+# Validaciones del rol asignado (criterio 1): el usuario va vinculado a un
+# trabajador y a un único rol ACTIVO, y ese rol tiene que existir.
+sql("DELETE FROM usuarios WHERE username='TEST-HU-ROL'")
+libre_id = crear_trabajador(TOKENS['admin'], f'{PREFIJO}-CC-ROL')
+NUEVO = {
+    'username': 'TEST-HU-ROL', 'email': 'test.hu.rol@sincoco.test',
+    'password': 'Prueba123!', 'trabajador_id': libre_id,
+}
+
+estado, r = http('POST', '/api/usuarios', dict(NUEVO, rol_id=99999), token=TOKENS['admin'])
+assert estado == 400, f'un rol inexistente debe rechazarse, llego {estado}: {r}'
+print('rol inexistente al crear ->', estado, r['error'])
+
+estado, r = http('POST', '/api/usuarios', dict(NUEVO, rol_id=4), token=TOKENS['admin'])
+assert estado == 201, f'no se pudo crear el usuario de prueba: {estado} {r}'
+usuario_id = r['id']
+
+estado, r = http('PATCH', f'/api/usuarios/{usuario_id}/rol', {'rol_id': 99999}, token=TOKENS['admin'])
+assert estado == 400, f'un cambio a un rol inexistente debe rechazarse, llego {estado}: {r}'
+print('rol inexistente al cambiar ->', estado, r['error'])
+
+# El rol de un usuario solo puede cambiarlo quien tenga el permiso, y el cambio
+# queda en la bitácora sin tocar el rol_id anterior del historial.
+estado, r = http('PATCH', f'/api/usuarios/{usuario_id}/rol', {'rol_id': 2}, token=TOKENS['gerente'])
+assert estado == 403, f'gerente no debe cambiar roles, llego {estado}: {r}'
+estado, r = http('PATCH', f'/api/usuarios/{usuario_id}/rol', {'rol_id': 2}, token=TOKENS['admin'])
+assert estado == 200 and r['rol_id'] == 2, f'el cambio de rol valido fallo: {estado} {r}'
+assert scalar(
+    "SELECT COUNT(*) FROM bitacora_trazabilidad WHERE tabla_afectada='usuarios' "
+    f"AND registro_id={usuario_id} AND accion='ACTUALIZAR'"
+) == '1', 'el cambio de rol debe quedar en la bitacora'
+print('cambio de rol -> 403 para gerente · 200 para admin · registrado en la bitácora')
+
+# Limpieza: la cuenta y el trabajador de prueba no deben quedar en la base.
+sql(f'DELETE FROM usuarios WHERE id={usuario_id}')
+sql(f"DELETE FROM trabajadores WHERE numero_documento='{PREFIJO}-CC-ROL'")
+assert scalar("SELECT COUNT(*) FROM usuarios WHERE username='TEST-HU-ROL'") == '0', \
+    'la cuenta de prueba no se limpio'
+print('limpieza -> la cuenta de prueba se elimino')
 
 print('\nHU-01 (permisos): TODAS LAS PRUEBAS PASARON')

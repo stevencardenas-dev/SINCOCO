@@ -245,10 +245,18 @@ export default function Proyectos() {
                     presupuesto_inicial: soloDigitos(e.target.value).slice(0, MAX_DIGITOS_PRESUPUESTO),
                   })} required />
               </div>
-              <p className="mt-1 text-xs text-slate-500">
+              <p
+                className={`mt-1 text-xs ${
+                  form.presupuesto_inicial && presupuestoNumero <= 0
+                    ? 'font-medium text-red-600'
+                    : 'text-slate-500'
+                }`}
+              >
                 {presupuestoNumero > 0
                   ? `${fmtCOP(presupuestoNumero)} · ${montoEnPalabras(form.presupuesto_inicial)}`
-                  : 'Escriba el monto en pesos, sin puntos: se separan solos. Debe ser mayor que cero.'}
+                  : form.presupuesto_inicial
+                    ? 'El presupuesto debe ser mayor que cero.'
+                    : 'Escriba el monto en pesos, sin puntos: se separan solos.'}
               </p>
             </div>
 

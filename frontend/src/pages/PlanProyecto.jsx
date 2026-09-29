@@ -131,7 +131,7 @@ export default function PlanProyecto() {
             </div>
             <div>
               <label htmlFor="e-orden" className="label">Orden</label>
-              <input id="e-orden" type="number" min="1" className="input" value={etapaForm.orden}
+              <input id="e-orden" type="number" min="1" max="999" step="1" className="input" value={etapaForm.orden}
                 onChange={(e) => setEtapaForm({ ...etapaForm, orden: e.target.value })}
                 placeholder="Automático si se deja vacío" />
             </div>

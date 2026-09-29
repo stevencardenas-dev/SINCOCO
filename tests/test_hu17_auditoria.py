@@ -9,7 +9,9 @@
 #   2. El registro es de solo lectura e inmutable (no hay ruta que lo modifique).
 #   3. El acceso se restringe al rol con permiso específico (`auditoria.listar`).
 #   4. La consulta filtra por usuario, tabla afectada y rango de fechas.
-from api_helper import crear_proyecto, http, limpiar, login, scalar
+import subprocess
+
+from api_helper import crear_proyecto, http, limpiar, login, mysql_args, scalar
 
 RUTA = '/api/auditoria'
 ESPERADO = {'admin': 200, 'gerente': 403, 'maestro': 403, 'bodega': 403}
@@ -54,9 +56,23 @@ print(f'bitacora -> {fila["username"]} · {fila["accion"]} · {fila["tabla_afect
 dia = scalar('SELECT DATE(MAX(fecha_registro)) FROM bitacora_trazabilidad')
 assert dia, 'la bitacora quedo vacia tras una operacion critica'
 
+def ids_en_base(condicion=''):
+    """Ids de la bitácora que cumplen una condición, leídos de la base."""
+    r = subprocess.run(
+        mysql_args(['-N', '-e', f'SELECT id FROM bitacora_trazabilidad {condicion}']),
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 0, f'no se pudo leer la bitacora: {r.stderr}'
+    return {int(x) for x in r.stdout.split()}
+
+
 estado, hoy = http('GET', f'{RUTA}?desde={dia}&hasta={dia}', token=TOKEN)
 assert estado == 200 and hoy['total'] > 0, f'el rango de fechas {dia} no devolvio nada: {hoy}'
-assert all(f['fecha_registro'][:10] == dia for f in hoy['filas']), 'el rango devolvio otro dia'
+# El día se contrasta contra la base, no recortando el ISO: `fecha_registro`
+# viaja en UTC y el filtro trabaja con el día local, así que de noche las dos
+# fechas no coinciden como texto aunque la fila sí sea del día pedido.
+ids_del_dia = ids_en_base(f"WHERE DATE(fecha_registro) = '{dia}'")
+assert {f['id'] for f in hoy['filas']} <= ids_del_dia, 'el rango devolvio filas de otro dia'
 print(f'filtro por rango {dia} -> {hoy["total"]} registros, todos de ese dia')
 
 # El total de la API debe cuadrar con la base para el mismo filtro.
