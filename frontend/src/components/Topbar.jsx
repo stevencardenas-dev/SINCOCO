@@ -15,6 +15,7 @@ const TITLES = {
   '/reportes': 'Reportes',
   '/auditoria': 'Trazabilidad y auditoría',
   '/usuarios': 'Gestión de usuarios',
+  '/roles': 'Roles y permisos',
 }
 
 // Roles reales del sistema (tabla `roles`, ver docs/seed_usuarios_prueba.sql)

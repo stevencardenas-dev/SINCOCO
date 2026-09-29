@@ -4,7 +4,7 @@ import { FolderIcon, ArrowPathIcon, PlusIcon, BuildingOffice2Icon, ClipboardDocu
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
-import { estadoProyecto, fmtCOP, fmtFecha } from '../lib/format.js'
+import { estadoProyecto, fmtCOP, fmtFecha, fmtMiles, montoEnPalabras, soloDigitos } from '../lib/format.js'
 
 /**
  * Módulo de proyectos (RF02 · HU-02). El listado consume GET /api/proyectos y
@@ -28,6 +28,9 @@ const VACIO = {
 
 const CLIENTE_VACIO = { numero_documento: '', tipo_documento: 'NIT', razon_social_nombre: '' }
 
+// presupuesto_inicial es decimal(15,2): 13 dígitos enteros como máximo.
+const MAX_DIGITOS_PRESUPUESTO = 13
+
 export default function Proyectos() {
   const { user } = useAuth()
   const esAdmin = user?.rol === 'ADMINISTRADOR'
@@ -45,6 +48,9 @@ export default function Proyectos() {
   const [errorCampo, setErrorCampo] = useState(null)
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
+
+  // Presupuesto capturado, como número, para el resumen que va bajo el campo.
+  const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
 
   const cargar = () => {
     setError(null)
@@ -89,7 +95,7 @@ export default function Proyectos() {
         ...form,
         cliente_id: Number(form.cliente_id),
         responsable_id: Number(form.responsable_id),
-        presupuesto_inicial: Number(form.presupuesto_inicial),
+        presupuesto_inicial: Number(soloDigitos(form.presupuesto_inicial) || 0),
       })
       setForm(VACIO)
       setAbierto(false)
@@ -224,9 +230,26 @@ export default function Proyectos() {
             </div>
             <div>
               <label htmlFor="p-presupuesto" className="label">Presupuesto inicial (COP)</label>
-              <input id="p-presupuesto" type="number" min="1" step="any"
-                className={campo('presupuesto_inicial')} value={form.presupuesto_inicial}
-                onChange={(e) => setForm({ ...form, presupuesto_inicial: e.target.value })} required />
+              {/* Campo de moneda: se capturan solo dígitos y se muestran con
+                  separador de miles, para no confundir miles con millones. */}
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+                  $
+                </span>
+                <input id="p-presupuesto" type="text" inputMode="numeric" autoComplete="off"
+                  placeholder="850.000.000"
+                  className={`${campo('presupuesto_inicial')} pl-8 tabular-nums`}
+                  value={fmtMiles(form.presupuesto_inicial)}
+                  onChange={(e) => setForm({
+                    ...form,
+                    presupuesto_inicial: soloDigitos(e.target.value).slice(0, MAX_DIGITOS_PRESUPUESTO),
+                  })} required />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                {presupuestoNumero > 0
+                  ? `${fmtCOP(presupuestoNumero)} · ${montoEnPalabras(form.presupuesto_inicial)}`
+                  : 'Escriba el monto en pesos, sin puntos: se separan solos. Debe ser mayor que cero.'}
+              </p>
             </div>
 
             <div className="sm:col-span-2">

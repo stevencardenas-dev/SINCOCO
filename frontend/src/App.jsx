@@ -9,6 +9,8 @@ const Dashboard = lazy(() => import('./pages/Dashboard.jsx'))
 const Proyectos = lazy(() => import('./pages/Proyectos.jsx'))
 const ModulePlaceholder = lazy(() => import('./pages/ModulePlaceholder.jsx'))
 const Usuarios = lazy(() => import('./pages/Usuarios.jsx'))
+const RolesPermisos = lazy(() => import('./pages/RolesPermisos.jsx'))
+const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 
@@ -77,10 +79,12 @@ export default function App() {
           <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" rf="RF26" /></RutaPorRol>} />
           {/* RF17 */}
           <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Reportes" rf="RF29 · RF30" /></RutaPorRol>} />
-          {/* RF18 */}
-          <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><ModulePlaceholder title="Trazabilidad y auditoría" rf="RF31 · RF32" /></RutaPorRol>} />
+          {/* RF18 · HU-17: bitácora de trazabilidad (solo el administrador) */}
+          <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><Auditoria /></RutaPorRol>} />
           {/* RF1 */}
           <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><Usuarios /></RutaPorRol>} />
+          {/* RF1 · monitoreo de la matriz roles_permisos (solo el administrador) */}
+          <Route path="roles" element={<RutaPorRol roles={[ADMIN]}><RolesPermisos /></RutaPorRol>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

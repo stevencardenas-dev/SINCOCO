@@ -8,6 +8,7 @@ import {
   ExclamationTriangleIcon,
   FolderIcon,
   HomeIcon,
+  KeyIcon,
   ShieldCheckIcon,
   TruckIcon,
   UserCircleIcon,
@@ -35,6 +36,7 @@ const NAV = [
       { to: '/', label: 'Dashboard', icon: HomeIcon, end: true, roles: TODOS },
       { to: '/proyectos', label: 'Proyectos', icon: FolderIcon, roles: [ADMIN, GERENTE, MAESTRO] },
       { to: '/personal', label: 'Personal', icon: UsersIcon, roles: [ADMIN, GERENTE] },
+      { to: '/usuarios', label: 'Usuarios', icon: UserCircleIcon, roles: [ADMIN] },
     ],
   },
   {
@@ -58,7 +60,7 @@ const NAV = [
     items: [
       { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE] },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
-      { to: '/usuarios', label: 'Usuarios', icon: UserCircleIcon, roles: [ADMIN] },
+      { to: '/roles', label: 'Roles y permisos', icon: KeyIcon, roles: [ADMIN] },
     ],
   },
 ]

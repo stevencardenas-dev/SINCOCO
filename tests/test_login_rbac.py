@@ -10,7 +10,7 @@
 from playwright.sync_api import sync_playwright
 
 ESPERADO = {
- 'admin':      ['Dashboard','Proyectos','Personal','Materiales','Herramientas','Alertas','Proveedores','Incidencias','Costos','Reportes','Auditoría','Usuarios'],
+ 'admin':      ['Dashboard','Proyectos','Personal','Usuarios','Materiales','Herramientas','Alertas','Proveedores','Incidencias','Costos','Reportes','Auditoría','Roles y permisos'],
  'gerente':    ['Dashboard','Proyectos','Personal','Alertas','Proveedores','Incidencias','Costos','Reportes'],
  'maestro':    ['Dashboard','Proyectos','Materiales','Incidencias'],
  'bodega':     ['Dashboard','Materiales','Herramientas','Alertas'],
