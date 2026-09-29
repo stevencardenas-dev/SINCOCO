@@ -29,7 +29,9 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('etapas.dar_baja',          'Dar de baja lógica una etapa',             'planificacion'),
   ('actividades.listar',       'Consultar las actividades del plan',       'planificacion'),
   ('actividades.crear',        'Definir actividades del plan de trabajo',  'planificacion'),
-  ('actividades.dar_baja',     'Dar de baja lógica una actividad',         'planificacion')
+  ('actividades.dar_baja',     'Dar de baja lógica una actividad',         'planificacion'),
+  -- HU-17: la bitácora se consulta con un permiso propio, no con el de usuarios.
+  ('auditoria.listar',         'Consultar la bitácora de trazabilidad',    'auditoria')
 ON DUPLICATE KEY UPDATE
   `descripcion` = VALUES(`descripcion`),
   `modulo` = VALUES(`modulo`);
@@ -62,3 +64,7 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
   AND p.`nombre` IN ('proyectos.listar', 'etapas.listar', 'actividades.listar');
 
 -- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
+--
+-- `auditoria.listar` (HU-17) queda solo en el administrador: no aparece en las
+-- listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba ya se lo da a
+-- ADMINISTRADOR.

@@ -133,7 +133,7 @@ jobs:
       - name: Ejecutar las pruebas
         working-directory: tests
         run: |
-          for prueba in test_hu01_permisos.py test_hu03_plan.py test_hu04_personal.py test_hu18_baja_logica.py; do
+          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_hu18_baja_logica.py; do
             echo "::group::$prueba"
             python3 "$prueba"
             echo "::endgroup::"

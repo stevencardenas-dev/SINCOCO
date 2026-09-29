@@ -6,19 +6,20 @@
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 19 · GERENTE 5 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
+#   ADMIN 20 · GERENTE 5 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
+#   (20 desde que HU-17 añadió `auditoria.listar`.)
 from api_helper import http, login, scalar
 
 # La matriz del seed, por rol. Con 'incluirInactivos' se evita depender de datos.
 ESPERADO_GET = {
     'admin': {'/api/usuarios': 200, '/api/clientes': 200, '/api/trabajadores': 200,
-              '/api/proyectos': 200},
+              '/api/proyectos': 200, '/api/roles/permisos': 200, '/api/auditoria': 200},
     'gerente': {'/api/usuarios': 403, '/api/clientes': 200, '/api/trabajadores': 200,
-                '/api/proyectos': 200},
+                '/api/proyectos': 200, '/api/roles/permisos': 403, '/api/auditoria': 403},
     'maestro': {'/api/usuarios': 403, '/api/clientes': 403, '/api/trabajadores': 403,
-                '/api/proyectos': 200},
+                '/api/proyectos': 200, '/api/roles/permisos': 403, '/api/auditoria': 403},
     'bodega': {'/api/usuarios': 403, '/api/clientes': 403, '/api/trabajadores': 403,
-               '/api/proyectos': 403},
+               '/api/proyectos': 403, '/api/roles/permisos': 403, '/api/auditoria': 403},
 }
 
 TOKENS = {usuario: login(usuario) for usuario in ESPERADO_GET}
@@ -36,14 +37,15 @@ for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
         'SELECT COUNT(*) FROM roles_permisos rp JOIN roles r ON r.id = rp.rol_id '
         f"WHERE r.nombre='{rol}'"
     )
-assert conteos['ADMINISTRADOR'] == '19', f'ADMIN debe tener 19 permisos: {conteos}'
+assert conteos['ADMINISTRADOR'] == '20', f'ADMIN debe tener 20 permisos: {conteos}'
 assert conteos['GERENTE'] == '5', f'GERENTE debe tener 5 permisos: {conteos}'
 assert conteos['MAESTRO_OBRA'] == '3', f'MAESTRO_OBRA debe tener 3 permisos: {conteos}'
 assert conteos['ENCARGADO_BODEGA'] == '0', f'BODEGA no debe tener permisos: {conteos}'
 print('matriz en roles_permisos ->', conteos)
 
 # Sin token, toda ruta protegida responde 401 (requireAuth sigue vigente).
-for ruta in ('/api/usuarios', '/api/clientes', '/api/trabajadores', '/api/proyectos'):
+for ruta in ('/api/usuarios', '/api/clientes', '/api/trabajadores', '/api/proyectos',
+             '/api/roles/permisos', '/api/auditoria'):
     estado, _ = http('GET', ruta)
     assert estado == 401, f'{ruta} sin token: se esperaba 401, llego {estado}'
 print('sin token -> 401 en todas las rutas protegidas')
