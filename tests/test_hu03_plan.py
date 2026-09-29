@@ -29,6 +29,14 @@ assert e['orden'] == 1, f'criterio 2: primer orden debe ser 1, llego {e["orden"]
 etapa_id = e['id']
 print('crear etapa ->', estado, 'orden', e['orden'], e['estado'])
 
+# Criterio 2: el orden es la secuencia de la etapa, solo enteros desde 1.
+for invalido in (0, -3, 2.5, 'primera'):
+    estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa orden invalido',
+                                                 orden=invalido), token=admin)
+    assert estado == 400 and r.get('campo') == 'orden', \
+        f'orden={invalido!r} debia dar 400 en el campo orden: {estado} {r}'
+print('orden fuera de rango -> 400 en', '0, -3, 2.5 y "primera"')
+
 # Criterio 3: fecha fuera del rango del proyecto -> 400.
 estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa fuera',
                                              fecha_inicio_programada='2099-01-01'), token=admin)

@@ -27,8 +27,14 @@ export class RegistrarEtapaDto {
         throw new AppError(`${campo} debe ser una fecha válida`, 400, campo)
       }
     }
-    if (body.orden !== undefined && body.orden !== '' && Number.isNaN(Number(body.orden))) {
-      throw new AppError('orden debe ser numérico', 400, 'orden')
+    // El orden es la secuencia de la etapa dentro del plan: solo admite enteros
+    // desde 1. La UI lo limita con min=1 y step=1, pero la API se puede llamar
+    // directamente (RNF04), así que el rango se valida también aquí.
+    if (body.orden !== undefined && body.orden !== '') {
+      const orden = Number(body.orden)
+      if (!Number.isInteger(orden) || orden < 1) {
+        throw new AppError('orden debe ser un número entero mayor o igual a 1', 400, 'orden')
+      }
     }
 
     return new RegistrarEtapaDto({
