@@ -97,7 +97,7 @@ aws ssm put-parameter --name /sincoco/origin-verify --type SecureString --overwr
 # 3. Empaquetar el backend y subirlo
 tar -czf deploy/local/sincoco-backend.tar.gz \
   --exclude='node_modules' --exclude='*/.env' --exclude='.env' \
-  backend deploy docs/schema.sql docs/seed_permisos_prueba.sql docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql
+  backend deploy docs/schema.sql docs/seed_permisos_prueba.sql docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql docs/seed_catalogos_prueba.sql docs/migracion_*.sql
 aws s3 cp deploy/local/sincoco-backend.tar.gz s3://sincoco-deploy-388371826611/
 
 # 4. Instalar/actualizar en la instancia (ver deploy/instalar-backend.sh)
@@ -162,6 +162,7 @@ instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
 | Job | Trabajo |
 |---|---|
 | `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18 contra un backend recién arrancado. |
+| `migrar` | Deja el esquema del RDS al día aplicando `docs/migracion_*.sql` (idempotente, sin borrar datos) **antes** de tocar la instancia. Invoca el workflow reutilizable `migrar-base.yml`. |
 | `backend` | Empaqueta, sube a S3 y ejecuta `deploy/instalar-backend.sh` en la instancia con `deploy/remoto.sh` (SSM, sin SSH). |
 | `frontend` | `npm ci` + build, sincroniza a S3 e invalida `/` y `/index.html` en CloudFront. |
 | `resumen` | Escribe en la ejecución quién desplegó, qué componente, con qué motivo y el resultado de cada job. |
@@ -178,6 +179,32 @@ bash deploy/remoto.sh deploy/instalar-backend.sh   # backend
 deploy/remoto.sh deploy/cargar-base.sh             # base de datos
 ```
 
+### Migraciones de esquema
+
+El pipeline **no carga `docs/schema.sql`** en producción: ese dump empieza con
+`DROP TABLE`. Relanzar `deploy/cargar-base.sh` tampoco migra, porque omite el
+esquema si ya existe y `FORZAR_ESQUEMA=1` **borra los datos**.
+
+Para cambios de esquema (columnas o tablas nuevas) se añade un
+`docs/migracion_<algo>.sql` **idempotente**: que compruebe `information_schema`
+antes de tocar nada, como los dos que ya existen. **No hay tabla de control**: se
+aplican todos en orden alfabético cada vez, y como se protegen solos, repetirlos
+no hace daño. Basta con dejar el archivo en `docs/`; no hay que registrarlo en
+ningún sitio.
+
+Ese trabajo lo hace el workflow **`.github/workflows/migrar-base.yml`**:
+
+- **A mano**: *Actions* → **Migrar base de datos** → *Run workflow*. Útil cuando
+  has tocado el esquema en local y quieres dejar producción al día antes de
+  desplegar.
+- **Automático**: **Desplegar SINCOCO en AWS** lo invoca como primer paso del
+  backend (job `migrar`, antes de instalar el código). Si la migración falla, el
+  backend no se despliega.
+
+Empaqueta solo `docs/` en `sincoco-migraciones.tar.gz`, lo sube a S3 y ejecuta
+`deploy/migrar-base.sh` en la instancia por SSM. **Nunca** carga el esquema
+completo ni borra datos, y no reinicia el backend.
+
 ### Límites de la capa gratuita en CI
 
 | Consumo por ejecución | Coste |
@@ -193,9 +220,9 @@ EC2/RDS**, que es lo que de verdad puede salirse de la capa gratuita.
 
 ### Limitaciones conocidas
 
-- El pipeline **no migra el esquema**. Si un sprint añade tablas o columnas hay
-  que preparar una migración; relanzar `deploy/cargar-base.sh` no basta (omite el
-  esquema si ya existe, y `FORZAR_ESQUEMA=1` **borra los datos**).
+- Las **migraciones de esquema** van por su propio workflow (ver *Migraciones de
+  esquema*). `docs/schema.sql` **no** se aplica en producción, así que un cambio
+  de esquema siempre necesita su `docs/migracion_*.sql` idempotente.
 - El despliegue del backend **reinicia el servicio** (unos segundos de corte).
 - Reiniciar la instancia o cambiar su IP no rompe nada (hay IP elástica), pero
   cambiar el **DNS del origen** obligaría a actualizar CloudFront.
