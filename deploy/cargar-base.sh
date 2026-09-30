@@ -33,28 +33,42 @@ else
   echo "el esquema ya existe: se omite (usa FORZAR_ESQUEMA=1 para recargarlo)"
 fi
 
-# --- 2. Roles, usuarios y trabajadores ------------------------------------
+# --- 2. Catálogos del personal (cargos y especialidades) --------------------
+# Se ejecuta SIEMPRE: en una base que viene del esquema anterior migra el texto
+# libre de `trabajadores.cargo` / `especialidad` a las tablas de dominio, y en
+# una base nueva no hace nada. Después se completan con el catálogo inicial.
+$MYSQL "$DB_NAME" < docs/migracion_catalogos.sql
+
+# --- 2b. Recuperación de contraseña (HU-01) --------------------------------
+# Crea la tabla de códigos de un solo uso si no existe (bases anteriores).
+$MYSQL "$DB_NAME" < docs/migracion_password_reset.sql
+$MYSQL "$DB_NAME" < docs/seed_catalogos_prueba.sql
+
+# --- 3. Roles, usuarios y trabajadores ------------------------------------
 # Va ANTES que la matriz de permisos: seed_permisos_prueba.sql construye
 # roles_permisos con un SELECT sobre `roles`, así que los roles deben existir.
+# Los trabajadores referencian `cargos`, que ya quedó cargado arriba.
 $MYSQL "$DB_NAME" < docs/seed_usuarios_prueba.sql
 
-# --- 3. Catálogo de permisos y matriz rol -> permisos (HU-01) -------------
+# --- 4. Catálogo de permisos y matriz rol -> permisos (HU-01) -------------
 $MYSQL "$DB_NAME" < docs/seed_permisos_prueba.sql
 
-# --- 4. Cliente de ejemplo ------------------------------------------------
+# --- 5. Cliente de ejemplo ------------------------------------------------
 $MYSQL "$DB_NAME" < docs/seed_proyectos_prueba.sql
 
-# --- 5. Contraseñas reales ------------------------------------------------
+# --- 6. Contraseñas reales ------------------------------------------------
 # El SQL deja un hash de marcador: scripts/seed.js lo reemplaza por bcrypt.
 (cd /opt/sincoco/backend && sudo -u ubuntu node scripts/seed.js)
 
-# --- 6. Verificación ------------------------------------------------------
+# --- 7. Verificación ------------------------------------------------------
 $MYSQL "$DB_NAME" -e "
   SELECT 'usuarios' t, COUNT(*) n FROM usuarios
   UNION ALL SELECT 'roles', COUNT(*) FROM roles
   UNION ALL SELECT 'permisos', COUNT(*) FROM permisos
   UNION ALL SELECT 'roles_permisos', COUNT(*) FROM roles_permisos
   UNION ALL SELECT 'trabajadores', COUNT(*) FROM trabajadores
+  UNION ALL SELECT 'cargos', COUNT(*) FROM cargos
+  UNION ALL SELECT 'especialidades', COUNT(*) FROM especialidades
   UNION ALL SELECT 'clientes', COUNT(*) FROM clientes
   UNION ALL SELECT 'triggers', COUNT(*) FROM information_schema.triggers
     WHERE trigger_schema = 'sincoco';"

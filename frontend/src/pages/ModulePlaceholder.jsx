@@ -16,11 +16,11 @@ const RF_DESCRIPTIONS = {
 export default function ModulePlaceholder({ title, rf }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-white/60 px-6 py-24 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-100 text-brand-800 ring-1 ring-accent-200">
         <WrenchScrewdriverIcon className="h-7 w-7" />
       </div>
       <h2 className="mt-5 text-xl font-bold tracking-tight text-slate-900">{title}</h2>
-      <span className="badge mt-2 bg-brand-50 text-brand-700 ring-1 ring-brand-200">{rf}</span>
+      <span className="badge mt-2 bg-accent-50 text-brand-700 ring-1 ring-accent-200">{rf}</span>
       <p className="mt-4 max-w-md text-sm leading-relaxed text-slate-500">
         Módulo en desarrollo — se construye por sprints (Scrum).
         <br />

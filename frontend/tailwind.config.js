@@ -4,21 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Paleta del equipo (decisión PO): negro para acciones primarias,
-        // blanco como color principal de fondo. El acento de focus es
-        // amarillo (accent-*) — ver .btn-primary/.input en index.css.
+        // Paleta del equipo (decisión PO): gris grafito para las superficies
+        // oscuras y las acciones principales, blanco como fondo, y amarillo
+        // (accent-*) como color de marca — logo, menú activo, botones
+        // primarios y acentos de foco. Se descartó el negro puro (#000):
+        // cansaba la vista en pantallas largas.
         brand: {
-          50: '#fafafa',
-          100: '#f5f5f5',
-          200: '#e5e5e5',
-          300: '#d4d4d4',
-          400: '#a3a3a3',
-          500: '#737373',
-          600: '#171717',
-          700: '#000000',
-          800: '#000000',
-          900: '#000000',
-          950: '#000000',
+          50: '#f6f7f9',
+          100: '#eceff3',
+          200: '#dde2e9',
+          300: '#c6cdd8',
+          400: '#98a2b3',
+          500: '#667085',
+          600: '#4b5768',
+          700: '#3a4453',
+          800: '#2b3341',
+          900: '#1f2530',
+          950: '#171c24',
         },
         accent: {
           50: '#fefce8',
@@ -28,6 +30,7 @@ export default {
           400: '#facc15',
           500: '#eab308',
           600: '#ca8a04',
+          700: '#a16207',
         },
       },
       fontFamily: {

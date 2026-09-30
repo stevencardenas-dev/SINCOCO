@@ -156,6 +156,32 @@ CREATE TABLE `bitacora_trazabilidad` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `cargos`
+--
+-- Dominio de los cargos de la empresa (HU-04). `operativo` marca los cargos de
+-- obra: para ellos la especialidad es obligatoria.
+--
+
+DROP TABLE IF EXISTS `cargos`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `cargos` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descripcion` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `operativo` tinyint(1) NOT NULL DEFAULT '0',
+  `estado` enum('ACTIVO','INACTIVO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVO',
+  `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `actualizado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
+  `fecha_baja` datetime DEFAULT NULL,
+  `baja_por_usuario_id` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `categorias_materiales`
 --
 
@@ -470,6 +496,31 @@ CREATE TABLE `entradas_inventario` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `especialidades`
+--
+-- Dominio de las especialidades del personal (HU-04). Es el valor que se exige
+-- cuando el cargo es operativo.
+--
+
+DROP TABLE IF EXISTS `especialidades`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `especialidades` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `descripcion` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `estado` enum('ACTIVO','INACTIVO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'ACTIVO',
+  `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `actualizado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `activo` tinyint(1) NOT NULL DEFAULT '1',
+  `fecha_baja` datetime DEFAULT NULL,
+  `baja_por_usuario_id` bigint DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `nombre` (`nombre`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `etapas_proyecto`
 --
 
@@ -765,6 +816,33 @@ CREATE TABLE `proyectos` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `restablecimientos_password`
+--
+-- Recuperación de contraseña desde el login (HU-01). Cada solicitud genera un
+-- código de un solo uso con vencimiento. El código se guarda legible porque el
+-- canal de entrega es el administrador (el sistema no envía correo), y queda
+-- inutilizado al usarse o al vencer; no se copia a la bitácora.
+--
+
+DROP TABLE IF EXISTS `restablecimientos_password`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `restablecimientos_password` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `usuario_id` bigint NOT NULL,
+  `codigo` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `expira_en` datetime NOT NULL,
+  `intentos` tinyint NOT NULL DEFAULT '0',
+  `usado_en` datetime DEFAULT NULL,
+  `solicitado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `direccion_ip` varchar(45) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `fk_reset_usuario` (`usuario_id`),
+  CONSTRAINT `fk_reset_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `roles`
 --
 
@@ -968,8 +1046,8 @@ CREATE TABLE `trabajadores` (
   `email` varchar(150) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `telefono` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `direccion` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `cargo` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
-  `especialidad` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cargo_id` bigint NOT NULL,
+  `especialidad_id` bigint DEFAULT NULL,
   `disponible` tinyint(1) DEFAULT '1',
   `estado` enum('ACTIVO','INACTIVO','VACACIONES','LICENCIA') COLLATE utf8mb4_unicode_ci DEFAULT 'ACTIVO',
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
@@ -979,7 +1057,11 @@ CREATE TABLE `trabajadores` (
   `baja_por_usuario_id` bigint DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `numero_documento` (`numero_documento`),
-  UNIQUE KEY `email` (`email`)
+  UNIQUE KEY `email` (`email`),
+  KEY `fk_trabajador_cargo` (`cargo_id`),
+  KEY `fk_trabajador_especialidad` (`especialidad_id`),
+  CONSTRAINT `fk_trabajador_cargo` FOREIGN KEY (`cargo_id`) REFERENCES `cargos` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_trabajador_especialidad` FOREIGN KEY (`especialidad_id`) REFERENCES `especialidades` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

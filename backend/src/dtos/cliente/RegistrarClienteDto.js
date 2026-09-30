@@ -1,6 +1,6 @@
 import { AppError } from '../../utils/AppError.js'
 
-const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PASAPORTE']
+export const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PASAPORTE']
 
 /**
  * DTO para el registro de un cliente (HU-02 · CU-02 Alt 2: cuando el cliente

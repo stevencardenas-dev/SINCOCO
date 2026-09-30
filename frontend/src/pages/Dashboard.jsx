@@ -97,7 +97,7 @@ export default function Dashboard() {
       <div>
         <p className="text-sm text-slate-500">{hoyCapitalizado}</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-black">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-400 text-brand-950 ring-1 ring-inset ring-accent-500/30">
             <SunIcon className="h-5 w-5" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -139,7 +139,7 @@ export default function Dashboard() {
               label="Proyectos activos"
               value={proyectos.activos}
               hint={resumenEstados(proyectos.por_estado)}
-              tone="brand"
+              tone="accent"
             />
             <StatCard
               icon={BellAlertIcon}
@@ -223,12 +223,13 @@ export default function Dashboard() {
                       />
                       <Tooltip
                         contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0', fontSize: 13 }}
+                        cursor={{ fill: '#fefce8' }}
                         formatter={(v) => [`${v}%`, 'Avance']}
                         labelFormatter={(codigo) =>
                           proyectos.avance.find((p) => p.codigo === codigo)?.nombre ?? codigo
                         }
                       />
-                      <Bar dataKey="avance" fill="#171717" radius={[0, 6, 6, 0]} barSize={18} />
+                      <Bar dataKey="avance" fill="#facc15" radius={[0, 6, 6, 0]} barSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

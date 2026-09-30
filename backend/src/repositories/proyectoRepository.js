@@ -54,6 +54,18 @@ export async function listarActivos(incluirInactivos = false) {
  * valores iniciales (estado, porcentaje_avance_total) aplicados por el
  * service. Devuelve el id autogenerado.
  */
+/**
+ * Actualización parcial del proyecto: solo se escriben los campos recibidos
+ * (el service ya validó las reglas de negocio y el `codigo` no es editable).
+ */
+export async function update(id, campos) {
+  const asignaciones = Object.keys(campos).map((c) => `${c} = ?`)
+  await pool.query(
+    `UPDATE proyectos SET ${asignaciones.join(', ')} WHERE id = ?`,
+    [...Object.values(campos), id],
+  )
+}
+
 export async function create(proyecto) {
   const sql = `
     INSERT INTO proyectos (

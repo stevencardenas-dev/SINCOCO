@@ -32,11 +32,29 @@ export async function findByDocumento(numeroDocumento) {
  * Lista el catálogo de clientes activos para el formulario de CU-02.
  */
 export async function listarActivos() {
+  return listar(false)
+}
+
+/**
+ * Catálogo de clientes. `incluirInactivos` lo usa la pantalla de Catálogo, que
+ * administra también los clientes dados de baja (HU-18).
+ */
+export async function listar(incluirInactivos = false) {
   const [rows] = await pool.query(
-    `SELECT ${CAMPOS} FROM clientes WHERE activo = 1
+    `SELECT ${CAMPOS} FROM clientes
+     ${incluirInactivos ? '' : 'WHERE activo = 1'}
      ORDER BY razon_social_nombre`,
   )
   return rows.map(Cliente.fromRow)
+}
+
+/** Actualización parcial: solo se escriben los campos recibidos. */
+export async function update(id, campos) {
+  const asignaciones = Object.keys(campos).map((c) => `${c} = ?`)
+  await pool.query(
+    `UPDATE clientes SET ${asignaciones.join(', ')} WHERE id = ?`,
+    [...Object.values(campos), id],
+  )
 }
 
 export async function create(cliente) {

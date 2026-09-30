@@ -167,7 +167,7 @@ export default function PlanProyecto() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
               <div>
                 <p className="text-sm font-semibold text-slate-900">
-                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs text-white">
+                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent-400 text-xs font-semibold text-brand-950 ring-1 ring-inset ring-accent-500/30">
                     {et.orden}
                   </span>
                   {et.nombre}

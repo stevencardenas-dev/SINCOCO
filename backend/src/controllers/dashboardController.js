@@ -64,9 +64,11 @@ export async function resumen(req, res) {
        FROM trabajadores`,
   )
   const [porCargo] = await pool.query(
-    `SELECT cargo, COUNT(*) AS total
-       FROM trabajadores WHERE activo = 1
-      GROUP BY cargo ORDER BY total DESC, cargo`,
+    // HU-04: el cargo vive en el catálogo `cargos` (tabla de dominio).
+    `SELECT c.nombre AS cargo, COUNT(*) AS total
+       FROM trabajadores t JOIN cargos c ON c.id = t.cargo_id
+      WHERE t.activo = 1
+      GROUP BY c.id, c.nombre ORDER BY total DESC, c.nombre`,
   )
   const [[cuentas]] = await pool.query(
     'SELECT COUNT(*) AS activos FROM usuarios WHERE activo = 1',

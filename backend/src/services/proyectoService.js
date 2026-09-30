@@ -124,6 +124,106 @@ export async function registrarProyecto(dto, ctx = {}) {
 }
 
 /**
+ * Actualiza la información de un proyecto (HU-02).
+ *
+ * Se vuelven a aplicar las mismas reglas del registro, porque una edición
+ * puede dejarlo inconsistente: presupuesto mayor que cero y dentro del rango de
+ * la columna, fechas coherentes, cliente existente y responsable existente y no
+ * dado de baja. El `codigo` no se edita: es el identificador con el que el
+ * proyecto se cita en la obra y en la bitácora.
+ *
+ * La edición queda registrada en la bitácora (RF31 · RN07) con los campos
+ * cambiados, igual que cualquier otro cambio de datos.
+ */
+const CAMPOS_EDITABLES = [
+  'cliente_id', 'nombre', 'descripcion', 'ubicacion',
+  'fecha_inicio_programada', 'fecha_fin_programada',
+  'responsable_id', 'presupuesto_inicial', 'estado', 'observaciones',
+]
+
+const ESTADOS_VALIDOS = ['PLANIFICACION', 'EN_EJECUCION', 'PAUSADO', 'FINALIZADO', 'CANCELADO']
+
+export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
+  const actual = await proyectoRepository.findById(id)
+  if (!actual) throw new AppError('Proyecto no encontrado', 404)
+
+  const campos = {}
+  for (const campo of CAMPOS_EDITABLES) {
+    if (cambios[campo] !== undefined) campos[campo] = cambios[campo]
+  }
+  if (Object.keys(campos).length === 0) {
+    throw new AppError('No hay campos que actualizar', 400)
+  }
+
+  // Criterio 2: presupuesto numérico, mayor que cero y dentro del rango.
+  if (campos.presupuesto_inicial !== undefined) {
+    campos.presupuesto_inicial = Number(campos.presupuesto_inicial)
+    if (!(campos.presupuesto_inicial > 0)) {
+      throw new AppError('El presupuesto inicial debe ser mayor que 0', 400, 'presupuesto_inicial')
+    }
+    if (campos.presupuesto_inicial > PRESUPUESTO_MAXIMO) {
+      throw new AppError(
+        `El presupuesto inicial supera el máximo permitido (${PRESUPUESTO_MAXIMO.toLocaleString('es-CO')})`,
+        400,
+        'presupuesto_inicial',
+      )
+    }
+  }
+
+  // Criterio 3: fechas coherentes, comparando con el valor vigente.
+  const inicio = new Date(campos.fecha_inicio_programada ?? actual.fecha_inicio_programada)
+  const fin = new Date(campos.fecha_fin_programada ?? actual.fecha_fin_programada)
+  if (inicio >= fin) {
+    throw new AppError(
+      'La fecha de inicio programada debe ser anterior a la fecha de finalización programada',
+      400,
+      'fecha_fin_programada',
+    )
+  }
+
+  // Criterio 1: cliente y responsable siguen existiendo (y el responsable activo).
+  if (campos.cliente_id !== undefined) {
+    const cliente = await clienteRepository.findById(campos.cliente_id)
+    if (!cliente) {
+      throw new AppError('El cliente indicado no existe; regístrelo antes de continuar', 404, 'cliente_id')
+    }
+  }
+  if (campos.responsable_id !== undefined) {
+    const responsable = await trabajadorRepository.findById(campos.responsable_id)
+    if (!responsable) {
+      throw new AppError('El responsable indicado no existe', 404, 'responsable_id')
+    }
+    if (!responsable.activo) {
+      throw new AppError(
+        'El responsable indicado se encuentra dado de baja y no puede ser asignado a un proyecto',
+        400,
+        'responsable_id',
+      )
+    }
+  }
+
+  if (campos.estado !== undefined) {
+    campos.estado = String(campos.estado).toUpperCase()
+    if (!ESTADOS_VALIDOS.includes(campos.estado)) {
+      throw new AppError(`estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}`, 400, 'estado')
+    }
+  }
+
+  await proyectoRepository.update(id, campos)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId,
+    accion: 'ACTUALIZAR',
+    tabla: 'proyectos',
+    registroId: Number(id),
+    detalles: { codigo: actual.codigo, cambios: campos },
+    ip: ctx.ip,
+  })
+
+  return proyectoRepository.findById(id)
+}
+
+/**
  * Lista los proyectos activos (módulo de proyectos, HU-02). `incluirInactivos`
  * permite consultar los dados de baja (HU-18).
  */
