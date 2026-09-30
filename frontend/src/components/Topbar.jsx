@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRightOnRectangleIcon, Bars3Icon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -16,6 +16,8 @@ const TITLES = {
   '/auditoria': 'Trazabilidad y auditoría',
   '/usuarios': 'Gestión de usuarios',
   '/roles': 'Roles y permisos',
+  '/catalogo': 'Catálogo',
+  '/perfil': 'Mi información personal',
 }
 
 // Roles reales del sistema (tabla `roles`, ver docs/seed_usuarios_prueba.sql)
@@ -62,18 +64,24 @@ export default function Topbar({ onMenuClick }) {
             />
           </div>
 
-          {/* User */}
+          {/* User: el bloque abre la información personal (HU-01 · HU-04). */}
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 py-1.5 pl-1.5 pr-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black text-xs font-bold text-white">
-              {user?.username?.[0]?.toUpperCase() ?? 'U'}
-            </div>
-            <div className="hidden leading-tight sm:block">
-              <p className="text-sm font-semibold text-slate-800">{user?.username ?? 'Usuario'}</p>
-              <p className="text-[11px] text-slate-500">{ROLE_LABELS[user?.rol] ?? user?.rol ?? 'Usuario'}</p>
-            </div>
+            <Link
+              to="/perfil"
+              className="flex items-center gap-3 rounded-lg transition hover:bg-accent-50"
+              title="Ver mi información personal"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-800 text-xs font-bold text-white">
+                {user?.username?.[0]?.toUpperCase() ?? 'U'}
+              </div>
+              <div className="hidden leading-tight sm:block">
+                <p className="text-sm font-semibold text-slate-800">{user?.username ?? 'Usuario'}</p>
+                <p className="text-[11px] text-slate-500">{ROLE_LABELS[user?.rol] ?? user?.rol ?? 'Usuario'}</p>
+              </div>
+            </Link>
             <button
               onClick={handleLogout}
-              className="ml-1 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              className="ml-1 rounded-lg p-1.5 text-slate-400 transition hover:bg-accent-50 hover:text-brand-900"
               title="Cerrar sesión"
             >
               <ArrowRightOnRectangleIcon className="h-4 w-4" />

@@ -11,7 +11,7 @@ export default function Layout() {
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-30 bg-slate-900/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-30 bg-brand-950/50 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

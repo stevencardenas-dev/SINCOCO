@@ -2,36 +2,20 @@ import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
+import { resolverCargo, resolverEspecialidad } from './catalogoService.js'
 
 /**
- * HU-04 · criterio 2: `especialidad` es obligatoria cuando el cargo
- * corresponde a personal operativo. El esquema no marca qué cargos son
- * operativos, así que se declara aquí el conjunto.
- */
-const CARGOS_OPERATIVOS = [
-  'MAESTRO DE OBRA',
-  'MAESTRO_OBRA',
-  'OFICIAL',
-  'OBRERO',
-  'AYUDANTE',
-  'OPERARIO',
-  'TECNICO',
-  'TECNICO DE OBRA',
-]
-
-const normalizar = (texto) =>
-  String(texto).toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-
-function esCargoOperativo(cargo) {
-  return CARGOS_OPERATIVOS.includes(normalizar(cargo))
-}
-
-/**
- * Criterio 2: si el cargo es operativo, la especialidad es obligatoria.
- * Se usa tanto al crear como al editar el cargo.
+ * HU-04 · criterio 2: la especialidad es obligatoria para el personal
+ * operativo. La lista de cargos operativos ya no está escrita aquí: la marca
+ * `cargos.operativo` en la tabla de dominio, así que el administrador puede
+ * cambiar la regla desde la pantalla de Catálogo sin tocar el código.
+ *
+ * Se usa tanto al crear como al editar el trabajador; `cargo` es la fila del
+ * catálogo (o, al editar sin cambiar el cargo, el resumen que devuelve el
+ * repositorio).
  */
 export function exigirEspecialidadSiOperativo(cargo, especialidad) {
-  if (esCargoOperativo(cargo) && !especialidad) {
+  if (Number(cargo?.operativo) === 1 && !especialidad) {
     throw new AppError(
       'La especialidad es obligatoria para cargos de personal operativo',
       400,
@@ -63,16 +47,24 @@ export async function registrarTrabajador(dto, ctx = {}) {
     if (porEmail) throw new AppError('Ya existe un trabajador con ese correo', 409, 'email')
   }
 
-  exigirEspecialidadSiOperativo(dto.cargo, dto.especialidad)
+  // HU-04: el cargo y la especialidad tienen que existir en los catálogos.
+  const cargo = await resolverCargo(dto)
+  const especialidad = await resolverEspecialidad(dto)
 
-  const id = await trabajadorRepository.create(dto)
+  exigirEspecialidadSiOperativo(cargo, especialidad)
+
+  const id = await trabajadorRepository.create({
+    ...dto,
+    cargo_id: cargo.id,
+    especialidad_id: especialidad?.id ?? null,
+  })
 
   await bitacora({
     usuarioId: ctx.usuarioId,
     accion: 'CREAR',
     tabla: 'trabajadores',
     registroId: id,
-    detalles: { numero_documento: dto.numero_documento, cargo: dto.cargo },
+    detalles: { numero_documento: dto.numero_documento, cargo: cargo.nombre },
     ip: ctx.ip,
   })
 
@@ -85,7 +77,7 @@ export async function registrarTrabajador(dto, ctx = {}) {
  */
 const CAMPOS_EDITABLES = [
   'nombres', 'apellidos', 'email', 'telefono', 'direccion',
-  'cargo', 'especialidad', 'estado', 'disponible',
+  'estado', 'disponible',
 ]
 
 export async function actualizarTrabajador(id, cambios, ctx = {}) {
@@ -96,6 +88,21 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
   for (const campo of CAMPOS_EDITABLES) {
     if (cambios[campo] !== undefined) campos[campo] = cambios[campo]
   }
+
+  // El cargo y la especialidad se cambian por id o por nombre del catálogo.
+  let cargoFinal = { operativo: actual.cargo_operativo }
+  if (cambios.cargo_id !== undefined || cambios.cargo !== undefined) {
+    const cargo = await resolverCargo(cambios)
+    campos.cargo_id = cargo.id
+    cargoFinal = cargo
+  }
+  let especialidadFinal = actual.especialidad_id
+  if (cambios.especialidad_id !== undefined || cambios.especialidad !== undefined) {
+    const especialidad = await resolverEspecialidad(cambios)
+    campos.especialidad_id = especialidad?.id ?? null
+    especialidadFinal = campos.especialidad_id
+  }
+
   if (Object.keys(campos).length === 0) {
     throw new AppError('No hay campos que actualizar', 400)
   }
@@ -108,10 +115,7 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
   }
   if (campos.email === '') campos.email = null
 
-  exigirEspecialidadSiOperativo(
-    campos.cargo ?? actual.cargo,
-    campos.especialidad ?? actual.especialidad,
-  )
+  exigirEspecialidadSiOperativo(cargoFinal, especialidadFinal)
 
   await trabajadorRepository.update(id, campos)
 

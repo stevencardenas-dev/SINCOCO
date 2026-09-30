@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FolderIcon, ArrowPathIcon, PlusIcon, BuildingOffice2Icon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
+import { FolderIcon, ArrowPathIcon, PlusIcon, BuildingOffice2Icon, ClipboardDocumentListIcon, PencilSquareIcon } from '@heroicons/react/24/outline'
+import Modal from '../components/Modal.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
@@ -26,7 +27,13 @@ const VACIO = {
   observaciones: '',
 }
 
-const CLIENTE_VACIO = { numero_documento: '', tipo_documento: 'NIT', razon_social_nombre: '' }
+const CLIENTE_VACIO = {
+  numero_documento: '',
+  tipo_documento: 'NIT',
+  razon_social_nombre: '',
+  nombre_contacto: '',
+  telefono: '',
+}
 
 // presupuesto_inicial es decimal(15,2): 13 dígitos enteros como máximo.
 const MAX_DIGITOS_PRESUPUESTO = 13
@@ -42,9 +49,14 @@ export default function Proyectos() {
   const [aviso, setAviso] = useState('')
   const [form, setForm] = useState(VACIO)
   const [abierto, setAbierto] = useState(false)
+  // Proyecto en edición: null = el formulario está registrando uno nuevo.
+  const [editando, setEditando] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const [clienteAbierto, setClienteAbierto] = useState(false)
   const [clienteForm, setClienteForm] = useState(CLIENTE_VACIO)
+  // Error propio del alta de cliente: se muestra dentro de su ventana, no en el
+  // aviso de la página (que queda detrás del modal).
+  const [errorCliente, setErrorCliente] = useState('')
   const [errorCampo, setErrorCampo] = useState(null)
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
@@ -84,35 +96,69 @@ export default function Proyectos() {
     }
   }
 
-  const crear = async (e) => {
+  // CU-02: registrar un proyecto nuevo o actualizar el que se está editando.
+  const guardar = async (e) => {
     e.preventDefault()
     setError(null)
     setAviso('')
     setErrorCampo(null)
     setGuardando(true)
     try {
-      const { data } = await api.post('/proyectos', {
+      const cuerpo = {
         ...form,
         cliente_id: Number(form.cliente_id),
         responsable_id: Number(form.responsable_id),
         presupuesto_inicial: Number(soloDigitos(form.presupuesto_inicial) || 0),
-      })
-      setForm(VACIO)
-      setAbierto(false)
-      setAviso(`Proyecto "${data.proyecto?.nombre ?? form.nombre}" registrado en planificación.`)
+      }
+      const { data } = editando
+        ? await api.patch(`/proyectos/${editando}`, cuerpo)
+        : await api.post('/proyectos', cuerpo)
+      const nombre = data.proyecto?.nombre ?? form.nombre
+      setAviso(editando ? `Proyecto "${nombre}" actualizado.` : `Proyecto "${nombre}" registrado en planificación.`)
+      cerrarFormulario()
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar el proyecto.')
+      setError(err.response?.data?.error ?? 'No se pudo guardar el proyecto.')
       setErrorCampo(err.response?.data?.campo ?? null)
     } finally {
       setGuardando(false)
     }
   }
 
+  const cerrarFormulario = () => {
+    setAbierto(false)
+    setEditando(null)
+    setForm(VACIO)
+    setErrorCampo(null)
+  }
+
+  /** Pasa el proyecto a edición: el formulario se abre con sus datos actuales. */
+  const abrirEditar = (p) => {
+    setError(null)
+    setAviso('')
+    setErrorCampo(null)
+    setEditando(p.id)
+    setForm({
+      codigo: p.codigo ?? '',
+      nombre: p.nombre ?? '',
+      cliente_id: String(p.cliente_id ?? ''),
+      responsable_id: String(p.responsable_id ?? ''),
+      ubicacion: p.ubicacion ?? '',
+      // El presupuesto llega como decimal ('1250000000.00'): se pasa a dígitos.
+      presupuesto_inicial: String(Math.round(Number(p.presupuesto_inicial ?? 0))),
+      fecha_inicio_programada: String(p.fecha_inicio_programada ?? '').slice(0, 10),
+      fecha_fin_programada: String(p.fecha_fin_programada ?? '').slice(0, 10),
+      descripcion: p.descripcion ?? '',
+      observaciones: p.observaciones ?? '',
+    })
+    setAbierto(true)
+  }
+
   // CU-02 Alt 2: el cliente no existe -> se registra aquí y queda seleccionado.
   const crearCliente = async (e) => {
     e.preventDefault()
     setError(null)
+    setErrorCliente('')
     setErrorCampo(null)
     try {
       const { data } = await api.post('/clientes', clienteForm)
@@ -123,7 +169,7 @@ export default function Proyectos() {
       setClienteAbierto(false)
       setAviso(`Cliente "${data.cliente.razon_social_nombre}" registrado y seleccionado.`)
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar el cliente.')
+      setErrorCliente(err.response?.data?.error ?? 'No se pudo registrar el cliente.')
       setErrorCampo(err.response?.data?.campo ?? null)
     }
   }
@@ -140,7 +186,7 @@ export default function Proyectos() {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => setAbierto((v) => !v)}
+            onClick={() => { setEditando(null); setForm(VACIO); setErrorCampo(null); setAbierto(true) }}
           >
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
@@ -164,15 +210,26 @@ export default function Proyectos() {
         </p>
       )}
 
-      {esAdmin && abierto && (
-        <form onSubmit={crear} className="card space-y-5 p-6">
-          <h3 className="text-base font-semibold text-slate-900">Registrar proyecto (CU-02)</h3>
-
+      {esAdmin && (
+        <Modal
+          abierto={abierto}
+          titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto (CU-02)'}
+          subtitulo={editando ? `Código ${form.codigo} · el cambio queda en la bitácora` : 'CU-02 · queda en estado de planificación'}
+          onCerrar={cerrarFormulario}
+          ancho="max-w-3xl"
+        >
+        <form onSubmit={guardar} className="space-y-5">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="p-codigo" className="label">Código</label>
               <input id="p-codigo" className={campo('codigo')} value={form.codigo}
-                onChange={(e) => setForm({ ...form, codigo: e.target.value })} required />
+                onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                disabled={Boolean(editando)} required />
+              {editando && (
+                <p className="mt-1 text-xs text-slate-500">
+                  El código identifica el proyecto y no se edita.
+                </p>
+              )}
             </div>
             <div>
               <label htmlFor="p-nombre" className="label">Nombre</label>
@@ -267,48 +324,78 @@ export default function Proyectos() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
             <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
-              {guardando ? 'Registrando…' : 'Registrar proyecto'}
+              {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar proyecto'}
             </button>
-            <button type="button" className="btn-ghost"
-              onClick={() => { setAbierto(false); setForm(VACIO); setErrorCampo(null) }}>
+            <button type="button" className="btn-ghost" onClick={cerrarFormulario}>
               Cancelar
             </button>
           </div>
         </form>
+        </Modal>
       )}
 
-      {esAdmin && abierto && clienteAbierto && (
-        <form onSubmit={crearCliente} className="card space-y-4 border border-brand-200 p-6">
-          <h4 className="text-sm font-semibold text-slate-900">Registrar cliente (CU-02 Alt 2)</h4>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <label htmlFor="c-doc" className="label">Documento</label>
-              <input id="c-doc" className={campo('numero_documento')} value={clienteForm.numero_documento}
-                onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })} required />
-            </div>
-            <div>
-              <label htmlFor="c-tipo" className="label">Tipo</label>
-              <select id="c-tipo" className="input" value={clienteForm.tipo_documento}
-                onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}>
-                <option value="NIT">NIT</option>
-                <option value="CC">CC</option>
-                <option value="CE">CE</option>
-                <option value="PASAPORTE">Pasaporte</option>
-              </select>
+      {/* CU-02 Alt 2: el cliente que no está en la lista se registra en una
+          ventana emergente encima del formulario. Antes aparecía al final de la
+          página, así que había que bajar y se perdía de vista el proyecto que
+          se estaba registrando. */}
+      {esAdmin && (
+        <Modal
+          abierto={clienteAbierto}
+          titulo="Registrar cliente"
+          subtitulo="CU-02 Alt 2 · queda guardado en el catálogo y seleccionado en el proyecto"
+          onCerrar={() => { setClienteAbierto(false); setErrorCliente(''); setErrorCampo(null) }}
+        >
+          <form onSubmit={crearCliente} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="c-tipo" className="label">Tipo de documento</label>
+                <select id="c-tipo" className="input" value={clienteForm.tipo_documento}
+                  onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}>
+                  <option value="NIT">NIT</option>
+                  <option value="CC">CC</option>
+                  <option value="CE">CE</option>
+                  <option value="PASAPORTE">Pasaporte</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="c-doc" className="label">Documento</label>
+                <input id="c-doc" className={campo('numero_documento')} value={clienteForm.numero_documento}
+                  onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })} required />
+              </div>
             </div>
             <div>
               <label htmlFor="c-nombre" className="label">Razón social / nombre</label>
               <input id="c-nombre" className={campo('razon_social_nombre')} value={clienteForm.razon_social_nombre}
                 onChange={(e) => setClienteForm({ ...clienteForm, razon_social_nombre: e.target.value })} required />
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button type="submit" className="btn-primary">Registrar cliente</button>
-            <button type="button" className="btn-ghost" onClick={() => setClienteAbierto(false)}>Cerrar</button>
-          </div>
-        </form>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="c-contacto" className="label">Nombre del contacto</label>
+                <input id="c-contacto" className="input" value={clienteForm.nombre_contacto}
+                  onChange={(e) => setClienteForm({ ...clienteForm, nombre_contacto: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="c-telefono" className="label">Teléfono</label>
+                <input id="c-telefono" className="input" value={clienteForm.telefono}
+                  onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })} />
+              </div>
+            </div>
+
+            {errorCliente && (
+              <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                {errorCliente}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
+              <button type="submit" className="btn-primary">Registrar cliente</button>
+              <button type="button" className="btn-ghost"
+                onClick={() => { setClienteAbierto(false); setErrorCliente('') }}>Cancelar</button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {proyectos === null && !error && (
@@ -369,9 +456,9 @@ export default function Proyectos() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-2 w-28 overflow-hidden rounded-full bg-brand-100">
                             <div
-                              className="h-full rounded-full bg-brand-600 transition-all"
+                              className="h-full rounded-full bg-accent-500 transition-all"
                               style={{ width: `${avance}%` }}
                             />
                           </div>
@@ -383,16 +470,27 @@ export default function Proyectos() {
                           <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
                         </Link>
                       </td>
-                      <td className="px-5 py-4 text-right">
-                        {esAdmin && (
-                          <button
-                            className="btn-ghost text-xs"
-                            onClick={() => cambiarBaja(p)}
-                            aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
-                          >
-                            {p.activo ? 'Dar de baja' : 'Reactivar'}
-                          </button>
-                        )}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {esAdmin && p.activo && (
+                            <button
+                              className="btn-ghost text-xs"
+                              onClick={() => abrirEditar(p)}
+                              aria-label={`Actualizar ${p.nombre}`}
+                            >
+                              <PencilSquareIcon className="h-4 w-4" /> Editar
+                            </button>
+                          )}
+                          {esAdmin && (
+                            <button
+                              className="btn-ghost text-xs"
+                              onClick={() => cambiarBaja(p)}
+                              aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
+                            >
+                              {p.activo ? 'Dar de baja' : 'Reactivar'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

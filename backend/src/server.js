@@ -9,6 +9,8 @@ import dashboardRoutes from './routes/dashboard.js'
 import proyectosRoutes from './routes/proyectos.js'
 import clientesRoutes from './routes/clientes.js'
 import trabajadoresRoutes from './routes/trabajadores.js'
+import catalogosRoutes from './routes/catalogos.js'
+import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
 import actividadesRoutes from './routes/actividades.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -25,6 +27,8 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/proyectos', proyectosRoutes)
 app.use('/api/clientes', clientesRoutes)
 app.use('/api/trabajadores', trabajadoresRoutes)
+app.use('/api/catalogos', catalogosRoutes)
+app.use('/api/perfil', perfilRoutes)
 app.use('/api/etapas', etapasRoutes)
 app.use('/api/actividades', actividadesRoutes)
 

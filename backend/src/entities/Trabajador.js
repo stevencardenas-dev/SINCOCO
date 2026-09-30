@@ -13,7 +13,10 @@ export class Trabajador {
     email,
     telefono,
     direccion,
+    cargo_id,
     cargo,
+    cargo_operativo,
+    especialidad_id,
     especialidad,
     disponible,
     estado,
@@ -27,7 +30,12 @@ export class Trabajador {
     this.email = email ?? null
     this.telefono = telefono ?? null
     this.direccion = direccion ?? null
+    // HU-04: `cargo` y `especialidad` llegan del catálogo por el JOIN del
+    // repositorio; los ids son los que se guardan al registrar o editar.
+    this.cargo_id = cargo_id ?? null
     this.cargo = cargo
+    this.cargo_operativo = Number(cargo_operativo) === 1
+    this.especialidad_id = especialidad_id ?? null
     this.especialidad = especialidad ?? null
     this.disponible = disponible
     this.estado = estado

@@ -1,5 +1,6 @@
 import {
-  registrarProyecto, listarProyectos, darDeBajaProyecto, reactivarProyecto,
+  registrarProyecto,
+  actualizarProyecto, listarProyectos, darDeBajaProyecto, reactivarProyecto,
 } from '../services/proyectoService.js'
 import { RegistrarProyectoDto } from '../dtos/proyecto/RegistrarProyectoDto.js'
 
@@ -42,6 +43,19 @@ export async function listar(req, res, next) {
 }
 
 /** PATCH /api/proyectos/:id/baja -> HU-18: baja lógica. */
+/** PATCH /api/proyectos/:id -> editar la información del proyecto. */
+export async function actualizar(req, res, next) {
+  try {
+    const proyecto = await actualizarProyecto(req.params.id, req.body, {
+      usuarioId: req.user.id,
+      ip: req.ip,
+    })
+    return res.json({ message: 'Proyecto actualizado', proyecto })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 export async function baja(req, res, next) {
   try {
     const resultado = await darDeBajaProyecto(req.params.id, { usuarioId: req.user.id, ip: req.ip })

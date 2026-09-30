@@ -98,8 +98,10 @@ jobs:
           # RDS no acepta los DEFINER del dump; aquí se quitan igual que en producción.
           sed 's|/\*!50017 DEFINER=[^*]*\*/||g' docs/schema.sql > /tmp/schema.sql
           mysql -h 127.0.0.1 -u root < /tmp/schema.sql
-          # Los roles van antes que la matriz de permisos (roles_permisos se
-          # construye con un SELECT sobre roles).
+          # Los catálogos van antes que los trabajadores (trabajadores.cargo_id
+          # es clave foránea de cargos) y los roles antes que la matriz de
+          # permisos (roles_permisos se construye con un SELECT sobre roles).
+          mysql -h 127.0.0.1 -u root sincoco < docs/seed_catalogos_prueba.sql
           mysql -h 127.0.0.1 -u root sincoco < docs/seed_usuarios_prueba.sql
           mysql -h 127.0.0.1 -u root sincoco < docs/seed_permisos_prueba.sql
           mysql -h 127.0.0.1 -u root sincoco < docs/seed_proyectos_prueba.sql
@@ -133,7 +135,7 @@ jobs:
       - name: Ejecutar las pruebas
         working-directory: tests
         run: |
-          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_hu18_baja_logica.py; do
+          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py; do
             echo "::group::$prueba"
             python3 "$prueba"
             echo "::endgroup::"
@@ -171,7 +173,9 @@ jobs:
             --exclude='node_modules' --exclude='*/.env' --exclude='.env' \
             --exclude='__pycache__' \
             backend deploy docs/schema.sql docs/seed_permisos_prueba.sql \
-            docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql
+            docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql \
+            docs/seed_catalogos_prueba.sql docs/migracion_catalogos.sql \
+            docs/migracion_password_reset.sql
           ls -lh sincoco-backend.tar.gz
 
       - name: Subir el paquete a S3

@@ -5,13 +5,25 @@ import { Trabajador } from '../entities/Trabajador.js'
  * Repositorio de la tabla `trabajadores` (HU-04, HU-02).
  */
 
-const CAMPOS = `id, numero_documento, tipo_documento, nombres, apellidos,
-                email, telefono, direccion, cargo, especialidad,
-                disponible, estado, activo`
+/**
+ * HU-04: el cargo y la especialidad ya no son texto libre, viven en las tablas
+ * de dominio `cargos` y `especialidades`. Se siguen exponiendo por su nombre
+ * (contrato que ya usan la interfaz y las pruebas) y se añaden los ids para que
+ * el formulario los seleccione en un combo.
+ */
+const CAMPOS = `t.id, t.numero_documento, t.tipo_documento, t.nombres, t.apellidos,
+                t.email, t.telefono, t.direccion,
+                t.cargo_id, c.nombre AS cargo, c.operativo AS cargo_operativo,
+                t.especialidad_id, e.nombre AS especialidad,
+                t.disponible, t.estado, t.activo`
+
+const DESDE = `FROM trabajadores t
+               JOIN cargos c ON c.id = t.cargo_id
+               LEFT JOIN especialidades e ON e.id = t.especialidad_id`
 
 export async function findById(id) {
   const [rows] = await pool.query(
-    `SELECT ${CAMPOS} FROM trabajadores WHERE id = ? LIMIT 1`,
+    `SELECT ${CAMPOS} ${DESDE} WHERE t.id = ? LIMIT 1`,
     [id],
   )
   return Trabajador.fromRow(rows[0])
@@ -42,9 +54,9 @@ export async function findByEmail(email) {
  */
 export async function listar(incluirInactivos = false) {
   const [rows] = await pool.query(
-    `SELECT ${CAMPOS} FROM trabajadores
-     ${incluirInactivos ? '' : 'WHERE activo = 1'}
-     ORDER BY apellidos, nombres`,
+    `SELECT ${CAMPOS} ${DESDE}
+     ${incluirInactivos ? '' : 'WHERE t.activo = 1'}
+     ORDER BY t.apellidos, t.nombres`,
   )
   return rows.map(Trabajador.fromRow)
 }
@@ -53,11 +65,11 @@ export async function create(t) {
   const [result] = await pool.query(
     `INSERT INTO trabajadores
        (numero_documento, tipo_documento, nombres, apellidos, email, telefono,
-        direccion, cargo, especialidad, disponible, estado)
+        direccion, cargo_id, especialidad_id, disponible, estado)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       t.numero_documento, t.tipo_documento, t.nombres, t.apellidos,
-      t.email, t.telefono, t.direccion, t.cargo, t.especialidad,
+      t.email, t.telefono, t.direccion, t.cargo_id, t.especialidad_id,
       t.disponible, t.estado,
     ],
   )

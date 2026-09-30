@@ -10,6 +10,8 @@ const Proyectos = lazy(() => import('./pages/Proyectos.jsx'))
 const ModulePlaceholder = lazy(() => import('./pages/ModulePlaceholder.jsx'))
 const Usuarios = lazy(() => import('./pages/Usuarios.jsx'))
 const RolesPermisos = lazy(() => import('./pages/RolesPermisos.jsx'))
+const Catalogo = lazy(() => import('./pages/Catalogo.jsx'))
+const Perfil = lazy(() => import('./pages/Perfil.jsx'))
 const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
@@ -30,7 +32,7 @@ const BODEGA = 'ENCARGADO_BODEGA'
 
 const Spinner = () => (
   <div className="flex min-h-screen items-center justify-center bg-slate-50">
-    <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-600 border-t-transparent" />
+    <div className="h-10 w-10 animate-spin rounded-full border-4 border-brand-200 border-t-accent-500" />
   </div>
 )
 
@@ -46,6 +48,8 @@ export default function App() {
 
         <Route element={user ? <Layout /> : <Navigate to="/login" replace />}>
           <Route index element={<Dashboard />} />
+          {/* HU-01 · HU-04: información personal de cualquier usuario autenticado */}
+          <Route path="perfil" element={<Perfil />} />
           <Route
             path="proyectos"
             element={
@@ -85,6 +89,8 @@ export default function App() {
           <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><Usuarios /></RutaPorRol>} />
           {/* RF1 · monitoreo de la matriz roles_permisos (solo el administrador) */}
           <Route path="roles" element={<RutaPorRol roles={[ADMIN]}><RolesPermisos /></RutaPorRol>} />
+          {/* RF01 · RF06: cargos, especialidades y clientes (solo el administrador) */}
+          <Route path="catalogo" element={<RutaPorRol roles={[ADMIN]}><Catalogo /></RutaPorRol>} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

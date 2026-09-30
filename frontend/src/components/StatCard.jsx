@@ -1,6 +1,9 @@
 export default function StatCard({ icon: Icon, label, value, hint, tone = 'brand' }) {
+  // `accent` es el amarillo de marca (indicador protagonista); `brand` es el
+  // gris grafito y `amber` queda para las alertas.
   const tones = {
-    brand: 'bg-brand-50 text-brand-600',
+    accent: 'bg-accent-400 text-brand-950 ring-1 ring-inset ring-accent-500/30',
+    brand: 'bg-brand-100 text-brand-700',
     amber: 'bg-amber-50 text-amber-600',
     slate: 'bg-slate-100 text-slate-600',
   }

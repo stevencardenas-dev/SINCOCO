@@ -16,6 +16,8 @@ const TABLAS_PERMITIDAS = new Set([
   'actividades',
   'usuarios',
   'clientes',
+  'cargos',
+  'especialidades',
 ])
 
 function validarTabla(tabla) {

@@ -21,14 +21,15 @@ with sync_playwright() as p:
     pg.fill('#t-doc', 'TEST-UI-CC-01')
     pg.fill('#t-nombres', 'Ulises')
     pg.fill('#t-apellidos', 'Interfaz')
-    pg.fill('#t-cargo', 'Obrero')
+    # El cargo y la especialidad salen del catálogo (select), no se escriben.
+    pg.select_option('#t-cargo', label='Obrero · obra')
     pg.click('button:has-text("Registrar trabajador")')
     pg.wait_for_selector('[role=alert]', timeout=10000)
     print('sin especialidad ->', pg.locator('[role=alert]').inner_text())
     assert 'especialidad' in pg.locator('[role=alert]').inner_text().lower()
 
     # Flujo principal: con especialidad se registra y aparece en la tabla.
-    pg.fill('#t-especialidad', 'Mamposteria')
+    pg.select_option('#t-especialidad', label='Mampostería')
     pg.click('button:has-text("Registrar trabajador")')
     pg.wait_for_selector('[role=status]', timeout=10000)
     print('crear ->', pg.locator('[role=status]').inner_text())
@@ -37,7 +38,8 @@ with sync_playwright() as p:
     assert fila.count() == 1, 'el trabajador creado debe aparecer en la tabla'
     texto = fila.inner_text().replace('\n', ' | ')
     print('fila ->', texto)
-    assert 'Obrero' in texto and 'Mamposteria' in texto
+    # El nombre se muestra tal como está en el catálogo (con tilde).
+    assert 'Obrero' in texto and 'Mampostería' in texto
 
     # Duplicado: el backend responde 409 y la interfaz lo muestra.
     pg.click('text=Nuevo trabajador')
@@ -45,8 +47,8 @@ with sync_playwright() as p:
     pg.fill('#t-doc', 'TEST-UI-CC-01')
     pg.fill('#t-nombres', 'Otro')
     pg.fill('#t-apellidos', 'Duplicado')
-    pg.fill('#t-cargo', 'Obrero')
-    pg.fill('#t-especialidad', 'Mamposteria')
+    pg.select_option('#t-cargo', label='Obrero · obra')
+    pg.select_option('#t-especialidad', label='Mampostería')
     pg.click('button:has-text("Registrar trabajador")')
     pg.wait_for_selector('[role=alert]', timeout=10000)
     print('duplicado ->', pg.locator('[role=alert]').inner_text())

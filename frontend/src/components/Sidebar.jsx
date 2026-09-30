@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router-dom'
+import Logo from './Logo.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   BellAlertIcon,
@@ -9,6 +10,7 @@ import {
   FolderIcon,
   HomeIcon,
   KeyIcon,
+  RectangleStackIcon,
   ShieldCheckIcon,
   TruckIcon,
   UserCircleIcon,
@@ -59,6 +61,8 @@ const NAV = [
     group: 'Sistema',
     items: [
       { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE] },
+      // RF01 · RF06: valores de dominio (cargos, especialidades y clientes).
+      { to: '/catalogo', label: 'Catálogo', icon: RectangleStackIcon, roles: [ADMIN] },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
       { to: '/roles', label: 'Roles y permisos', icon: KeyIcon, roles: [ADMIN] },
     ],
@@ -76,16 +80,14 @@ export default function Sidebar({ open, onClose }) {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-black transition-transform duration-200 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-brand-900 transition-transform duration-200 lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
       {/* Brand */}
       <div className="flex items-center justify-between px-6 py-5">
         <NavLink to="/" onClick={onClose} className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-lg font-extrabold text-black">
-            S
-          </div>
+          <Logo className="h-10 w-10" />
           <div>
             <p className="text-base font-bold leading-tight tracking-tight text-white">SINCOCO</p>
             <p className="text-[11px] font-medium text-slate-400">Control de proyectos</p>
@@ -93,18 +95,21 @@ export default function Sidebar({ open, onClose }) {
         </NavLink>
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white lg:hidden"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-800 hover:text-white lg:hidden"
           aria-label="Cerrar menú"
         >
           <XMarkIcon className="h-5 w-5" />
         </button>
       </div>
 
+      {/* Filo amarillo de marca bajo el encabezado */}
+      <div className="mx-6 h-px bg-gradient-to-r from-accent-400 via-accent-400/40 to-transparent" />
+
       {/* Nav */}
       <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-4 pb-6">
         {nav.map((group) => (
           <div key={group.group}>
-            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+            <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               {group.group}
             </p>
             <ul className="space-y-1">
@@ -115,10 +120,10 @@ export default function Sidebar({ open, onClose }) {
                     end={end}
                     onClick={onClose}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
+                      `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                         isActive
-                          ? 'bg-white text-black'
-                          : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          ? 'bg-accent-400 font-semibold text-brand-950 shadow-sm'
+                          : 'font-medium text-slate-300 hover:bg-brand-800 hover:text-white'
                       }`
                     }
                   >
@@ -132,9 +137,26 @@ export default function Sidebar({ open, onClose }) {
         ))}
       </nav>
 
-      {/* Footer */}
-      <div className="border-t border-slate-800 px-6 py-4">
-        <p className="text-[11px] leading-relaxed text-slate-500">
+      {/* Footer: la información personal está disponible para todos los roles. */}
+      <div className="border-t border-brand-800 px-4 py-3">
+        <NavLink
+          to="/perfil"
+          onClick={onClose}
+          className={({ isActive }) =>
+            `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+              isActive
+                ? 'bg-accent-400 font-semibold text-brand-950 shadow-sm'
+                : 'font-medium text-slate-300 hover:bg-brand-800 hover:text-white'
+            }`
+          }
+        >
+          <UserCircleIcon className="h-5 w-5 shrink-0" />
+          Mi información
+        </NavLink>
+      </div>
+
+      <div className="border-t border-brand-800 px-6 py-4">
+        <p className="text-[11px] leading-relaxed text-slate-400">
           Constructora XYZ · Cúcuta
           <br />
           Control integral de proyectos de construcción
