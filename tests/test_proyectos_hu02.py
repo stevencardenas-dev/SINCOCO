@@ -154,9 +154,11 @@ assert estado == 409, f'se esperaba 409 por codigo, llego {estado}: {r}'
 print('codigo duplicado ->', estado, r['error'])
 
 # criterio: responsable dado de baja (activo=0) -> 400
+# `cargo_id` es clave foránea del catálogo `cargos` (ya no hay columna de
+# texto), así que se resuelve el id del cargo 'Operario' del seed.
 baja = subprocess.run(mysql_args(['-e',
-    "INSERT INTO trabajadores (numero_documento, tipo_documento, nombres, apellidos, cargo, activo, fecha_baja) "
-    "VALUES ('1999999999','CC','Dado','De Baja','Operario',0,NOW()) "
+    "INSERT INTO trabajadores (numero_documento, tipo_documento, nombres, apellidos, cargo_id, activo, fecha_baja) "
+    "SELECT '1999999999','CC','Dado','De Baja', c.id, 0, NOW() FROM cargos c WHERE c.nombre='Operario' "
     "ON DUPLICATE KEY UPDATE activo=0, fecha_baja=NOW()"]), capture_output=True, text=True)
 if baja.returncode == 0:
     q = subprocess.run(mysql_args(['-N', '-e',

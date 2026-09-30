@@ -152,12 +152,17 @@ finally:
     sql(f"DELETE FROM categorias_materiales WHERE nombre='{CATEGORIA}'")
 
 # Personal dado de baja lógica (HU-18): no debe contar como activo.
+# `cargo_id` es clave foránea del catálogo `cargos` (ya no hay columna de
+# texto), así que se resuelve el id del cargo 'Operario' del seed.
 trabajadores_activos = int(scalar('SELECT COUNT(*) FROM trabajadores WHERE activo=1'))
 assert sql(
-    'INSERT INTO trabajadores (numero_documento, tipo_documento, nombres, apellidos, cargo, activo, fecha_baja) '
-    "VALUES ('TEST-DASH-BAJA','CC','Dado','De Baja','Operario',0,NOW()) "
+    'INSERT INTO trabajadores (numero_documento, tipo_documento, nombres, apellidos, cargo_id, activo, fecha_baja) '
+    "SELECT 'TEST-DASH-BAJA','CC','Dado','De Baja', c.id, 0, NOW() FROM cargos c WHERE c.nombre='Operario' "
     'ON DUPLICATE KEY UPDATE activo=0, fecha_baja=NOW()'
 ).returncode == 0, 'no se pudo sembrar el trabajador de baja'
+assert scalar("SELECT COUNT(*) FROM trabajadores WHERE numero_documento='TEST-DASH-BAJA'") == '1', (
+    'no se pudo sembrar el trabajador de baja (¿está cargado docs/seed_catalogos_prueba.sql?)'
+)
 try:
     d4 = indicadores()
     assert d4['personal']['activos'] == trabajadores_activos, (
