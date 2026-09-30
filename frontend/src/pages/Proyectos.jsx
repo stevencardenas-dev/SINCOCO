@@ -474,7 +474,7 @@ export default function Proyectos() {
                         <div className="flex items-center justify-end gap-2">
                           {esAdmin && p.activo && (
                             <button
-                              className="btn-ghost text-xs"
+                              className="btn-accion btn-accion-editar"
                               onClick={() => abrirEditar(p)}
                               aria-label={`Actualizar ${p.nombre}`}
                             >
@@ -483,7 +483,7 @@ export default function Proyectos() {
                           )}
                           {esAdmin && (
                             <button
-                              className="btn-ghost text-xs"
+                              className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
                               onClick={() => cambiarBaja(p)}
                               aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
                             >

@@ -454,7 +454,7 @@ export default function Personal() {
                       <div className="flex items-center justify-end gap-2">
                         {esAdmin && t.activo && (
                           <button
-                            className="btn-ghost text-xs"
+                            className="btn-accion btn-accion-editar"
                             onClick={() => abrirEditar(t)}
                             aria-label={`Actualizar información de ${t.nombres}`}
                           >
@@ -463,7 +463,7 @@ export default function Personal() {
                         )}
                         {esAdmin && (
                           <button
-                            className="btn-ghost text-xs"
+                            className={`btn-accion ${t.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
                             onClick={() => cambiarBaja(t)}
                             aria-label={t.activo ? `Dar de baja a ${t.nombres}` : `Reactivar a ${t.nombres}`}
                           >

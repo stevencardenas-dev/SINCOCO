@@ -162,8 +162,8 @@ export default function Dashboard() {
             <StatCard
               icon={CurrencyDollarIcon}
               label="Costo consolidado"
-              value={fmtCOP(costos.total)}
-              hint={`Presupuesto vigente: ${fmtCOP(proyectos.presupuesto_activos)}`}
+              value={fmtCOP(proyectos.presupuesto_activos)}
+              hint={`Costo real registrado: ${fmtCOP(costos.total)}`}
               tone="slate"
             />
           </div>

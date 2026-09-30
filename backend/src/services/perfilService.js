@@ -6,17 +6,18 @@ import { AppError } from '../utils/AppError.js'
 /**
  * Información personal de quien está conectado (HU-01 · HU-04).
  *
- * Cada usuario puede consultar sus datos y corregir los suyos: documento,
- * teléfono, correo de contacto y dirección de su ficha de trabajador, más su
- * contraseña. El correo empresarial (`usuarios.email`) y el rol son datos de la
- * empresa y solo los cambia el administrador; el cargo y la especialidad salen
- * del catálogo y tampoco se editan aquí.
+ * Cada usuario puede consultar sus datos y corregir los suyos: teléfono, correo
+ * de contacto y dirección de su ficha de trabajador, más su contraseña. El
+ * número de documento es la identidad de la ficha y no se modifica (igual que en
+ * /api/trabajadores/:id). El correo empresarial (`usuarios.email`) y el rol son
+ * datos de la empresa y solo los cambia el administrador; el cargo y la
+ * especialidad salen del catálogo y tampoco se editan aquí.
  *
  * Todo cambio queda en la bitácora (RF31 · RN07): la contraseña se registra
  * como el hecho de haberla cambiado, nunca su valor.
  */
 
-const CAMPOS_EDITABLES = ['numero_documento', 'telefono', 'email', 'direccion']
+const CAMPOS_EDITABLES = ['telefono', 'email', 'direccion']
 const LARGO_MINIMO_PASSWORD = 8
 
 /** Forma la respuesta de GET /api/perfil separando cuenta y ficha. */
@@ -74,17 +75,6 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
         'La cuenta no tiene ficha de trabajador: el administrador debe asociarla antes de editar estos datos',
         400,
       )
-    }
-
-    if (campos.numero_documento !== undefined) {
-      const documento = String(campos.numero_documento).trim()
-      if (!documento) {
-        throw new AppError('El número de documento no puede quedar vacío', 400, 'numero_documento')
-      }
-      if (await perfilRepository.documentoEnUso(documento, perfil.trabajador.id)) {
-        throw new AppError('Ya existe un trabajador con ese número de documento', 409, 'numero_documento')
-      }
-      campos.numero_documento = documento
     }
 
     if (campos.email !== undefined) {
