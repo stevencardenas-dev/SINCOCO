@@ -149,8 +149,20 @@ lo habitual porque **el repositorio es público**: unas claves estáticas sería
 peor sitio donde tenerlas.
 
 La política de confianza (`deploy/iam/github-trust-policy.json`) solo acepta el
-sujeto `repo:stevencardenas-dev/SINCOCO:ref:refs/heads/main`, así que ni un fork,
-ni otra rama, ni otro repositorio pueden asumir el rol. La política de permisos
+sujeto de la rama `main` de este repositorio, así que ni un fork, ni otra rama,
+ni otro repositorio pueden asumir el rol.
+
+Acepta **dos formatos** de sujeto (`StringLike`, no `StringEquals`): el clásico
+`repo:stevencardenas-dev/SINCOCO:ref:refs/heads/main` y el de IDs inmutables
+`repo:stevencardenas-dev@143960577/SINCOCO@1374889660:ref:refs/heads/main`. Desde
+el **15 de julio de 2026** GitHub emite el segundo para los repositorios nuevos
+(este se creó el 17 de septiembre de 2026); con solo el formato clásico, el
+`AssumeRoleWithWebIdentity` falla con *Not authorized*. El prefijo exacto se
+puede consultar con:
+
+```bash
+gh api /repos/stevencardenas-dev/SINCOCO/actions/oidc/customization/sub
+``` La política de permisos
 (`deploy/iam/github-deploy-policy.json`) es de mínimo privilegio: escribir en los
 dos buckets, invalidar esta distribución y mandar el comando a **esta**
 instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
