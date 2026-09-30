@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { listarSolicitudesPendientes } from '../services/resetService.js'
 
 // HU-01: crear usuario con rol asignado
 export async function crear(req, res) {
@@ -44,6 +45,20 @@ export async function crear(req, res) {
       return res.status(400).json({ error: 'el trabajador o el rol indicado no existe' })
     }
     throw err
+  }
+}
+
+/**
+ * GET /api/usuarios/solicitudes-reset -> códigos de recuperación pendientes.
+ *
+ * El sistema no envía correo: el administrador es quien entrega el código, así
+ * que necesita verlo aquí junto con el usuario que lo pidió (HU-01).
+ */
+export async function listarSolicitudesReset(req, res, next) {
+  try {
+    return res.json(await listarSolicitudesPendientes())
+  } catch (error) {
+    return next(error)
   }
 }
 
@@ -97,8 +112,9 @@ export async function listarRoles(req, res) {
 // Solo trabajadores activos y sin cuenta: usuarios.trabajador_id es UNIQUE.
 export async function listarTrabajadoresSinCuenta(req, res) {
   const [rows] = await pool.query(
-    `SELECT t.id, t.nombres, t.apellidos, t.numero_documento, t.cargo
+    `SELECT t.id, t.nombres, t.apellidos, t.numero_documento, c.nombre AS cargo
      FROM trabajadores t
+     JOIN cargos c ON c.id = t.cargo_id
      LEFT JOIN usuarios u ON u.trabajador_id = t.id
      WHERE u.id IS NULL AND t.activo = 1
      ORDER BY t.nombres, t.apellidos`,
