@@ -1,7 +1,15 @@
 import { Router } from 'express'
-import { login } from '../controllers/authController.js'
+import { login, solicitarReset, restablecer } from '../controllers/authController.js'
 
 const router = Router()
+
+// HU-01: autenticación.
 router.post('/login', login)
+
+// HU-01: «¿Olvidó su contraseña?». Son públicas a propósito: el usuario no
+// tiene sesión. La solicitud no revela si la cuenta existe y el código es de un
+// solo uso con vencimiento (ver services/resetService.js).
+router.post('/solicitar-reset', solicitarReset)
+router.post('/restablecer', restablecer)
 
 export default router

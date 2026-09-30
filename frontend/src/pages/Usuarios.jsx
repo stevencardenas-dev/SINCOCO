@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { CheckCircleIcon, LockClosedIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon, KeyIcon, LockClosedIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
+import { fmtFechaHora } from '../lib/format.js'
 
 /**
  * CU-01 (HU-01): Registrar usuario y asignar rol.
@@ -37,6 +38,9 @@ export default function Usuarios() {
   const [guardando, setGuardando] = useState(false)
   // CU-01 Alt 3: id del usuario cuyo rol se está editando en la tabla.
   const [editandoRol, setEditandoRol] = useState(null)
+  // HU-01: solicitudes de contraseña esperando que el administrador entregue el
+  // código (el sistema no envía correo en esta versión).
+  const [solicitudes, setSolicitudes] = useState([])
 
   const cargar = async () => {
     const [u, r, t] = await Promise.all([
@@ -50,11 +54,18 @@ export default function Usuarios() {
     setCargando(false)
   }
 
+  const cargarSolicitudes = () => {
+    api.get('/usuarios/solicitudes-reset')
+      .then((res) => setSolicitudes(res.data))
+      .catch(() => {})
+  }
+
   useEffect(() => {
     cargar().catch(() => {
       setError('No se pudo cargar la lista de usuarios.')
       setCargando(false)
     })
+    cargarSolicitudes()
   }, [])
 
   const crear = async (e) => {
@@ -138,6 +149,52 @@ export default function Usuarios() {
         </p>
       )}
 
+      {/* HU-01: códigos de recuperación pendientes. El administrador es el canal
+          de entrega, así que aquí ve el código y su vencimiento. */}
+      {solicitudes.length > 0 && (
+        <div className="card border-l-4 border-accent-400 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <KeyIcon className="h-5 w-5 text-brand-600" />
+              <h3 className="text-base font-semibold text-slate-900">
+                Solicitudes de contraseña ({solicitudes.length})
+              </h3>
+            </div>
+            <button type="button" onClick={cargarSolicitudes} className="btn-ghost text-xs">
+              Actualizar solicitudes
+            </button>
+          </div>
+          <p className="mt-1 text-sm text-slate-500">
+            Entregue el código a la persona: lo necesita en «¿Olvidó su contraseña?» del login.
+            Cada código sirve una sola vez y vence.
+          </p>
+
+          <ul className="mt-4 space-y-3">
+            {solicitudes.map((s) => (
+              <li key={s.id}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent-100 bg-accent-50/60 p-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {s.username} · {s.trabajador || 'sin ficha de trabajador'}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {s.email} · solicitada el {fmtFechaHora(s.solicitado_en)}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <code className="rounded-lg bg-white px-3 py-1.5 text-sm font-bold tracking-widest text-brand-900 ring-1 ring-accent-200">
+                    {s.codigo}
+                  </code>
+                  <span className="badge bg-white text-brand-700 ring-1 ring-accent-200">
+                    vence en {s.minutos_restantes} min
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {abierto && (
         <form onSubmit={crear} className="card space-y-5 p-6">
           <div className="flex items-center gap-2 text-slate-900">
@@ -160,7 +217,7 @@ export default function Usuarios() {
             </div>
             <div>
               <label htmlFor="u-email" className="label">
-                Correo electrónico
+                Correo empresarial
               </label>
               <input
                 id="u-email"
@@ -259,7 +316,7 @@ export default function Usuarios() {
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
                   <th className="px-5 py-3.5 font-semibold">Usuario</th>
-                  <th className="px-5 py-3.5 font-semibold">Correo</th>
+                  <th className="px-5 py-3.5 font-semibold">Correo empresarial</th>
                   <th className="px-5 py-3.5 font-semibold">Rol</th>
                   <th className="px-5 py-3.5 font-semibold">Estado</th>
                   <th className="px-5 py-3.5 text-right font-semibold">Acceso</th>

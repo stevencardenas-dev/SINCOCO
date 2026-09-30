@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
+import { solicitarRestablecimiento, restablecerPassword } from '../services/resetService.js'
 
 // HU-01: login — valida credenciales y estado de cuenta, emite JWT
 export async function login(req, res) {
@@ -36,4 +37,40 @@ export async function login(req, res) {
     expiresIn: '8h',
   })
   res.json({ token, user: { id: user.id, username: user.username, rol: user.rol } })
+}
+
+/**
+ * POST /api/auth/solicitar-reset -> «¿Olvidó su contraseña?» (HU-01).
+ *
+ * Público (no hay sesión todavía). Genera un código de un solo uso para la
+ * cuenta y responde siempre igual, exista o no el usuario.
+ */
+export async function solicitarReset(req, res, next) {
+  try {
+    const { usuario, email } = req.body ?? {}
+    const resultado = await solicitarRestablecimiento(usuario ?? email, { ip: req.ip })
+    return res.json({
+      message: 'Si la cuenta existe, la solicitud quedó registrada.',
+      ...resultado,
+    })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/**
+ * POST /api/auth/restablecer -> definir la contraseña nueva con el código.
+ * Público: es la continuación del flujo anterior desde el login.
+ */
+export async function restablecer(req, res, next) {
+  try {
+    const { usuario, email, codigo, password } = req.body ?? {}
+    const resultado = await restablecerPassword(
+      { usuario: usuario ?? email, codigo, password },
+      { ip: req.ip },
+    )
+    return res.json({ message: 'Contraseña restablecida. Ya puede iniciar sesión.', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
 }

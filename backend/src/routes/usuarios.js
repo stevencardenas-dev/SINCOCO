@@ -4,6 +4,7 @@ import { requirePermiso } from '../middleware/permisos.js'
 import {
   crear, listar, cambiarEstado, listarRoles,
   listarTrabajadoresSinCuenta, cambiarRol, baja, reactivarCtrl,
+  listarSolicitudesReset,
 } from '../controllers/usuariosController.js'
 
 // HU-01 · criterio 4: el acceso se decide por los permisos del rol
@@ -12,6 +13,8 @@ const router = Router()
 router.use(requireAuth)
 
 router.get('/', requirePermiso('usuarios.listar'), listar)
+// HU-01: códigos de recuperación de contraseña pendientes de entregar.
+router.get('/solicitudes-reset', requirePermiso('usuarios.listar'), listarSolicitudesReset)
 router.get('/roles', requirePermiso('usuarios.crear', 'usuarios.cambiar_rol'), listarRoles)
 router.get('/trabajadores-disponibles', requirePermiso('usuarios.crear'), listarTrabajadoresSinCuenta)
 router.post('/', requirePermiso('usuarios.crear'), crear)
