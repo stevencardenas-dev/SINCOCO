@@ -1,0 +1,95 @@
+name: Migrar base de datos (SINCOCO)
+
+# Aplica al RDS de producción las migraciones docs/migracion_*.sql. Son
+# idempotentes y no destructivas: este workflow NUNCA carga docs/schema.sql ni
+# borra datos (para eso está deploy/cargar-base.sh, que es otra cosa).
+#
+# Se usa de dos maneras:
+#   1. A mano: Actions → "Migrar base de datos" → Run workflow. Útil cuando has
+#      tocado el esquema en local y quieres dejar producción al día antes de
+#      desplegar.
+#   2. Automática: el workflow "Desplegar SINCOCO en AWS" lo llama como primer
+#      paso del backend (`workflow_call`), así que la base siempre queda al día
+#      antes de instalar el código y el despliegue no falla por un esquema viejo.
+#
+# Igual que el despliegue, no hay credenciales guardadas en GitHub: se pide un
+# token OIDC y se asume el rol, que solo acepta la rama main de este repositorio.
+on:
+  workflow_dispatch:
+    inputs:
+      motivo:
+        description: 'Motivo de la migración (queda en el historial de ejecuciones)'
+        type: string
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      motivo:
+        description: 'Motivo de la migración (lo pasa el despliegue)'
+        type: string
+        required: false
+        default: ''
+
+permissions:
+  id-token: write
+  contents: read
+
+# Grupo propio (no el del despliegue): si reutilizara `desplegar-sincoco`, al
+# ser invocado por el propio despliegue se quedaría esperándose a sí mismo.
+concurrency:
+  group: migrar-sincoco
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-2
+  AWS_ROLE: arn:aws:iam::388371826611:role/sincoco-github-deploy
+  BUCKET_DESPLIEGUE: sincoco-deploy-388371826611
+  INSTANCIA: i-0c50888c3b1ee7fe6
+
+jobs:
+  migrar:
+    name: Migrar base (RDS)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Comprobar que se migra desde main
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Solo se migra desde la rama main (se pidió $GITHUB_REF)."
+            exit 1
+          fi
+          echo "rama: $GITHUB_REF"
+
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: sincoco-migrar-${{ github.run_id }}
+
+      # Solo docs/: el script que se ejecuta en la instancia viaja aparte, por
+      # SSM (deploy/remoto.sh), así que el paquete no necesita nada más.
+      - name: Empaquetar las migraciones
+        run: |
+          tar -czf sincoco-migraciones.tar.gz docs
+          ls -lh sincoco-migraciones.tar.gz
+
+      - name: Subir el paquete a S3
+        run: aws s3 cp sincoco-migraciones.tar.gz "s3://$BUCKET_DESPLIEGUE/sincoco-migraciones.tar.gz"
+
+      - name: Aplicar las migraciones en la instancia
+        run: bash deploy/remoto.sh deploy/migrar-base.sh
+
+      - name: Escribir el resumen
+        run: |
+          {
+            echo "## Migración de base SINCOCO"
+            echo ""
+            echo "| Campo | Valor |"
+            echo "|---|---|"
+            echo "| Lo pidió | @${{ github.actor }} |"
+            echo "| Motivo | ${{ inputs.motivo || '—' }} |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Origen | ${{ github.event_name }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
