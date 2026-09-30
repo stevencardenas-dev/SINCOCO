@@ -106,7 +106,7 @@ export default function Sidebar({ open, onClose }) {
       <div className="mx-6 h-px bg-gradient-to-r from-accent-400 via-accent-400/40 to-transparent" />
 
       {/* Nav */}
-      <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-4 pb-6">
+      <nav className="sidebar-scroll flex-1 space-y-6 overflow-y-auto px-4 pb-6 pt-6">
         {nav.map((group) => (
           <div key={group.group}>
             <p className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
