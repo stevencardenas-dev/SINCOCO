@@ -9,6 +9,7 @@ from playwright.sync_api import sync_playwright
 # corrida anterior —lo que libera su trabajador— y, si aun así no hay ninguno
 # libre, se registra uno de prueba.
 from api_helper import login as _login_api, http as _http, scalar as _scalar, sql as _sql
+from ui_helper import captura
 
 _token = _login_api('admin')
 _sql("DELETE FROM usuarios WHERE username='carlos.test'")
@@ -16,11 +17,13 @@ if _scalar(
     'SELECT COUNT(*) FROM trabajadores t LEFT JOIN usuarios u ON u.trabajador_id = t.id '
     'WHERE u.id IS NULL AND t.activo = 1'
 ) == '0':
-    _http('POST', '/api/trabajadores', {
+    # La especialidad sale del catálogo (ya no es texto libre): 'General' no existe.
+    _estado, _data = _http('POST', '/api/trabajadores', {
         'numero_documento': 'TEST-HU-CU01', 'tipo_documento': 'CC',
         'nombres': 'Trabajador', 'apellidos': 'Sin cuenta',
-        'cargo': 'Operario', 'especialidad': 'General',
+        'cargo': 'Operario', 'especialidad': 'Mamposteria',
     }, token=_token)
+    assert _estado in (201, 409), f'trabajador de prueba CU-01: {_estado} {_data}'
 
 def login(pg, u, p='Prueba123!'):
     pg.goto('http://localhost:5173/login'); pg.wait_for_load_state('networkidle')
@@ -39,8 +42,10 @@ with sync_playwright() as pw:
     pg.click('text=Nuevo usuario'); pg.wait_for_selector('#u-username')
     pg.fill('#u-username','carlos.test'); pg.fill('#u-email','carlos.test@sincoco.test')
     pg.fill('#u-password','Test1234!'); pg.select_option('#u-rol', label='Maestro de obra')
-    # criterio 1: la cuenta debe vincularse a un trabajador (usuarios.trabajador_id)
-    pg.select_option('#u-trabajador', index=1)
+    # criterio 1: la cuenta debe vincularse a un trabajador (usuarios.trabajador_id).
+    # #u-trabajador es un buscador con lista (combobox), no un <select>.
+    pg.fill('#u-trabajador', 'Trabajador')
+    pg.locator('#u-trabajador-opciones li[role=option]').first.click()
     pg.click('button:has-text("Crear usuario")')
     pg.wait_for_selector('[role=status]', timeout=8000)
     print("crear ->", pg.locator('[role=status]').inner_text())
@@ -49,10 +54,12 @@ with sync_playwright() as pw:
     fila = pg.locator('table tbody tr', has_text='carlos.test').inner_text().split('\n')
     print(f"lista ahora: {filas1} usuarios | fila: {[c.strip() for c in fila if c.strip()]}")
 
-    # criterio 1: ya no quedan trabajadores sin cuenta, el selector queda vacio
+    # criterio 1: el buscador ya no ofrece al trabajador recien vinculado
     pg.click('text=Nuevo usuario'); pg.wait_for_selector('#u-trabajador')
-    libres = pg.locator('#u-trabajador option').count() - 1  # menos el placeholder
-    print(f"trabajadores sin cuenta: {libres} (form bloquea crear sin vincular)")
+    pg.fill('#u-trabajador', 'Trabajador')
+    pg.wait_for_timeout(300)
+    libres = pg.locator('#u-trabajador-opciones li[role=option]').count()
+    print(f"trabajadores sin cuenta que ofrece el buscador: {libres}")
     pg.click('button:has-text("Cancelar")')
 
     # flujo alterno 1: duplicado. Se valida contra la API porque el formulario
@@ -108,5 +115,5 @@ with sync_playwright() as pw:
     pg3.wait_for_load_state('networkidle'); pg3.wait_for_timeout(600)
     print("bodega en /usuarios ->", pg3.url.split('5173')[1], "(BLOQUEADO OK)" if pg3.url.endswith('/') else "(ACCESO INDEBIDO)")
     pg3.close()
-    pg.screenshot(path='/tmp/claude-1000/-home-alvaro/5de88b02-ddd6-452e-ac72-8e6512891156/scratchpad/shot_usuarios.png')
+    captura(pg, 'usuarios_cu01')
     b.close()
