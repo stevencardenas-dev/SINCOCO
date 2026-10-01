@@ -3,9 +3,12 @@ import {
   ArrowPathIcon,
   IdentificationIcon,
   KeyIcon,
+  MapPinIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
+import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
+import TelefonoPais from '../components/TelefonoPais.jsx'
 import api from '../services/api'
 import { fmtFechaHora } from '../lib/format.js'
 
@@ -33,6 +36,8 @@ export default function Perfil() {
 
   const [datos, setDatos] = useState(VACIO_DATOS)
   const [guardandoDatos, setGuardandoDatos] = useState(false)
+  // Selector de ubicación en el mapa (Leaflet) para la dirección.
+  const [mapaAbierto, setMapaAbierto] = useState(false)
 
   const [clave, setClave] = useState(VACIO_CLAVE)
   const [errorClave, setErrorClave] = useState('')
@@ -107,7 +112,7 @@ export default function Perfil() {
     <div className="space-y-6">
       <PageHeader
         title="Mi información personal"
-        subtitle="Sus datos de acceso y su ficha de trabajador · HU-01 · HU-04"
+        subtitle="Sus datos de acceso y su ficha de trabajador"
       >
         <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
           <ArrowPathIcon className="h-4 w-4" /> Actualizar
@@ -126,6 +131,17 @@ export default function Perfil() {
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando su información…
         </div>
       )}
+
+      {/* Mapa para la dirección personal: devuelve el texto al formulario. */}
+      <SelectorUbicacion
+        abierto={mapaAbierto}
+        valorInicial={datos.direccion}
+        onCerrar={() => setMapaAbierto(false)}
+        onAceptar={(texto) => {
+          setDatos((d) => ({ ...d, direccion: texto }))
+          setMapaAbierto(false)
+        }}
+      />
 
       {perfil && (
         <>
@@ -210,18 +226,36 @@ export default function Perfil() {
                     </div>
                     <div>
                       <label htmlFor="mi-telefono" className="label">Teléfono</label>
-                      <input id="mi-telefono" className={campo('telefono')} value={datos.telefono}
-                        onChange={(e) => setDatos({ ...datos, telefono: e.target.value })} />
+                      <TelefonoPais
+                        id="mi-telefono"
+                        value={datos.telefono}
+                        onChange={(v) => setDatos({ ...datos, telefono: v })}
+                        error={errorCampo === 'telefono'}
+                      />
                     </div>
                     <div>
                       <label htmlFor="mi-email" className="label">Correo de contacto</label>
                       <input id="mi-email" type="email" className={campo('email')} value={datos.email}
                         onChange={(e) => setDatos({ ...datos, email: e.target.value })} />
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label htmlFor="mi-direccion" className="label">Dirección</label>
-                      <input id="mi-direccion" className={campo('direccion')} value={datos.direccion}
-                        onChange={(e) => setDatos({ ...datos, direccion: e.target.value })} />
+                      <div className="flex gap-2">
+                        <input
+                          id="mi-direccion"
+                          className={campo('direccion')}
+                          placeholder="Escriba la dirección o selecciónela en el mapa"
+                          value={datos.direccion}
+                          onChange={(e) => setDatos({ ...datos, direccion: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          className="btn-ghost shrink-0"
+                          onClick={() => setMapaAbierto(true)}
+                        >
+                          <MapPinIcon className="h-4 w-4" /> Mapa
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label htmlFor="mi-cargo" className="label">Cargo</label>

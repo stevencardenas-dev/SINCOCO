@@ -69,20 +69,20 @@ export default function App() {
           />
           {/* RF06–RF07 · HU-04 */}
           <Route path="personal" element={<RutaPorRol roles={[ADMIN, GERENTE]}><Personal /></RutaPorRol>} />
-          {/* RF7–RF9 */}
-          <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" rf="RF09 · RF10 · RF11" /></RutaPorRol>} />
-          {/* RF10–RF11 */}
-          <Route path="herramientas" element={<RutaPorRol roles={[ADMIN, BODEGA]}><ModulePlaceholder title="Herramientas" rf="RF15 · RF16 · RF17" /></RutaPorRol>} />
-          {/* RF12 */}
-          <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" rf="RF19 · RF20" /></RutaPorRol>} />
-          {/* RF13 */}
-          <Route path="incidencias" element={<RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}><ModulePlaceholder title="Incidencias de obra" rf="RF22" /></RutaPorRol>} />
-          {/* RF14 */}
-          <Route path="alertas" element={<RutaPorRol roles={[ADMIN, GERENTE, BODEGA]}><ModulePlaceholder title="Alertas de inventario" rf="RF23" /></RutaPorRol>} />
-          {/* RF15 */}
-          <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" rf="RF26" /></RutaPorRol>} />
-          {/* RF17 */}
-          <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Reportes" rf="RF29 · RF30" /></RutaPorRol>} />
+          {/* Inventario de materiales */}
+          <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" descripcion="Catálogo de materiales con existencias y nivel mínimo, y el registro de entradas, salidas y consumos de inventario." /></RutaPorRol>} />
+          {/* Inventario de herramientas */}
+          <Route path="herramientas" element={<RutaPorRol roles={[ADMIN, BODEGA]}><ModulePlaceholder title="Herramientas" descripcion="Catálogo de herramientas con su estado operativo y disponibilidad, entregas a trabajador o proyecto y devoluciones con su condición." /></RutaPorRol>} />
+          {/* Proveedores y servicios */}
+          <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" descripcion="Proveedores y servicios contratados: transporte, alquiler de maquinaria, electricidad y plomería, con responsable, proyecto, fechas y valor." /></RutaPorRol>} />
+          {/* Incidencias de obra */}
+          <Route path="incidencias" element={<RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}><ModulePlaceholder title="Incidencias de obra" descripcion="Novedades e imprevistos en obra (averías, accidentes, retrasos) vinculados al proyecto donde ocurrieron." /></RutaPorRol>} />
+          {/* Alertas de inventario */}
+          <Route path="alertas" element={<RutaPorRol roles={[ADMIN, GERENTE, BODEGA]}><ModulePlaceholder title="Alertas de inventario" descripcion="Avisos cuando un material alcanza el nivel mínimo definido en el catálogo, con su atención y seguimiento." /></RutaPorRol>} />
+          {/* Consolidación de costos */}
+          <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" descripcion="Consolidación de costos de materiales y servicios externos por proyecto para el análisis gerencial." /></RutaPorRol>} />
+          {/* Reportes */}
+          <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Reportes" descripcion="Reportes filtrados por proyecto, periodo o trabajador, exportables a PDF y Excel." /></RutaPorRol>} />
           {/* RF18 · HU-17: bitácora de trazabilidad (solo el administrador) */}
           <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><Auditoria /></RutaPorRol>} />
           {/* RF1 */}

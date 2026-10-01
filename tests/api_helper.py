@@ -82,6 +82,13 @@ def limpiar():
         "'trabajadores','clientes','usuarios') "
         "AND fecha_registro >= NOW() - INTERVAL 1 HOUR"
     )
+    # Las asignaciones de personal (acceso a proyectos y actividades) van primero:
+    # la FK del proyecto es RESTRICT y sin borrarlas el proyecto no se puede eliminar.
+    sql(
+        "DELETE FROM asignaciones_personal "
+        "WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%') "
+        "OR trabajador_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%')"
+    )
     sql("DELETE FROM actividades WHERE nombre LIKE 'TEST-%'")
     sql("DELETE FROM etapas_proyecto WHERE nombre LIKE 'TEST-%'")
     # Además de los proyectos de prueba, se quitan los que apunten a un

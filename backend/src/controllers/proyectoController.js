@@ -38,13 +38,16 @@ export async function registrar(req, res, next) {
 export async function listar(req, res, next) {
   try {
     const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
-    const proyectos = await listarProyectos({
-      incluirInactivos,
-      buscar: req.query.buscar ?? req.query.q ?? '',
-      estado: req.query.estado ?? '',
-      clienteId: req.query.cliente_id || null,
-      responsableId: req.query.responsable_id || null,
-    })
+    const proyectos = await listarProyectos(
+      {
+        incluirInactivos,
+        buscar: req.query.buscar ?? req.query.q ?? '',
+        estado: req.query.estado ?? '',
+        clienteId: req.query.cliente_id || null,
+        responsableId: req.query.responsable_id || null,
+      },
+      req.user,
+    )
     return res.json(proyectos)
   } catch (error) {
     return next(error)

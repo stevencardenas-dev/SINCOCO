@@ -42,12 +42,34 @@ export async function findById(id) {
  * volumen de proyectos exige que el filtro corra en la base, no en el navegador.
  */
 export async function listar(filtros = {}) {
-  const { incluirInactivos = false, buscar = '', estado = '', clienteId = null, responsableId = null } =
-    filtros
+  const {
+    incluirInactivos = false,
+    buscar = '',
+    estado = '',
+    clienteId = null,
+    responsableId = null,
+    // RBAC: si llega un trabajador, solo se listan los proyectos donde tiene
+    // acceso vigente (asignación activa o ser el responsable).
+    soloTrabajadorId = null,
+  } = filtros
   const condiciones = []
   const params = []
 
   if (!incluirInactivos) condiciones.push('p.activo = 1')
+
+  if (soloTrabajadorId) {
+    condiciones.push(
+      `(p.responsable_id = ? OR EXISTS (
+         SELECT 1
+           FROM asignaciones_personal ap
+           LEFT JOIN actividades ac ON ac.id = ap.actividad_id
+           LEFT JOIN etapas_proyecto ep ON ep.id = ac.etapa_id
+          WHERE ap.trabajador_id = ? AND ap.estado = 'ACTIVO'
+            AND (ap.proyecto_id = p.id OR ep.proyecto_id = p.id)
+       ))`,
+    )
+    params.push(soloTrabajadorId, soloTrabajadorId)
+  }
 
   const texto = String(buscar ?? '').trim()
   if (texto) {

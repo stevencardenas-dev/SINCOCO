@@ -123,7 +123,9 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
     const hashActual = await perfilRepository.findPasswordHash(usuarioId)
     const coincide = hashActual ? await bcrypt.compare(String(cambios.password_actual), hashActual) : false
     if (!coincide) {
-      throw new AppError('La contraseña actual no es correcta', 401, 'password_actual')
+      // 400 y no 401: la sesión es válida; lo que no coincide es el campo. Con
+      // 401 el cliente cerraría la sesión en vez de mostrar el error del campo.
+      throw new AppError('La contraseña actual no es correcta', 400, 'password_actual')
     }
 
     await perfilRepository.cambiarPassword(usuarioId, await bcrypt.hash(password, 10))

@@ -13,6 +13,7 @@ import catalogosRoutes from './routes/catalogos.js'
 import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
 import actividadesRoutes from './routes/actividades.js'
+import asignacionesRoutes from './routes/asignaciones.js'
 import { errorHandler } from './middleware/errorHandler.js'
 
 const app = express()
@@ -31,6 +32,7 @@ app.use('/api/catalogos', catalogosRoutes)
 app.use('/api/perfil', perfilRoutes)
 app.use('/api/etapas', etapasRoutes)
 app.use('/api/actividades', actividadesRoutes)
+app.use('/api/asignaciones', asignacionesRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Recurso no encontrado' })

@@ -11,7 +11,7 @@ import Modal from '../components/Modal.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
-import TelefonoPais from '../components/TelefonoPais.jsx'
+import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
@@ -236,7 +236,7 @@ export default function Personal() {
     <div className="space-y-6">
       <PageHeader
         title="Personal"
-        subtitle="Registrar personal con cargo y especialidad · RF06 · RF07 · CU-04"
+        subtitle="Registrar personal con su cargo y especialidad"
       >
         {esAdmin && (
           <button
@@ -365,7 +365,7 @@ export default function Personal() {
           subtitulo={
             editando
               ? 'El cambio queda registrado en la bitácora de trazabilidad'
-              : 'Cargo y especialidad salen del catálogo de la empresa · CU-04'
+              : 'Cargo y especialidad salen del catálogo de la empresa'
           }
           onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
@@ -639,7 +639,7 @@ export default function Personal() {
               <span>
                 Es cargo de obra
                 <span className="block text-xs text-slate-500">
-                  Para estos cargos la especialidad es obligatoria (criterio 2 de HU-04).
+                  Para estos cargos la especialidad es obligatoria.
                 </span>
               </span>
             </label>
@@ -722,7 +722,7 @@ export default function Personal() {
                     <td className="px-5 py-4 text-slate-600">{t.cargo}</td>
                     <td className="px-5 py-4 text-xs text-slate-500">
                       {t.email ?? '—'}
-                      {t.telefono && <p>{t.telefono}</p>}
+                      {t.telefono && <p className="tabular-nums">{telefonoLegible(t.telefono)}</p>}
                       {t.direccion && (
                         <p className="max-w-[180px] truncate" title={t.direccion}>
                           {t.direccion}
@@ -757,7 +757,9 @@ export default function Personal() {
                       {Number(t.disponible) ? 'Disponible' : 'No disponible'}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-2">
+                      {/* En escritorio las acciones se apilan en vertical: en
+                          horizontal se montaban unas sobre otras. */}
+                      <div className="flex flex-col items-stretch gap-1.5">
                         {esAdmin && (
                           <button
                             className="btn-accion btn-accion-editar"

@@ -193,9 +193,8 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 rounded-xl bg-accent-50 px-4 py-3 text-xs leading-relaxed text-brand-800 ring-1 ring-accent-200">
-            <strong>Usuarios de prueba:</strong> admin · gerente · maestro · bodega —
-            contraseña <code>Prueba123!</code>. Cada rol ve un menú distinto (RF01 · RNF05).
+          <p className="mt-6 text-center text-xs leading-relaxed text-slate-400">
+            El acceso y el menú dependen del rol asignado a cada cuenta.
           </p>
         </div>
       </div>
@@ -297,7 +296,7 @@ export default function Login() {
               Su contraseña quedó actualizada. Ya puede ingresar con ella.
             </p>
             <p className="text-sm text-slate-500">
-              El cambio quedó registrado en la bitácora de trazabilidad (RN07).
+              El cambio quedó registrado en la bitácora de trazabilidad.
             </p>
             <div className="border-t border-slate-100 pt-4">
               <button type="button" className="btn-primary"

@@ -19,8 +19,8 @@ export async function listar(req, res, next) {
     const opciones = { incluirInactivos: incluir(req.query) }
     return res.json(
       etapaId
-        ? await listarPorEtapa(etapaId, opciones)
-        : await listarPorProyecto(proyectoId, opciones),
+        ? await listarPorEtapa(etapaId, opciones, req.user)
+        : await listarPorProyecto(proyectoId, opciones, req.user),
     )
   } catch (error) {
     return next(error)

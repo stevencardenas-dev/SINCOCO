@@ -39,6 +39,10 @@ __pycache__/
 # Capturas que generan las pruebas de interfaz
 tests/_*.png
 
+# Archivos temporales de Office/LibreOffice (bloqueos de documento)
+.~lock.*#
+docs/.~lock.*
+
 # Secretos y artefactos locales del despliegue (nunca al repositorio)
 deploy/local/
 

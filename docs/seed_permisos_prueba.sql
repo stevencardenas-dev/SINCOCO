@@ -23,6 +23,10 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('proyectos.listar',         'Consultar el listado de proyectos',        'proyectos'),
   ('proyectos.registrar',      'Registrar un proyecto',                    'proyectos'),
   ('proyectos.dar_baja',       'Dar de baja lógica un proyecto',           'proyectos'),
+  -- Gestión de acceso (RBAC): asignar personal a proyectos y actividades, y
+  -- ver todos los proyectos en vez de solo los asignados.
+  ('proyectos.gestionar_acceso', 'Asignar personal a proyectos y actividades', 'proyectos'),
+  ('proyectos.acceso_total',   'Ver todos los proyectos, no solo los asignados', 'proyectos'),
   ('trabajadores.listar',      'Listar el personal',                       'personal'),
   ('trabajadores.crear',       'Registrar personal',                       'personal'),
   ('trabajadores.editar',      'Editar los datos del personal',            'personal'),
@@ -46,7 +50,7 @@ ON DUPLICATE KEY UPDATE
 -- única fuente de verdad de la asignación.
 DELETE FROM `roles_permisos`;
 
--- ADMINISTRADOR: todos los permisos del sistema.
+-- ADMINISTRADOR: todos los permisos del sistema (incluye gestionar_acceso).
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r CROSS JOIN `permisos` p
@@ -58,7 +62,7 @@ SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'GERENTE'
   AND p.`nombre` IN (
-    'clientes.listar', 'proyectos.listar',
+    'clientes.listar', 'proyectos.listar', 'proyectos.acceso_total',
     'trabajadores.listar', 'etapas.listar', 'actividades.listar'
   );
 
@@ -71,10 +75,10 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
 
 -- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
 --
--- `auditoria.listar` (HU-17), `roles.gestionar` y los dos permisos de
--- `catalogos` quedan solo en el administrador: no aparecen en las listas de
--- GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba ya se los da a
--- ADMINISTRADOR. Total: 23 permisos.
+-- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`
+-- y los dos permisos de `catalogos` quedan solo en el administrador: no
+-- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
+-- ya se los da a ADMINISTRADOR. Total: 25 permisos.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).

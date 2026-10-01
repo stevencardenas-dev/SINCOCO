@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ArrowRightOnRectangleIcon, Bars3Icon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -28,16 +29,30 @@ const ROLE_LABELS = {
   ENCARGADO_BODEGA: 'Encargado de bodega',
 }
 
+// El buscador de la barra superior busca proyectos: es el listado que el
+// módulo ofrece con filtro en la base. Los roles que no entran a Proyectos no
+// lo ven, para no ofrecer una búsqueda que no lleva a ninguna parte.
+const ROLES_CON_PROYECTOS = ['ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA']
+
 export default function Topbar({ onMenuClick }) {
   const { pathname } = useLocation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [busqueda, setBusqueda] = useState('')
 
   const title = TITLES[pathname] ?? 'SINCOCO'
 
   const handleLogout = () => {
     logout()
     navigate('/login')
+  }
+
+  const buscar = (e) => {
+    e.preventDefault()
+    const texto = busqueda.trim()
+    if (!texto) return
+    setBusqueda('')
+    navigate(`/proyectos?buscar=${encodeURIComponent(texto)}`)
   }
 
   return (
@@ -54,15 +69,20 @@ export default function Topbar({ onMenuClick }) {
         <h1 className="text-lg font-bold tracking-tight text-slate-900">{title}</h1>
 
         <div className="ml-auto flex items-center gap-3">
-          {/* Search */}
-          <div className="relative hidden md:block">
-            <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              placeholder="Buscar proyecto, material, trabajador…"
-              className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-accent-400 focus:bg-white focus:ring-2 focus:ring-accent-400/40"
-            />
-          </div>
+          {/* Search: filtra el listado de proyectos (corre en la base). */}
+          {ROLES_CON_PROYECTOS.includes(user?.rol) && (
+            <form onSubmit={buscar} className="relative hidden md:block">
+              <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar proyecto…"
+                aria-label="Buscar proyecto"
+                className="w-64 rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-accent-400 focus:bg-white focus:ring-2 focus:ring-accent-400/40"
+              />
+            </form>
+          )}
 
           {/* User: el bloque abre la información personal (HU-01 · HU-04). */}
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 py-1.5 pl-1.5 pr-3">
