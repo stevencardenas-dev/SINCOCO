@@ -88,7 +88,7 @@ export default function RolesPermisos() {
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Roles y permisos" subtitle="Matriz rol → permiso · RF01 · RNF05" />
+        <PageHeader title="Roles y permisos" subtitle="Matriz rol → permiso" />
         <AlertaFormulario mensaje={error} />
       </div>
     )
@@ -97,7 +97,7 @@ export default function RolesPermisos() {
   if (!datos) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Roles y permisos" subtitle="Matriz rol → permiso · RF01 · RNF05" />
+        <PageHeader title="Roles y permisos" subtitle="Matriz rol → permiso" />
         <div className="card flex items-center gap-3 px-6 py-12 text-sm text-slate-500">
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando matriz…
         </div>
@@ -207,7 +207,7 @@ export default function RolesPermisos() {
     <div className="space-y-6">
       <PageHeader
         title="Roles y permisos"
-        subtitle="Qué puede hacer cada rol según roles_permisos · RF01 · RNF05 · CU-01"
+        subtitle="Qué puede hacer cada rol en el sistema"
       >
         <input
           type="search"

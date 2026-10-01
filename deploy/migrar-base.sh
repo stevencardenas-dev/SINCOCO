@@ -58,14 +58,32 @@ else
 fi
 
 # --- 4. Verificación -------------------------------------------------------
-# Las tablas que deben existir tras migrar. Si alguna falta, el mysql de arriba
-# habría fallado antes; esto es la confirmación legible en el log de SSM.
+# Las tablas y columnas que deben existir tras migrar. Si algo falta, el mysql de
+# arriba habría fallado antes; esto es la confirmación legible en el log de SSM.
 echo "--- estado tras migrar ---"
 $MYSQL "$DB_NAME" -e "
   SELECT 'cargos' t, COUNT(*) n FROM cargos
   UNION ALL SELECT 'especialidades', COUNT(*) FROM especialidades
   UNION ALL SELECT 'restablecimientos_password', COUNT(*) FROM restablecimientos_password
   UNION ALL SELECT 'trabajadores', COUNT(*) FROM trabajadores;"
+
+# Las dos columnas de sesión única: sin ellas el backend nuevo responde 401 en
+# cada petición (requireAuth consulta `usuarios.sesion_actual`).
+echo "--- columnas de sesión única ---"
+$MYSQL "$DB_NAME" -e "
+  SELECT column_name, column_type FROM information_schema.columns
+   WHERE table_schema = DATABASE() AND table_name = 'usuarios'
+     AND column_name IN ('sesion_actual', 'sesion_iniciada_en');"
+
+# La matriz rol -> permisos: tras migrar debe salir ADMINISTRADOR 25,
+# GERENTE 6, MAESTRO_OBRA 3 y ENCARGADO_BODEGA 0. Si el administrador se queda
+# por debajo, la pantalla de asignaciones responderá 403 aunque el código esté
+# bien desplegado.
+echo "--- permisos por rol ---"
+$MYSQL "$DB_NAME" -e "
+  SELECT r.nombre rol, COUNT(rp.permiso_id) permisos
+  FROM roles r LEFT JOIN roles_permisos rp ON rp.rol_id = r.id
+  GROUP BY r.id, r.nombre ORDER BY permisos DESC;"
 
 unset MYSQL_PWD
 echo "✔ migraciones aplicadas"

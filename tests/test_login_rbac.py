@@ -33,7 +33,7 @@ with sync_playwright() as p:
         ok = sorted(links)==sorted(esperado)
         print(f"{usuario:11} url={url.split('5173')[1]:12} menu={len(links):2} {'OK ' if ok else 'DIFF'} {links}")
         if not ok: print(f"{'':11} esperado: {esperado}")
-        pg.screenshot(path=f'/tmp/claude-1000/-home-alvaro/5de88b02-ddd6-452e-ac72-8e6512891156/scratchpad/shot_{usuario}.png')
+        pg.screenshot(path=f'/tmp/shot_{usuario}.png')
         pg.close()
 
     # credenciales malas

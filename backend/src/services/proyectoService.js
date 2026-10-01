@@ -2,6 +2,7 @@ import * as clienteRepository from '../repositories/clienteRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
+import { alcanceDeUsuario } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
@@ -226,9 +227,17 @@ export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
 /**
  * Lista los proyectos activos (módulo de proyectos, HU-02). `incluirInactivos`
  * permite consultar los dados de baja (HU-18).
+ *
+ * RBAC: el resultado se limita al alcance del usuario. Quien tiene
+ * `proyectos.acceso_total` (administrador y gerente) ve todo; los demás roles
+ * ven solo los proyectos donde están asignados o de los que son responsables.
  */
-export async function listarProyectos(filtros = {}) {
-  return proyectoRepository.listar(filtros)
+export async function listarProyectos(filtros = {}, usuario = null) {
+  const alcance = await alcanceDeUsuario(usuario)
+  return proyectoRepository.listar({
+    ...filtros,
+    soloTrabajadorId: alcance.total ? null : alcance.trabajadorId,
+  })
 }
 
 /**

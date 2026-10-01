@@ -1,4 +1,4 @@
-export default function StatCard({ icon: Icon, label, value, hint, tone = 'brand' }) {
+export default function StatCard({ icon: Icon, label, value, hint, title, tone = 'brand' }) {
   // `accent` es el amarillo de marca (indicador protagonista); `brand` es el
   // gris grafito y `amber` queda para las alertas.
   const tones = {
@@ -15,7 +15,12 @@ export default function StatCard({ icon: Icon, label, value, hint, tone = 'brand
       </div>
       <div className="min-w-0">
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
-        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-slate-900">{value}</p>
+        <p
+          className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-slate-900"
+          title={title}
+        >
+          {value}
+        </p>
         {hint && <p className="mt-0.5 truncate text-xs text-slate-500">{hint}</p>}
       </div>
     </div>

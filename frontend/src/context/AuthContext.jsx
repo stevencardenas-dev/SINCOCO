@@ -41,7 +41,17 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const logout = () => {
+  /**
+   * Cierra la sesión en el servidor y en el navegador. El servidor invalida el
+   * token (sesión única por cuenta), así que no queda utilizable si alguien lo
+   * hubiera copiado; si la petición falla, igual se limpia el navegador.
+   */
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout')
+    } catch {
+      // Una sesión ya cerrada (o vencida) no debe impedir salir.
+    }
     localStorage.removeItem('sincoco_token')
     localStorage.removeItem('sincoco_user')
     setUser(null)

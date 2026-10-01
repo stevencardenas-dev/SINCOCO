@@ -52,7 +52,7 @@ const TABS = [
     etiqueta: 'cliente',
     articulo: 'el',
     nuevo: 'Nuevo cliente',
-    descripcion: 'Clientes que se pueden asociar a los proyectos (CU-02).',
+    descripcion: 'Clientes que se pueden asociar a los proyectos.',
   },
 ]
 
@@ -192,7 +192,7 @@ export default function Catalogo() {
     <div className="space-y-6">
       <PageHeader
         title="Catálogo"
-        subtitle="Cargos, especialidades y clientes de la empresa · RF01 · RF02 · RF06"
+        subtitle="Cargos, especialidades y clientes de la empresa"
       >
         <button type="button" className="btn-primary" onClick={abrirCrear}>
           <PlusIcon className="h-5 w-5" /> {tab.nuevo}
@@ -458,8 +458,8 @@ export default function Catalogo() {
       >
         <p className="text-sm text-slate-600">
           «{porEliminar ? nombreDe(porEliminar) : ''}» dejará de aparecer en los formularios. No se
-          borra de la base (RN07): se marca como dado de baja, los registros que ya lo usan
-          conservan el dato y se puede reactivar.
+          borra de la base: se marca como dado de baja, los registros que ya lo usan conservan el
+          dato y se puede reactivar.
         </p>
         {porEliminar && Number(porEliminar.en_uso) > 0 && (
           <p className="mt-3 rounded-xl bg-accent-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-accent-200">

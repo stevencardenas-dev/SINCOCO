@@ -161,7 +161,7 @@ export default function Usuarios() {
     <div className="space-y-6">
       <PageHeader
         title="Gestión de usuarios"
-        subtitle="Crear cuentas, asignar rol y controlar el acceso al sistema · RF01 · CU-01"
+        subtitle="Crear cuentas, asignar rol y controlar el acceso al sistema"
       >
         <button className="btn-primary" onClick={() => setAbierto((v) => !v)}>
           <PlusIcon className="h-5 w-5" />
@@ -276,7 +276,7 @@ export default function Usuarios() {
                 required
               />
               <p className="mt-1 text-xs text-slate-500">
-                Mínimo 8 caracteres. Se almacena cifrada (RNF04).
+                Mínimo 8 caracteres. Se almacena cifrada.
               </p>
             </div>
             <div>

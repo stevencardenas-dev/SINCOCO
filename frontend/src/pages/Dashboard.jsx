@@ -29,6 +29,7 @@ import {
   estadoIncidente,
   estadoProyecto,
   fmtCOP,
+  fmtCOPCompacto,
   fmtFecha,
   fmtFechaHora,
   severidadIncidente,
@@ -162,8 +163,9 @@ export default function Dashboard() {
             <StatCard
               icon={CurrencyDollarIcon}
               label="Costo consolidado"
-              value={fmtCOP(proyectos.presupuesto_activos)}
-              hint={`Costo real registrado: ${fmtCOP(costos.total)}`}
+              value={fmtCOPCompacto(proyectos.presupuesto_activos)}
+              title={fmtCOP(proyectos.presupuesto_activos)}
+              hint={`Costo real registrado: ${fmtCOPCompacto(costos.total)}`}
               tone="slate"
             />
           </div>
@@ -174,9 +176,7 @@ export default function Dashboard() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Avance de proyectos</h3>
-                  <p className="text-xs text-slate-500">
-                    % de avance registrado por proyecto · RF04 · RN09
-                  </p>
+                  <p className="text-xs text-slate-500">% de avance registrado por proyecto</p>
                 </div>
                 <Link
                   to="/proyectos"
@@ -284,15 +284,14 @@ export default function Dashboard() {
                           · mínimo {m.nivel_minimo}
                         </p>
                       </div>
-                      <span className="badge bg-amber-100 text-amber-700">RF23</span>
+
                     </li>
                   ))}
                 </ul>
               )}
 
               <p className="mt-4 text-xs leading-relaxed text-slate-500">
-                La alerta se genera cuando la existencia alcanza el nivel mínimo configurado en
-                RF09.{' '}
+                La alerta se genera cuando la existencia alcanza el nivel mínimo configurado.{' '}
                 {inventario.alertas_pendientes > 0
                   ? `Hay ${inventario.alertas_pendientes} alertas sin atender.`
                   : 'No hay alertas pendientes de atender.'}
@@ -306,7 +305,7 @@ export default function Dashboard() {
               <div>
                 <h3 className="text-base font-bold text-slate-900">Incidencias de obra</h3>
                 <p className="text-xs text-slate-500">
-                  {incidencias.abiertas} sin resolver de {incidencias.total} registradas · RF22
+                  {incidencias.abiertas} sin resolver de {incidencias.total} registradas
                 </p>
               </div>
               <Link

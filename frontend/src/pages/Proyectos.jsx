@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
   BuildingOffice2Icon,
   ClipboardDocumentListIcon,
   FolderIcon,
   FunnelIcon,
+  MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
@@ -13,6 +14,7 @@ import Modal from '../components/Modal.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
+import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
@@ -73,14 +75,22 @@ export default function Proyectos() {
   const { user } = useAuth()
   const esAdmin = user?.rol === 'ADMINISTRADOR'
 
+  // El buscador de la barra superior navega a /proyectos?buscar=…
+  const [parametros] = useSearchParams()
+
   const [proyectos, setProyectos] = useState(null)
   const [clientes, setClientes] = useState([])
   const [responsables, setResponsables] = useState([])
   const [error, setError] = useState(null)
   const [aviso, setAviso] = useState('')
-  const [filtros, setFiltros] = useState(SIN_FILTROS)
+  const [filtros, setFiltros] = useState(() => ({
+    ...SIN_FILTROS,
+    buscar: parametros.get('buscar') ?? '',
+  }))
   const [form, setForm] = useState(VACIO)
   const [abierto, setAbierto] = useState(false)
+  // Selector de ubicación en el mapa (Leaflet), abierto desde el formulario.
+  const [mapaAbierto, setMapaAbierto] = useState(false)
   // Proyecto en edición: null = el formulario está registrando uno nuevo.
   const [editando, setEditando] = useState(null)
   const [guardando, setGuardando] = useState(false)
@@ -120,6 +130,12 @@ export default function Proyectos() {
 
   useEffect(cargar, [incluirInactivos, filtros])
   useEffect(cargarCatalogos, [esAdmin])
+
+  // La búsqueda de la barra superior puede cambiar estando ya en esta pantalla.
+  useEffect(() => {
+    const buscar = parametros.get('buscar')
+    if (buscar !== null) setFiltros((f) => ({ ...f, buscar }))
+  }, [parametros])
 
   const cambiarFiltro = (campo, valor) => setFiltros((prev) => ({ ...prev, [campo]: valor }))
 
@@ -216,6 +232,9 @@ export default function Proyectos() {
 
   const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
   const hayFiltros = Boolean(filtros.buscar || filtros.estado)
+  // El backend limita el listado al alcance del rol (RBAC): estos roles ven
+  // todos los proyectos; los demás, solo los asignados.
+  const veTodos = ['ADMINISTRADOR', 'GERENTE'].includes(user?.rol)
 
   const opcionesClientes = clientes.map((c) => ({
     value: c.id,
@@ -233,7 +252,7 @@ export default function Proyectos() {
     <div className="space-y-6">
       <PageHeader
         title="Proyectos"
-        subtitle="Registro, etapas, actividades y seguimiento de avance · RF02 · RF03 · RF04"
+        subtitle="Registro, etapas, actividades y seguimiento de avance"
       >
         {esAdmin && (
           <button
@@ -318,6 +337,8 @@ export default function Proyectos() {
           <p className="text-xs text-slate-500">
             {proyectos.length} {proyectos.length === 1 ? 'proyecto' : 'proyectos'}{' '}
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
+            {!veTodos &&
+              ' · solo se listan los proyectos donde está asignado o de los que es responsable'}
           </p>
         )}
       </form>
@@ -325,11 +346,11 @@ export default function Proyectos() {
       {esAdmin && (
         <Modal
           abierto={abierto}
-          titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto (CU-02)'}
+          titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto'}
           subtitulo={
             editando
               ? `Código ${form.codigo} · el cambio queda en la bitácora`
-              : 'CU-02 · queda en estado de planificación'
+              : 'Queda en estado de planificación'
           }
           onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
@@ -436,13 +457,23 @@ export default function Proyectos() {
                 <label htmlFor="p-ubicacion" className="label">
                   Ubicación
                 </label>
-                <input
-                  id="p-ubicacion"
-                  className={campo('ubicacion')}
-                  value={form.ubicacion}
-                  onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
-                  required
-                />
+                <div className="flex gap-2">
+                  <input
+                    id="p-ubicacion"
+                    className={campo('ubicacion')}
+                    placeholder="Escriba la dirección o selecciónela en el mapa"
+                    value={form.ubicacion}
+                    onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn-ghost shrink-0"
+                    onClick={() => setMapaAbierto(true)}
+                  >
+                    <MapPinIcon className="h-4 w-4" /> Mapa
+                  </button>
+                </div>
               </div>
               <div>
                 <label htmlFor="p-presupuesto" className="label">
@@ -516,12 +547,23 @@ export default function Proyectos() {
         </Modal>
       )}
 
+      {/* Mapa para la ubicación: devuelve el texto normalizado al formulario. */}
+      <SelectorUbicacion
+        abierto={mapaAbierto}
+        valorInicial={form.ubicacion}
+        onCerrar={() => setMapaAbierto(false)}
+        onAceptar={(texto) => {
+          setForm((f) => ({ ...f, ubicacion: texto }))
+          setMapaAbierto(false)
+        }}
+      />
+
       {/* CU-02 Alt 2: alta rápida del cliente dentro de su propia ventana. */}
       {esAdmin && (
         <Modal
           abierto={clienteAbierto}
           titulo="Registrar cliente"
-          subtitulo="CU-02 Alt 2 · queda guardado en el catálogo y seleccionado en el proyecto"
+          subtitulo="Queda guardado en el catálogo y seleccionado en el proyecto"
           onCerrar={() => {
             setClienteAbierto(false)
             setErrorCliente('')
@@ -632,7 +674,7 @@ export default function Proyectos() {
             {hayFiltros
               ? 'Ajuste o limpie los filtros para ver más resultados.'
               : esAdmin
-                ? 'Registre el primer proyecto con el botón «Nuevo proyecto» (CU-02).'
+                ? 'Registre el primer proyecto con el botón «Nuevo proyecto».'
                 : 'El administrador todavía no ha registrado proyectos.'}
           </p>
         </div>
@@ -693,7 +735,9 @@ export default function Proyectos() {
                         </Link>
                       </td>
                       <td className="px-5 py-4">
-                        <div className="flex items-center justify-end gap-2">
+                        {/* En escritorio las acciones se apilan en vertical: en
+                            horizontal se montaban unas sobre otras. */}
+                        <div className="flex flex-col items-stretch gap-1.5">
                           {esAdmin && p.activo && (
                             <button
                               className="btn-accion btn-accion-editar"
@@ -725,8 +769,8 @@ export default function Proyectos() {
 
       <p className="text-xs text-slate-400">
         El avance del proyecto se deriva de sus actividades según la regla de cálculo definida por la
-        empresa (RN09). Las etapas y actividades con responsables, fechas y evidencias llegan con
-        HU-03 (RF03 · RF04).
+        empresa. Las etapas y actividades con responsables y fechas se administran desde el plan de
+        cada proyecto.
       </p>
     </div>
   )
