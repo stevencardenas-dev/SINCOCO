@@ -333,7 +333,7 @@ Además, en el navegador:
 | Dependencias nuevas del frontend | `npm ci` es estricto: si el `package-lock.json` no está en el repo, la compilación falla. | Los tres paquetes están en el lock versionados (`leaflet` 1.9.4, `react-leaflet` 4.2.1, `react-phone-number-input` 3.4.12). Verificado con la simulación del pipeline. |
 | Permisos nuevos en la base de producción | Si los permisos no llegan a la matriz, la interfaz muestra módulos que responden 403. | `migracion_rbac_acceso.sql` crea e inserta los permisos, y el log de la migración imprime la matriz (25 / 6 / 3 / 0). |
 | Datos de demostración | El despliegue **no** carga seeds ni borra datos: `migrar` solo aplica migraciones idempotentes. | Para recargar la base está `deploy/cargar-base.sh` (re-siembra y borra `roles_permisos`, así que se pierde lo que el administrador haya cambiado a mano). |
-| Caché del navegador y CloudFront | Los assets llevan hash y `index.html` se invalida: no queda mezcla de versiones. | El workflow ya lo hace en cada despliegue; las primeras 1.000 rutas/mes son gratis. |
+| Caché del navegador y CloudFront | Los assets llevan hash y `index.html` se invalida: no queda mezcla de versiones. El **icono de la pestaña** también lleva hash porque vive en `frontend/src/assets/` y no en `public/`; si estuviera en `public/` se publicaría como `/favicon.svg` sin hash y, con `max-age=31536000, immutable`, un cambio de logo tardaría un año en verse. | El workflow ya lo hace en cada despliegue; las primeras 1.000 rutas/mes son gratis. |
 | Coste | No se enciende ningún recurso nuevo (mismos EC2/RDS/buckets). | Sigue en la capa gratuita mientras `free-tier-ec2` y `documents-db` estén detenidos. |
 
 ### Límites de la capa gratuita en CI

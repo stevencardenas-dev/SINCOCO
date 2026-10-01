@@ -1,7 +1,9 @@
 /**
  * Marca de SINCOCO: un casco de obra sobre el amarillo de seguridad.
  *
- * Se usa en el sidebar, en el login y (misma figura) en public/favicon.svg.
+ * Se usa en el sidebar, en el login y (misma figura) en src/assets/favicon.svg,
+ * que es el icono de la pestaña: al estar dentro de src/, Vite le pone hash al
+ * compilar y el navegador no se queda con el logo anterior.
  * La figura se dibuja con `currentColor` para que herede el gris grafito del
  * texto y funcione igual sobre fondo claro u oscuro.
  */
