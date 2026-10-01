@@ -15,7 +15,7 @@ import re
 
 from playwright.sync_api import sync_playwright
 from api_helper import http, limpiar, login, scalar, sql, crear_proyecto
-from ui_helper import captura, ir_a, login as login_ui
+from ui_helper import BASE_UI, captura, ir_a, login as login_ui
 
 CODIGO = 'TEST-HU-PRESENT-01'
 CODIGO_GRANDE = 'TEST-HU-PRESENT-02'
@@ -114,6 +114,21 @@ with sync_playwright() as p:
     assert not desborda, 'el valor abreviado no debe desbordar su tarjeta'
     assert len(completo) > len(texto_valor), 'el valor exacto queda disponible al pasar el cursor'
     captura(pg, 'presentacion')
+
+    # --- El icono de la pestaña es el logo nuevo ------------------------------
+    # Vive en src/assets (no en public/) para que Vite le ponga hash al compilar
+    # (/assets/favicon-<hash>.svg en el sitio publicado, /src/assets/favicon.svg
+    # en desarrollo). En public/ volvería a ser /favicon.svg sin hash y el
+    # navegador se quedaría con el logo anterior hasta un año, porque el
+    # despliegue publica el resto de los archivos con caché inmutable.
+    icono = pg.get_attribute('link[rel="icon"]', 'href')
+    print('icono de la pestaña ->', icono)
+    assert icono != '/favicon.svg', \
+        'el icono no debe ser la ruta sin hash: el navegador la guarda un año'
+    assert re.match(r'^/(src/)?assets/favicon[\w.-]*\.svg$', icono or ''), \
+        f'el icono debe venir de src/assets/favicon.svg: {icono!r}'
+    respuesta = pg.request.get(f'{BASE_UI}{icono}')
+    assert respuesta.status == 200, f'el icono debe responder 200: {respuesta.status}'
 
     navegador.close()
 
