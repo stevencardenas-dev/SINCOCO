@@ -10,7 +10,7 @@
 # sea administrador puede consultarla.
 import subprocess
 
-from api_helper import http, login, mysql_args, scalar
+from api_helper import PREFIJO, crear_trabajador, http, login, mysql_args, scalar, sql
 
 RUTA = '/api/roles/permisos'
 
@@ -84,5 +84,89 @@ assert 'usuarios.listar' in [p['nombre'] for p in permisos], 'falta usuarios.lis
 sin_modulo = [p['nombre'] for p in permisos if not p['modulo']]
 assert not sin_modulo, f'permisos sin módulo (no se podrían agrupar): {sin_modulo}'
 print('invariantes del seed -> ADMIN completo · BODEGA sin permisos · módulos completos')
+
+# --- Administración de roles (permiso roles.gestionar) ------------------------
+NOMBRE_ROL = 'TEST_HU_ROL_GESTION'
+sql(f"DELETE FROM roles WHERE nombre = '{NOMBRE_ROL}'")  # por si quedó de otra corrida
+
+# RBAC: el gerente consulta... no; no administra roles.
+estado, r = http('POST', '/api/roles', {'nombre': NOMBRE_ROL}, token=TOKENS['gerente'])
+assert estado == 403, f'gerente no debe crear roles: {estado} {r}'
+print('gerente crea rol ->', estado)
+
+# Validaciones de forma.
+estado, r = http('POST', '/api/roles', {'nombre': 'ab'}, token=TOKENS['admin'])
+assert estado == 400 and r.get('campo') == 'nombre', f'nombre corto: {estado} {r}'
+
+estado, r = http('POST', '/api/roles', {'nombre': NOMBRE_ROL, 'descripcion': 'Rol de prueba'}, token=TOKENS['admin'])
+assert estado == 201, f'no se pudo crear el rol: {estado} {r}'
+rol_id = r['rol']['id']
+print('crear rol ->', estado, r['rol']['nombre'])
+
+estado, r = http('POST', '/api/roles', {'nombre': NOMBRE_ROL}, token=TOKENS['admin'])
+assert estado == 409, f'rol duplicado: {estado} {r}'
+
+# Editar la descripción.
+estado, r = http('PATCH', f'/api/roles/{rol_id}', {'descripcion': 'Rol de prueba editado'}, token=TOKENS['admin'])
+assert estado == 200 and r['rol']['descripcion'] == 'Rol de prueba editado', f'editar rol: {estado} {r}'
+print('editar rol ->', estado)
+
+# Asignar permisos al rol nuevo (la ruta reemplaza el conjunto).
+_, datos = http('GET', RUTA, token=TOKENS['admin'])
+permiso_ids = [p['id'] for p in datos['permisos'][:3]]
+estado, r = http('PUT', f'/api/roles/{rol_id}/permisos', {'permiso_ids': permiso_ids}, token=TOKENS['admin'])
+assert estado == 200 and r['permisos'] == len(permiso_ids), f'asignar permisos: {estado} {r}'
+
+_, datos = http('GET', RUTA, token=TOKENS['admin'])
+asignados = {a['permiso_id'] for a in datos['asignaciones'] if a['rol_id'] == rol_id}
+assert asignados == set(permiso_ids), f'los permisos del rol nuevo no coinciden: {asignados}'
+print('asignar permisos ->', sorted(permiso_ids))
+
+# Quitar permisos: el conjunto se reemplaza completo.
+estado, r = http('PUT', f'/api/roles/{rol_id}/permisos', {'permiso_ids': []}, token=TOKENS['admin'])
+assert estado == 200, f'quitar permisos: {estado} {r}'
+_, datos = http('GET', RUTA, token=TOKENS['admin'])
+assert not [a for a in datos['asignaciones'] if a['rol_id'] == rol_id], 'debían quedar sin permisos'
+print('quitar permisos -> 0')
+
+# Salvaguarda: el administrador no puede quitarse a sí mismo roles.gestionar.
+rol_admin = next(x for x in datos['roles'] if x['nombre'] == 'ADMINISTRADOR')
+estado, r = http('PUT', f"/api/roles/{rol_admin['id']}/permisos", {'permiso_ids': []}, token=TOKENS['admin'])
+assert estado == 400, f'no debe poder autobloquearse: {estado} {r}'
+print('salvaguarda admin ->', estado)
+
+# Los roles base del sistema no se eliminan.
+estado, r = http('DELETE', f"/api/roles/{rol_admin['id']}", token=TOKENS['admin'])
+assert estado == 409, f'rol base no se elimina: {estado} {r}'
+
+# Un rol con usuarios asignados no se elimina.
+trabajador_id = crear_trabajador(TOKENS['admin'], f'{PREFIJO}-CC-ROLES')
+estado, r = http('POST', '/api/usuarios', {
+    'username': 'TEST-HU-ROLG', 'email': 'test.hu.rolg@sincoco.test',
+    'password': 'Prueba123!', 'rol_id': rol_id, 'trabajador_id': trabajador_id,
+}, token=TOKENS['admin'])
+assert estado == 201, f'no se pudo crear el usuario del rol nuevo: {estado} {r}'
+estado, r = http('DELETE', f'/api/roles/{rol_id}', token=TOKENS['admin'])
+assert estado == 409, f'un rol con usuarios no debe eliminarse: {estado} {r}'
+print('eliminar rol con usuarios ->', estado, r['error'][:48])
+sql("DELETE FROM usuarios WHERE username='TEST-HU-ROLG'")
+
+# Sin usuarios asignados, sí se elimina (y no deja permisos huérfanos).
+estado, r = http('DELETE', f'/api/roles/{rol_id}', token=TOKENS['admin'])
+assert estado == 200 and r['eliminado'], f'eliminar rol libre: {estado} {r}'
+assert scalar(f'SELECT COUNT(*) FROM roles WHERE id={rol_id}') == '0', 'el rol no se eliminó'
+assert scalar(f'SELECT COUNT(*) FROM roles_permisos WHERE rol_id={rol_id}') == '0', 'quedaron permisos huérfanos'
+print('eliminar rol libre ->', estado)
+sql(f"DELETE FROM trabajadores WHERE numero_documento LIKE '{PREFIJO}-CC-ROLES%'")
+
+# Toda la gestión de roles queda en la bitácora (HU-17).
+for accion in ('CREAR', 'ACTUALIZAR', 'ASIGNAR_PERMISOS', 'ELIMINAR'):
+    n = scalar(
+        'SELECT COUNT(*) FROM bitacora_trazabilidad '
+        "WHERE tabla_afectada IN ('roles','roles_permisos') "
+        f"AND accion='{accion}'"
+    )
+    assert int(n) >= 1, f'falta {accion} en la bitácora de roles'
+print('gestión de roles -> crear/editar/permisos/eliminar + bitácora')
 
 print('\nRoles y permisos (HU-01 · criterio 4): TODAS LAS PRUEBAS PASARON')
