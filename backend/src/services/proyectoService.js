@@ -227,8 +227,8 @@ export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
  * Lista los proyectos activos (módulo de proyectos, HU-02). `incluirInactivos`
  * permite consultar los dados de baja (HU-18).
  */
-export async function listarProyectos({ incluirInactivos = false } = {}) {
-  return proyectoRepository.listarActivos(incluirInactivos)
+export async function listarProyectos(filtros = {}) {
+  return proyectoRepository.listar(filtros)
 }
 
 /**

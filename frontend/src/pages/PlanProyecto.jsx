@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeftIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
+import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
+import { mensajeError } from '../lib/errores.js'
 import { fmtFecha } from '../lib/format.js'
 
 /**
@@ -39,6 +42,9 @@ export default function PlanProyecto() {
   const [abrirEtapa, setAbrirEtapa] = useState(false)
   const [actividadEn, setActividadEn] = useState(null)
   const [actividadForm, setActividadForm] = useState(ACTIVIDAD_VACIA)
+  // Errores de negocio dentro de cada formulario, no sobre la tabla.
+  const [errorEtapa, setErrorEtapa] = useState('')
+  const [errorActividad, setErrorActividad] = useState('')
 
   const cargar = () => {
     setError('')
@@ -61,7 +67,7 @@ export default function PlanProyecto() {
 
   const crearEtapa = async (e) => {
     e.preventDefault()
-    setError('')
+    setErrorEtapa('')
     setAviso('')
     try {
       await api.post('/etapas', { ...etapaForm, proyecto_id: Number(id) })
@@ -70,13 +76,13 @@ export default function PlanProyecto() {
       setAviso('Etapa registrada.')
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar la etapa.')
+      setErrorEtapa(mensajeError(err, 'No se pudo registrar la etapa.'))
     }
   }
 
   const crearActividad = async (e) => {
     e.preventDefault()
-    setError('')
+    setErrorActividad('')
     setAviso('')
     try {
       await api.post('/actividades', {
@@ -89,7 +95,7 @@ export default function PlanProyecto() {
       setAviso('Actividad registrada.')
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar la actividad.')
+      setErrorActividad(mensajeError(err, 'No se pudo registrar la actividad.'))
     }
   }
 
@@ -117,8 +123,8 @@ export default function PlanProyecto() {
         </button>
       </PageHeader>
 
-      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-      {aviso && <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{aviso}</p>}
+      {error && <AlertaFormulario mensaje={error} />}
+      {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       {esAdmin && abrirEtapa && (
         <form onSubmit={crearEtapa} className="card space-y-4 p-6">
@@ -147,9 +153,10 @@ export default function PlanProyecto() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <AlertaFormulario mensaje={errorEtapa} />
             <button type="submit" className="btn-primary">Registrar etapa</button>
             <button type="button" className="btn-ghost"
-              onClick={() => { setAbrirEtapa(false); setEtapaForm(ETAPA_VACIA) }}>Cancelar</button>
+              onClick={() => { setAbrirEtapa(false); setEtapaForm(ETAPA_VACIA); setErrorEtapa('') }}>Cancelar</button>
           </div>
         </form>
       )}
@@ -204,13 +211,21 @@ export default function PlanProyecto() {
                 </div>
                 <div>
                   <label htmlFor={`a-resp-${et.id}`} className="label">Responsable</label>
-                  <select id={`a-resp-${et.id}`} className="input" value={actividadForm.responsable_id}
-                    onChange={(e) => setActividadForm({ ...actividadForm, responsable_id: e.target.value })}>
-                    <option value="">Sin asignar…</option>
-                    {responsables.map((t) => (
-                      <option key={t.id} value={t.id}>{t.nombres} {t.apellidos} — {t.cargo}</option>
-                    ))}
-                  </select>
+                  <BuscadorSelect
+                    id={`a-resp-${et.id}`}
+                    value={actividadForm.responsable_id}
+                    onChange={(v) => setActividadForm({ ...actividadForm, responsable_id: v })}
+                    opciones={[
+                      { value: '', label: 'Sin asignar' },
+                      ...responsables.map((t) => ({
+                        value: t.id,
+                        label: `${t.nombres} ${t.apellidos}`,
+                        sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
+                      })),
+                    ]}
+                    vacio="Sin asignar"
+                    placeholder="Escriba el nombre del responsable…"
+                  />
                 </div>
                 <div>
                   <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
@@ -222,9 +237,12 @@ export default function PlanProyecto() {
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={actividadForm.fecha_fin_programada}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_fin_programada: e.target.value })} required />
                 </div>
+                <div className="sm:col-span-2">
+                  <AlertaFormulario mensaje={errorActividad} />
+                </div>
                 <div className="sm:col-span-2 flex items-center gap-3">
                   <button type="submit" className="btn-primary">Registrar actividad</button>
-                  <button type="button" className="btn-ghost" onClick={() => setActividadEn(null)}>Cancelar</button>
+                  <button type="button" className="btn-ghost" onClick={() => { setActividadEn(null); setErrorActividad('') }}>Cancelar</button>
                 </div>
               </form>
             )}
