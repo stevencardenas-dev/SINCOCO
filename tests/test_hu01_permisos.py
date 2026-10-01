@@ -6,9 +6,9 @@
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 22 · GERENTE 5 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
+#   ADMIN 23 · GERENTE 5 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
 #   (20 desde que HU-17 añadió `auditoria.listar`; 22 con los dos permisos de
-#   `catalogos` que agregó el catálogo de cargos/especialidades/clientes.)
+#   `catalogos`; 23 con `roles.gestionar`, la administración de roles.)
 from api_helper import PREFIJO, crear_trabajador, http, login, scalar, sql
 
 # La matriz del seed, por rol. Con 'incluirInactivos' se evita depender de datos.
@@ -42,7 +42,7 @@ for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
         'SELECT COUNT(*) FROM roles_permisos rp JOIN roles r ON r.id = rp.rol_id '
         f"WHERE r.nombre='{rol}'"
     )
-assert conteos['ADMINISTRADOR'] == '22', f'ADMIN debe tener 22 permisos: {conteos}'
+assert conteos['ADMINISTRADOR'] == '23', f'ADMIN debe tener 23 permisos: {conteos}'
 assert conteos['GERENTE'] == '5', f'GERENTE debe tener 5 permisos: {conteos}'
 assert conteos['MAESTRO_OBRA'] == '3', f'MAESTRO_OBRA debe tener 3 permisos: {conteos}'
 assert conteos['ENCARGADO_BODEGA'] == '0', f'BODEGA no debe tener permisos: {conteos}'
