@@ -8,6 +8,9 @@
 ## Branches y commits
 - Un branch por HU: `feature/HU-<numero>-<slug>` (ej. `feature/HU-07-catalogo-materiales`).
 - El commit final que cierra una HU referencia su número: `HU-07: catálogo de materiales (CRUD + nivel mínimo)`.
+- Los commits se firman solo con el autor humano: **sin pies de `Co-Authored-By:` ni
+  líneas de "Generated with"** de asistentes o agentes (GitHub no debe atribuir
+  el trabajo a una cuenta de bot en el historial del equipo).
 
 ## Casos de uso e historias de usuario
 - Los **casos de uso** viven en `docs/CASOS_DE_USO.md` (uno por HU, mismo ID: HU-07 ↔ CU-07).
