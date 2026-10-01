@@ -3,10 +3,20 @@
 # Requiere backend (3005) y frontend (5173) corriendo.
 # Uso: .venv/Scripts/python.exe tests/test_ui_hu04_personal.py
 from playwright.sync_api import sync_playwright
-from api_helper import limpiar
+from api_helper import limpiar, sql
 from ui_helper import login, ir_a, captura
 
-limpiar()
+# Punto 6 de la revisión del PO: el documento solo acepta dígitos, así que la
+# prueba usa un número (el prefijo TEST- se perdería al teclear).
+DOC = '900777111'
+
+
+def limpiar_datos():
+    sql(f"DELETE FROM trabajadores WHERE numero_documento='{DOC}'")
+    limpiar()
+
+
+limpiar_datos()
 
 with sync_playwright() as p:
     navegador = p.chromium.launch(headless=True)
@@ -18,7 +28,7 @@ with sync_playwright() as p:
     # Criterio 2 (interfaz): sin especialidad, el backend señala el campo.
     pg.click('text=Nuevo trabajador')
     pg.wait_for_selector('#t-doc')
-    pg.fill('#t-doc', 'TEST-UI-CC-01')
+    pg.fill('#t-doc', DOC)
     pg.fill('#t-nombres', 'Ulises')
     pg.fill('#t-apellidos', 'Interfaz')
     # El cargo y la especialidad salen del catálogo (select), no se escriben.
@@ -34,7 +44,7 @@ with sync_playwright() as p:
     pg.wait_for_selector('[role=status]', timeout=10000)
     print('crear ->', pg.locator('[role=status]').inner_text())
     pg.wait_for_timeout(600)
-    fila = pg.locator('table tbody tr', has_text='TEST-UI-CC-01')
+    fila = pg.locator('table tbody tr', has_text=DOC)
     assert fila.count() == 1, 'el trabajador creado debe aparecer en la tabla'
     texto = fila.inner_text().replace('\n', ' | ')
     print('fila ->', texto)
@@ -44,7 +54,7 @@ with sync_playwright() as p:
     # Duplicado: el backend responde 409 y la interfaz lo muestra.
     pg.click('text=Nuevo trabajador')
     pg.wait_for_selector('#t-doc')
-    pg.fill('#t-doc', 'TEST-UI-CC-01')
+    pg.fill('#t-doc', DOC)
     pg.fill('#t-nombres', 'Otro')
     pg.fill('#t-apellidos', 'Duplicado')
     pg.select_option('#t-cargo', label='Obrero · obra')
@@ -57,5 +67,5 @@ with sync_playwright() as p:
     captura(pg, 'hu04_personal')
     navegador.close()
 
-limpiar()
+limpiar_datos()
 print('\nHU-04 (interfaz): TODAS LAS PRUEBAS PASARON')
