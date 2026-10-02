@@ -425,6 +425,7 @@ export default function RolesPermisos() {
             </label>
             <input
               id="rol-descripcion"
+              maxLength={255}
               className="input"
               value={rolForm.descripcion}
               onChange={(e) => setRolForm({ ...rolForm, descripcion: e.target.value })}

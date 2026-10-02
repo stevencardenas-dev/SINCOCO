@@ -139,6 +139,7 @@ export default function Login() {
               </label>
               <input
                 id="username"
+                maxLength={50}
                 type="text"
                 autoComplete="username"
                 className="input"
@@ -154,6 +155,7 @@ export default function Login() {
               </label>
               <input
                 id="password"
+                maxLength={72}
                 type="password"
                 autoComplete="current-password"
                 className="input"

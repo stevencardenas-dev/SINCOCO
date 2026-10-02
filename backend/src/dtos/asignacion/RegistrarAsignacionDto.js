@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
+import { LARGO, revisarLargo } from '../../utils/campos.js'
 import { textoOpcional } from '../trabajador/RegistrarTrabajadorDto.js'
 
 /** DTO para asignar personal a un proyecto o a una de sus actividades. */
@@ -42,6 +43,9 @@ export class RegistrarAsignacionDto {
         throw new AppError(`${campo} debe ser una fecha válida`, 400, campo)
       }
     }
+
+    revisarLargo(textoOpcional(body.rol_en_proyecto), LARGO.rol_en_proyecto, 'rol_en_proyecto')
+    revisarLargo(textoOpcional(body.observaciones), LARGO.texto_largo, 'observaciones')
 
     return new RegistrarAsignacionDto({
       trabajador_id: Number(body.trabajador_id),

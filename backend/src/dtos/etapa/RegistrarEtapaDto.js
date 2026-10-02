@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
+import { LARGO, revisarLargo } from '../../utils/campos.js'
 import { textoOpcional } from '../trabajador/RegistrarTrabajadorDto.js'
 
 /** DTO para definir una etapa del plan de trabajo (HU-03). */
@@ -36,6 +37,9 @@ export class RegistrarEtapaDto {
         throw new AppError('orden debe ser un número entero mayor o igual a 1', 400, 'orden')
       }
     }
+
+    revisarLargo(String(body.nombre).trim(), LARGO.nombre_etapa, 'nombre')
+    revisarLargo(textoOpcional(body.descripcion), LARGO.texto_largo, 'descripcion')
 
     return new RegistrarEtapaDto({
       proyecto_id: Number(body.proyecto_id),

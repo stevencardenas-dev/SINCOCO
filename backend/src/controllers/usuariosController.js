@@ -3,6 +3,7 @@ import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { listarSolicitudesPendientes } from '../services/resetService.js'
+import { LARGO, revisarCorreo, revisarLargo, revisarPassword } from '../utils/campos.js'
 
 // HU-01: crear usuario con rol asignado
 export async function crear(req, res) {
@@ -14,10 +15,14 @@ export async function crear(req, res) {
       error: 'username, password, email, rol_id y trabajador_id son requeridos',
     })
   }
-  // RNF04: la validación del formulario no basta, la API se puede llamar directamente.
-  if (password.length < 8) {
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' })
-  }
+  // RNF04: la validación del formulario no basta, la API se puede llamar
+  // directamente. Las longitudes se revisan contra las columnas de la base
+  // (usuarios.username varchar(50), email varchar(150)) y el correo debe tener
+  // forma de correo.
+  revisarLargo(username, LARGO.username, 'username')
+  revisarLargo(email, LARGO.email, 'email')
+  revisarCorreo(email)
+  revisarPassword(password, 8)
 
   const password_hash = await bcrypt.hash(password, 10)
   try {

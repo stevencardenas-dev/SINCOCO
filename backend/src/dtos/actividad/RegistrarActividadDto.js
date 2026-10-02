@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
+import { LARGO, revisarLargo } from '../../utils/campos.js'
 import { textoOpcional } from '../trabajador/RegistrarTrabajadorDto.js'
 
 /** DTO para definir una actividad del plan de trabajo (HU-03). */
@@ -37,6 +38,9 @@ export class RegistrarActividadDto {
         throw new AppError(`${campo} debe ser una fecha válida`, 400, campo)
       }
     }
+
+    revisarLargo(String(body.nombre).trim(), LARGO.nombre_actividad, 'nombre')
+    revisarLargo(textoOpcional(body.descripcion), LARGO.texto_largo, 'descripcion')
 
     return new RegistrarActividadDto({
       etapa_id: Number(body.etapa_id),

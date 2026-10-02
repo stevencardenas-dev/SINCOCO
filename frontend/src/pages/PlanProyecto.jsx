@@ -190,7 +190,7 @@ export default function PlanProyecto() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="e-nombre" className="label">Nombre</label>
-              <input id="e-nombre" className="input" value={etapaForm.nombre}
+              <input id="e-nombre" className="input" maxLength={100} value={etapaForm.nombre}
                 onChange={(e) => setEtapaForm({ ...etapaForm, nombre: e.target.value })} required />
             </div>
             <div>
@@ -382,6 +382,7 @@ export default function PlanProyecto() {
               <label htmlFor="ac-rol" className="label">Rol en el proyecto</label>
               <input
                 id="ac-rol"
+                maxLength={100}
                 className="input"
                 placeholder="Residente, oficial…"
                 value={accesoForm.rol_en_proyecto}

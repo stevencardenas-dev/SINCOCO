@@ -2,6 +2,13 @@ import bcrypt from 'bcrypt'
 import * as perfilRepository from '../repositories/perfilRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
+import {
+  LARGO,
+  revisarCorreo,
+  revisarLargo,
+  revisarPassword,
+  revisarTelefono,
+} from '../utils/campos.js'
 
 /**
  * Información personal de quien está conectado (HU-01 · HU-04).
@@ -87,6 +94,14 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
     for (const campo of ['telefono', 'direccion']) {
       if (campos[campo] !== undefined) campos[campo] = textoOpcional(campos[campo])
     }
+
+    // Las mismas reglas de forma que usa HU-04: sin esto, un teléfono de 40
+    // caracteres o un correo sin forma llegaban a la base desde el perfil.
+    revisarLargo(campos.telefono, LARGO.telefono, 'telefono')
+    revisarLargo(campos.email, LARGO.email, 'email')
+    revisarLargo(campos.direccion, LARGO.direccion, 'direccion')
+    revisarCorreo(campos.email)
+    revisarTelefono(campos.telefono)
 
     await perfilRepository.actualizarTrabajador(perfil.trabajador.id, campos)
 

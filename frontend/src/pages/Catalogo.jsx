@@ -368,7 +368,7 @@ export default function Catalogo() {
                 </div>
                 <div>
                   <label htmlFor="cat-documento" className="label">Documento</label>
-                  <input id="cat-documento" className="input" value={form.numero_documento}
+                  <input id="cat-documento" className="input" maxLength={20} value={form.numero_documento}
                     onChange={(e) => setForm({ ...form, numero_documento: e.target.value })}
                     disabled={modal === 'editar'} required />
                   {modal === 'editar' && (
@@ -380,7 +380,7 @@ export default function Catalogo() {
               </div>
               <div>
                 <label htmlFor="cat-razon" className="label">Razón social / nombre</label>
-                <input id="cat-razon" className="input" value={form.razon_social_nombre}
+                <input id="cat-razon" className="input" maxLength={150} value={form.razon_social_nombre}
                   onChange={(e) => setForm({ ...form, razon_social_nombre: e.target.value })} required />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -410,12 +410,12 @@ export default function Catalogo() {
             <>
               <div>
                 <label htmlFor="cat-nombre" className="label">Nombre</label>
-                <input id="cat-nombre" className="input" value={form.nombre} required minLength={3}
+                <input id="cat-nombre" className="input" maxLength={100} value={form.nombre} required minLength={3}
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
               </div>
               <div>
                 <label htmlFor="cat-descripcion" className="label">Descripción</label>
-                <input id="cat-descripcion" className="input" value={form.descripcion}
+                <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
               </div>
               {tipo === 'cargos' && (

@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
+import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
 import { mensajeError } from '../lib/errores.js'
@@ -243,6 +244,7 @@ export default function Usuarios() {
               </label>
               <input
                 id="u-username"
+                maxLength={50}
                 className="input"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
@@ -255,6 +257,7 @@ export default function Usuarios() {
               </label>
               <input
                 id="u-email"
+                maxLength={150}
                 type="email"
                 className="input"
                 value={form.email}
@@ -268,6 +271,7 @@ export default function Usuarios() {
               </label>
               <input
                 id="u-password"
+                maxLength={72}
                 type="password"
                 className="input"
                 minLength={8}
@@ -360,6 +364,11 @@ export default function Usuarios() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
+                {usuarios.length === 0 && (
+                  <FilaVacia columnas={5}>
+                    No hay usuarios que mostrar con estos filtros.
+                  </FilaVacia>
+                )}
                 {usuarios.map((u) => (
                   <tr key={u.id} className={u.activo ? '' : 'bg-slate-50/60'}>
                     <td className="px-5 py-4 font-medium text-slate-800">

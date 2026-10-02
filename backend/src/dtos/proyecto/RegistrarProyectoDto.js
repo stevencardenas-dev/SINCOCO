@@ -1,4 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
+import { LARGO, revisarLargo } from '../../utils/campos.js'
 
 /**
  * DTO para el registro de un proyecto (HU-02).
@@ -88,6 +89,14 @@ export class RegistrarProyectoDto {
     if (Number.isNaN(Date.parse(body.fecha_fin_programada))) {
       throw new AppError('fecha_fin_programada debe ser una fecha válida', 400)
     }
+
+    revisarLargo(body.codigo.trim(), LARGO.codigo, 'codigo')
+    revisarLargo(body.nombre.trim(), LARGO.nombre_proyecto, 'nombre')
+    revisarLargo(body.ubicacion.trim(), LARGO.ubicacion, 'ubicacion')
+    revisarLargo(body.descripcion ? String(body.descripcion).trim() : null,
+                 LARGO.texto_largo, 'descripcion')
+    revisarLargo(body.observaciones ? String(body.observaciones).trim() : null,
+                 LARGO.texto_largo, 'observaciones')
 
     return new RegistrarProyectoDto({
       codigo: body.codigo.trim(),
