@@ -173,7 +173,7 @@ instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
 
 | Job | Trabajo |
 |---|---|
-| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds, aplica `docs/migracion_*.sql` (las mismas que producción, porque el código nuevo consulta `usuarios.sesion_actual`) y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18 contra un backend recién arrancado. |
+| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds, aplica `docs/migracion_*.sql` (las mismas que producción, porque el código nuevo consulta `usuarios.sesion_actual`) y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18, más la batería de casos límite (`tests/test_bordes_api.py`), que exige que toda entrada imposible —texto larguísimo, número fuera de rango, fecha imposible, token viejo o id inexistente— devuelva 400/403/404 y nunca un 500, contra un backend recién arrancado. |
 | `migrar` | Deja el esquema del RDS al día aplicando `docs/migracion_*.sql` (idempotente, sin borrar datos) **antes** de tocar la instancia. Invoca el workflow reutilizable `migrar-base.yml`. |
 | `backend` | Empaqueta, sube a S3 y ejecuta `deploy/instalar-backend.sh` en la instancia con `deploy/remoto.sh` (SSM, sin SSH). |
 | `frontend` | `npm ci` + build, sincroniza a S3 e invalida `/` y `/index.html` en CloudFront. |

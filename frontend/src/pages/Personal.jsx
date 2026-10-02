@@ -418,6 +418,7 @@ export default function Personal() {
                 </label>
                 <input
                   id="t-nombres"
+                  maxLength={100}
                   className="input"
                   value={form.nombres}
                   onChange={(e) => setForm({ ...form, nombres: e.target.value })}
@@ -430,6 +431,7 @@ export default function Personal() {
                 </label>
                 <input
                   id="t-apellidos"
+                  maxLength={100}
                   className="input"
                   value={form.apellidos}
                   onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
@@ -442,6 +444,7 @@ export default function Personal() {
                 </label>
                 <input
                   id="t-email"
+                  maxLength={150}
                   type="email"
                   autoComplete="email"
                   placeholder="nombre@correo.com"
@@ -537,6 +540,7 @@ export default function Personal() {
                 <div className="flex gap-2">
                   <input
                     id="t-direccion"
+                    maxLength={255}
                     className="input"
                     placeholder="Escriba la dirección o selecciónela en el mapa"
                     value={form.direccion}
@@ -610,6 +614,7 @@ export default function Personal() {
             </label>
             <input
               id="cat-nombre"
+              maxLength={100}
               className="input"
               value={catalogoForm.nombre}
               required
@@ -623,6 +628,7 @@ export default function Personal() {
             </label>
             <input
               id="cat-descripcion"
+              maxLength={255}
               className="input"
               value={catalogoForm.descripcion}
               onChange={(e) => setCatalogoForm({ ...catalogoForm, descripcion: e.target.value })}

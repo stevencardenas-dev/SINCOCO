@@ -235,7 +235,7 @@ export default function Perfil() {
                     </div>
                     <div>
                       <label htmlFor="mi-email" className="label">Correo de contacto</label>
-                      <input id="mi-email" type="email" className={campo('email')} value={datos.email}
+                      <input id="mi-email" type="email" maxLength={150} className={campo('email')} value={datos.email}
                         onChange={(e) => setDatos({ ...datos, email: e.target.value })} />
                     </div>
                     <div className="sm:col-span-2">
@@ -243,6 +243,7 @@ export default function Perfil() {
                       <div className="flex gap-2">
                         <input
                           id="mi-direccion"
+                          maxLength={255}
                           className={campo('direccion')}
                           placeholder="Escriba la dirección o selecciónela en el mapa"
                           value={datos.direccion}

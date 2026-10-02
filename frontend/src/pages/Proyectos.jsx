@@ -363,6 +363,7 @@ export default function Proyectos() {
                 </label>
                 <input
                   id="p-codigo"
+                  maxLength={20}
                   className={campo('codigo')}
                   value={form.codigo}
                   onChange={(e) => setForm({ ...form, codigo: e.target.value })}
@@ -381,6 +382,7 @@ export default function Proyectos() {
                 </label>
                 <input
                   id="p-nombre"
+                  maxLength={150}
                   className={campo('nombre')}
                   value={form.nombre}
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })}
@@ -460,6 +462,7 @@ export default function Proyectos() {
                 <div className="flex gap-2">
                   <input
                     id="p-ubicacion"
+                    maxLength={255}
                     className={campo('ubicacion')}
                     placeholder="Escriba la dirección o selecciónela en el mapa"
                     value={form.ubicacion}
@@ -524,6 +527,7 @@ export default function Proyectos() {
                 </label>
                 <textarea
                   id="p-descripcion"
+                  maxLength={5000}
                   className="input"
                   rows={2}
                   value={form.descripcion}
@@ -593,6 +597,7 @@ export default function Proyectos() {
                 </label>
                 <input
                   id="c-doc"
+                  maxLength={20}
                   className="input"
                   value={clienteForm.numero_documento}
                   onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })}
@@ -606,6 +611,7 @@ export default function Proyectos() {
               </label>
               <input
                 id="c-nombre"
+                maxLength={150}
                 className="input"
                 value={clienteForm.razon_social_nombre}
                 onChange={(e) => setClienteForm({ ...clienteForm, razon_social_nombre: e.target.value })}
@@ -619,6 +625,7 @@ export default function Proyectos() {
                 </label>
                 <input
                   id="c-contacto"
+                  maxLength={100}
                   className="input"
                   value={clienteForm.nombre_contacto}
                   onChange={(e) => setClienteForm({ ...clienteForm, nombre_contacto: e.target.value })}
@@ -630,6 +637,7 @@ export default function Proyectos() {
                 </label>
                 <input
                   id="c-telefono"
+                  maxLength={20}
                   className="input"
                   value={clienteForm.telefono}
                   onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}

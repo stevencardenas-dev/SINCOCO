@@ -1,4 +1,10 @@
 import { AppError } from '../../utils/AppError.js'
+import {
+  LARGO,
+  revisarCorreo,
+  revisarLargo,
+  revisarTelefono,
+} from '../../utils/campos.js'
 
 const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PASAPORTE']
 
@@ -74,13 +80,26 @@ export class RegistrarTrabajadorDto {
       )
     }
 
+    // Los textos se recortan antes de medir: «  Bordes  » ocupa 9, pero en la
+    // columna entran 6.
+    const email = textoOpcional(body.email)
+    const telefono = textoOpcional(body.telefono)
+    revisarLargo(String(body.numero_documento).trim(), LARGO.numero_documento, 'numero_documento')
+    revisarLargo(String(body.nombres).trim(), LARGO.nombres, 'nombres')
+    revisarLargo(String(body.apellidos).trim(), LARGO.apellidos, 'apellidos')
+    revisarLargo(email, LARGO.email, 'email')
+    revisarLargo(telefono, LARGO.telefono, 'telefono')
+    revisarLargo(textoOpcional(body.direccion), LARGO.direccion, 'direccion')
+    revisarCorreo(email)
+    revisarTelefono(telefono)
+
     return new RegistrarTrabajadorDto({
       numero_documento: String(body.numero_documento).trim(),
       tipo_documento: tipo,
       nombres: String(body.nombres).trim(),
       apellidos: String(body.apellidos).trim(),
-      email: textoOpcional(body.email),
-      telefono: textoOpcional(body.telefono),
+      email,
+      telefono,
       direccion: textoOpcional(body.direccion),
       cargo_id: numeroOpcional(body.cargo_id),
       cargo: textoOpcional(body.cargo),

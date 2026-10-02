@@ -152,9 +152,10 @@ jobs:
       - name: Ejecutar las pruebas
         working-directory: tests
         run: |
-          # Las dos últimas cubren las funciones de este sprint: sesión única
-          # por cuenta y gestión de acceso a proyectos y actividades (RBAC).
-          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py test_sesion_unica.py test_rbac_acceso_proyectos.py; do
+          # Las tres últimas cubren las funciones de este sprint: sesión única
+          # por cuenta, gestión de acceso a proyectos y actividades (RBAC) y la
+          # batería de casos límite (entradas imposibles → 400, nunca 500).
+          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py test_sesion_unica.py test_rbac_acceso_proyectos.py test_bordes_api.py; do
             echo "::group::$prueba"
             python3 "$prueba"
             echo "::endgroup::"
