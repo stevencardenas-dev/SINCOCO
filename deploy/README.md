@@ -448,3 +448,18 @@ aws s3 rb s3://sincoco-deploy-388371826611 --force
 aws s3 rb s3://sincoco-frontend-388371826611 --force
 aws ssm delete-parameter --name /sincoco/backend-env --name /sincoco/origin-verify
 ```
+
+## Correo de recuperación de contraseña
+
+El backend envía el código de «¿Olvidó su contraseña?» por SMTP desde
+`administracion.sincoco@gmail.com`. Se activa añadiendo dos líneas al `.env` de
+producción en SSM (`/sincoco/backend-env`); sin ellas el sistema funciona igual y
+el administrador entrega el código desde el módulo de Usuarios.
+
+1. En la cuenta de Google: activar la verificación en 2 pasos y crear una
+   «contraseña de aplicación» (Cuenta de Google → Seguridad → Contraseñas de aplicaciones).
+2. Añadir al parámetro, conservando las variables que ya tiene:
+   `SMTP_USER=administracion.sincoco@gmail.com` y `SMTP_PASS=<contraseña de aplicación>`.
+3. Reiniciar el servicio (ver «Reiniciar tras cambiar el .env de SSM»).
+
+La instancia necesita salida a `smtp.gmail.com:587`.

@@ -1,15 +1,18 @@
 import bcrypt from 'bcrypt'
+import { randomInt } from 'node:crypto'
 import * as resetRepository from '../repositories/resetRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
+import { enviarCodigoRecuperacion } from './correoService.js'
 
 /**
  * «¿Olvidó su contraseña?» del login (HU-01).
  *
- * El sistema no envía correo (no hay servidor de correo configurado), así que
- * el código de recuperación lo entrega el administrador: se genera aquí, queda
- * visible en el módulo de Usuarios y él se lo comunica a la persona. El código
- * es de un solo uso, vence en 30 minutos y admite 5 intentos.
+ * El código se genera aquí y se envía por correo al email de la cuenta
+ * (correoService, desde administracion.sincoco@gmail.com). Si el correo no está
+ * configurado o el envío falla, el código sigue visible en el módulo de
+ * Usuarios y el administrador se lo entrega a la persona. El código es de un
+ * solo uso, vence en 30 minutos y admite 5 intentos.
  *
  * Nunca se revela si la cuenta existe: la respuesta es la misma en todos los
  * casos, para no permitir adivinar usuarios desde el login.
@@ -26,7 +29,7 @@ const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
 function generarCodigo() {
   let codigo = ''
   for (let i = 0; i < 8; i += 1) {
-    codigo += ALFABETO[Math.floor(Math.random() * ALFABETO.length)]
+    codigo += ALFABETO[randomInt(ALFABETO.length)]
   }
   return `${codigo.slice(0, 4)}-${codigo.slice(4)}`
 }
@@ -66,20 +69,31 @@ export async function solicitarRestablecimiento(identificador, ctx = {}) {
     ip: ctx.ip,
   })
 
+  const enviado = await enviarCodigoRecuperacion({
+    destino: usuario.email,
+    username: usuario.username,
+    codigo,
+    minutos: MINUTOS_VIGENCIA,
+  })
+
   await bitacora({
     usuarioId: null,
     accion: 'SOLICITAR_RESET',
     tabla: 'usuarios',
     registroId: usuario.id,
     // El código no entra en la bitácora: solo el hecho de la solicitud.
-    detalles: { username: usuario.username, vigencia_minutos: MINUTOS_VIGENCIA },
+    detalles: {
+      username: usuario.username,
+      vigencia_minutos: MINUTOS_VIGENCIA,
+      correo: enviado ? 'enviado' : 'no enviado (entrega el administrador)',
+    },
     ip: ctx.ip,
   })
 
   return { solicitado: true, vigencia_minutos: MINUTOS_VIGENCIA }
 }
 
-/** Restablece la contraseña con el código que entregó el administrador. */
+/** Restablece la contraseña con el código recibido por correo o del administrador. */
 export async function restablecerPassword({ usuario, codigo, password }, ctx = {}) {
   const valor = String(usuario ?? '').trim()
   if (!valor) throw new AppError('Escriba su usuario o su correo empresarial', 400, 'usuario')
