@@ -176,11 +176,7 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-slate-600">
-                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 focus:ring-accent-400" />
-                Recordarme
-              </label>
+            <div className="flex items-center justify-end text-sm">
               <button
                 type="button"
                 onClick={() => { setRecuperarAbierto(true); setPaso('pedir'); setErrorRecuperar('') }}
@@ -218,7 +214,7 @@ export default function Login() {
         subtitulo={paso === 'pedir'
           ? 'Escriba su usuario o su correo empresarial'
           : paso === 'cambiar'
-            ? 'Escriba el código que le entregó el administrador y su contraseña nueva'
+            ? 'Escriba el código que recibió por correo y su contraseña nueva'
             : ''}
         onCerrar={() => { setRecuperarAbierto(false); setErrorRecuperar('') }}
       >
@@ -231,8 +227,9 @@ export default function Login() {
                 placeholder="admin" required />
             </div>
             <p className="rounded-xl bg-accent-50 px-4 py-3 text-xs leading-relaxed text-brand-800 ring-1 ring-accent-200">
-              Se genera un código de un solo uso válido por 30 minutos. Como el sistema no envía
-              correo, el administrador lo verá en el módulo de Usuarios y se lo entregará.
+              Le enviaremos por correo electrónico, desde administracion.sincoco@gmail.com, un
+              código de un solo uso válido por 30 minutos. Si no le llega, revise la carpeta de
+              spam o pídale el código al administrador.
             </p>
 
             {errorRecuperar && (
