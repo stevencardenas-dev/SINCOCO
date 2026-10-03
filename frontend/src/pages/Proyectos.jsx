@@ -717,7 +717,11 @@ export default function Proyectos() {
                         </p>
                       </td>
                       <td className="px-5 py-4 text-slate-600">{p.responsable_nombre}</td>
-                      <td className="px-5 py-4 text-slate-600">{p.ubicacion}</td>
+                      <td className="max-w-[14rem] px-5 py-4 text-slate-600">
+                        <span className="block truncate" title={p.ubicacion}>
+                          {p.ubicacion}
+                        </span>
+                      </td>
                       <td className="px-5 py-4 font-medium tabular-nums text-slate-700">
                         {fmtCOP(Number(p.presupuesto_inicial))}
                       </td>

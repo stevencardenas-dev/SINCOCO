@@ -98,7 +98,7 @@ export default function Dashboard() {
       <div>
         <p className="text-sm text-slate-500">{hoyCapitalizado}</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-400 text-brand-950 ring-1 ring-inset ring-accent-500/30">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-300 to-accent-500 text-brand-950 shadow-sm ring-1 ring-inset ring-accent-500/30">
             <SunIcon className="h-5 w-5" />
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -172,10 +172,15 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
             {/* Avance por proyecto */}
-            <div className="card p-6 xl:col-span-2">
+            <div className="card bg-gradient-to-br from-white via-white to-accent-50 p-6 xl:col-span-2">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Avance de proyectos</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-slate-900">Avance de proyectos</h3>
+                    <span className="badge bg-accent-100 px-2 py-0 text-[10px] uppercase tracking-wide text-accent-700 ring-1 ring-accent-300">
+                      Próximamente
+                    </span>
+                  </div>
                   <p className="text-xs text-slate-500">% de avance registrado por proyecto</p>
                 </div>
                 <Link
@@ -204,6 +209,12 @@ export default function Dashboard() {
                       layout="vertical"
                       margin={{ top: 8, right: 16, left: 8, bottom: 0 }}
                     >
+                      <defs>
+                        <linearGradient id="gradAvance" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#fde047" />
+                          <stop offset="100%" stopColor="#eab308" />
+                        </linearGradient>
+                      </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
                       <XAxis
                         type="number"
@@ -229,7 +240,7 @@ export default function Dashboard() {
                           proyectos.avance.find((p) => p.codigo === codigo)?.nombre ?? codigo
                         }
                       />
-                      <Bar dataKey="avance" fill="#facc15" radius={[0, 6, 6, 0]} barSize={18} />
+                      <Bar dataKey="avance" fill="url(#gradAvance)" radius={[0, 6, 6, 0]} barSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -237,7 +248,7 @@ export default function Dashboard() {
             </div>
 
             {/* Alertas de inventario */}
-            <div className="card p-6">
+            <div className="card bg-gradient-to-b from-accent-50 to-white p-6">
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-base font-bold text-slate-900">Alertas de inventario</h3>
                 <span className="badge bg-amber-50 text-amber-700 ring-1 ring-amber-200">
@@ -300,10 +311,15 @@ export default function Dashboard() {
           </div>
 
           {/* Incidencias */}
-          <div className="card p-6">
+          <div className="card bg-gradient-to-br from-white via-white to-accent-50 p-6">
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-slate-900">Incidencias de obra</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-bold text-slate-900">Incidencias de obra</h3>
+                  <span className="badge bg-accent-100 px-2 py-0 text-[10px] uppercase tracking-wide text-accent-700 ring-1 ring-accent-300">
+                    Próximamente
+                  </span>
+                </div>
                 <p className="text-xs text-slate-500">
                   {incidencias.abiertas} sin resolver de {incidencias.total} registradas
                 </p>
