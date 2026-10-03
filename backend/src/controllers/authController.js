@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
+import { ACTIVIDAD_SQL, MINUTOS_INACTIVIDAD } from '../middleware/auth.js'
 import { solicitarRestablecimiento, restablecerPassword } from '../services/resetService.js'
 
 // HU-01: login — valida credenciales y estado de cuenta, emite JWT
@@ -28,13 +29,33 @@ export async function login(req, res) {
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' })
 
-  // Sesión única por cuenta: este ingreso reemplaza la sesión vigente, de modo
-  // que el token de un ingreso anterior deja de ser válido (ver middleware/auth.js).
+  // Sesión única por cuenta: si la cuenta ya tiene una sesión activa, este
+  // segundo ingreso se rechaza y la sesión abierta sigue intacta (ver
+  // middleware/auth.js). La condición va dentro del UPDATE para que dos
+  // ingresos simultáneos no puedan pasar los dos.
   const sesion = randomUUID()
-  await pool.query(
-    'UPDATE usuarios SET ultimo_acceso = NOW(), sesion_actual = ?, sesion_iniciada_en = NOW() WHERE id = ?',
-    [sesion, user.id],
+  const [resultado] = await pool.query(
+    `UPDATE usuarios
+        SET ultimo_acceso = NOW(), sesion_actual = ?, sesion_iniciada_en = NOW(), sesion_actividad = NOW()
+      WHERE id = ?
+        AND (sesion_actual IS NULL
+             OR ${ACTIVIDAD_SQL} IS NULL
+             OR ${ACTIVIDAD_SQL} < NOW() - INTERVAL ? MINUTE)`,
+    [sesion, user.id, MINUTOS_INACTIVIDAD],
   )
+  if (resultado.affectedRows === 0) {
+    await registrar({
+      usuarioId: user.id, accion: 'SESION_RECHAZADA', tabla: 'usuarios',
+      registroId: user.id, ip: req.ip,
+      detalles: { motivo: 'La cuenta ya tiene una sesión activa' },
+    })
+    return res.status(409).json({
+      error:
+        'Esta cuenta ya tiene una sesión abierta en otro navegador o dispositivo. ' +
+        `Ciérrela allí o espere ${MINUTOS_INACTIVIDAD} minutos sin actividad para volver a ingresar.`,
+      codigo: 'SESION_ACTIVA',
+    })
+  }
   await registrar({
     usuarioId: user.id, accion: 'AUTENTICAR', tabla: 'usuarios',
     registroId: user.id, ip: req.ip,
@@ -57,7 +78,10 @@ export async function login(req, res) {
  */
 export async function logout(req, res, next) {
   try {
-    await pool.query('UPDATE usuarios SET sesion_actual = NULL WHERE id = ?', [req.user.id])
+    await pool.query('UPDATE usuarios SET sesion_actual = NULL WHERE id = ? AND sesion_actual = ?', [
+      req.user.id,
+      req.user.sid,
+    ])
     await registrar({
       usuarioId: req.user.id,
       accion: 'CERRAR_SESION',
@@ -69,6 +93,15 @@ export async function logout(req, res, next) {
   } catch (error) {
     return next(error)
   }
+}
+
+/**
+ * GET /api/auth/sesion -> latido del frontend mientras la aplicación está
+ * abierta. requireAuth ya valida la sesión y registra la actividad, así que la
+ * cuenta no se da por abandonada aunque el usuario no haga clic en nada.
+ */
+export function latido(req, res) {
+  res.json({ activa: true })
 }
 
 /**

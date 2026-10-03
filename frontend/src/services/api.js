@@ -20,14 +20,24 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// 401 en una sesión ya iniciada (token vencido) → cerrar sesión.
-// Se excluye /auth/login: ahí un 401 significa credenciales incorrectas y lo
-// maneja el formulario; recargar la página borraría el mensaje de error.
+// 401 en una sesión ya iniciada (token vencido o sesión finalizada) → cerrar
+// sesión. Se excluyen /auth/login (ahí un 401 significa credenciales
+// incorrectas y lo maneja el formulario; recargar la página borraría el
+// mensaje de error) y /auth/logout (la salida ya limpia el navegador).
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    const esLogin = err.config?.url?.includes('/auth/login')
-    if (err.response?.status === 401 && !esLogin) {
+    const url = err.config?.url ?? ''
+    const esAuth = url.includes('/auth/login') || url.includes('/auth/logout')
+    if (err.response?.status === 401 && !esAuth) {
+      // Sesión única por cuenta: el login explica por qué se cerró la sesión.
+      if (err.response.data?.codigo === 'SESION_EXPIRADA') {
+        try {
+          sessionStorage.setItem('sincoco_aviso_login', err.response.data.error)
+        } catch {
+          // Sin sessionStorage solo se pierde el aviso.
+        }
+      }
       localStorage.removeItem('sincoco_token')
       localStorage.removeItem('sincoco_user')
       window.location.href = '/login'

@@ -10,7 +10,7 @@
 # Requiere backend (3005) y frontend (5173) corriendo.
 # Uso: python3 tests/test_ui_cambio_password.py
 from playwright.sync_api import sync_playwright
-from api_helper import http, login, sql, scalar
+from api_helper import http, liberar_sesion, login, sql, scalar
 from ui_helper import login as login_ui, ir_a, captura
 
 USUARIO = 'kevin.test'
@@ -93,6 +93,7 @@ estado, data = http('POST', '/api/auth/login', {'username': USUARIO, 'password':
 print('ingreso con la contraseña anterior ->', estado, '·', data.get('error'))
 assert estado == 401, 'la contraseña anterior no debe seguir sirviendo'
 
+liberar_sesion(USUARIO)  # la sesión del navegador quedó abierta (sesión única)
 estado, data = http('POST', '/api/auth/login', {'username': USUARIO, 'password': NUEVA})
 assert estado == 200, f'la contraseña nueva debe servir: {estado} {data}'
 print('ingreso con la contraseña nueva ->', estado)

@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 
 # Utilidades compartidas para garantizar las precondiciones de datos.
-from api_helper import http as _http, scalar as _scalar
+from api_helper import http as _http, liberar_sesion, scalar as _scalar
 
 BASE = 'http://localhost:3005'
 
@@ -61,6 +61,7 @@ limpieza = subprocess.run(mysql_args(['-e',
 assert limpieza.returncode == 0, 'limpieza de proyectos fallo: ' + limpieza.stderr
 print('db limpio')
 
+liberar_sesion('admin')  # sesión única por cuenta
 estado, login = http('POST', '/api/auth/login', {'username': 'admin', 'password': 'Prueba123!'})
 assert estado == 200, f'login admin fallo: {estado} {login}'
 token = login['token']
@@ -178,6 +179,7 @@ else:
     print('responsable de baja -> OMITIDO (sin acceso mysql para sembrar el caso)')
 
 # RBAC: un rol no autorizado no puede registrar
+liberar_sesion('bodega')
 estado, login_m = http('POST', '/api/auth/login', {'username': 'bodega', 'password': 'Prueba123!'})
 if estado == 200:
     estado, r = http('POST', '/api/proyectos', PROYECTO, token=login_m['token'])
@@ -185,6 +187,7 @@ if estado == 200:
     print('bodega crea proyecto ->', estado, r['error'])
 
 # RBAC: el maestro de obra consulta (su menu muestra Proyectos) pero no registra
+liberar_sesion('maestro')
 estado, login_mo = http('POST', '/api/auth/login', {'username': 'maestro', 'password': 'Prueba123!'})
 if estado == 200:
     estado, r = http('GET', '/api/proyectos', token=login_mo['token'])

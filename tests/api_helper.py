@@ -63,7 +63,18 @@ def http(metodo, ruta, cuerpo=None, token=None):
         return e.code, json.loads(e.read() or b'{}')
 
 
+def liberar_sesion(usuario):
+    """Cierra en la base la sesión abierta de la cuenta.
+
+    Sesión única por cuenta: mientras una sesión esté activa, un segundo
+    ingreso se rechaza (409). Cada archivo de prueba es un proceso nuevo que
+    vuelve a ingresar con los mismos usuarios, así que antes de cada login se
+    libera la cuenta, como si la sesión anterior se hubiera cerrado."""
+    sql(f"UPDATE usuarios SET sesion_actual = NULL WHERE username = '{usuario}'")
+
+
 def login(usuario, password='Prueba123!'):
+    liberar_sesion(usuario)
     estado, data = http('POST', '/api/auth/login', {'username': usuario, 'password': password})
     assert estado == 200, f'login de {usuario} fallo: {estado} {data}'
     return data['token']

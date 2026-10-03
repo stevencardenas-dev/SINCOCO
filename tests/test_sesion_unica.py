@@ -1,9 +1,9 @@
 # Sesión única por cuenta (RNF05 · seguridad).
 #
-# Una misma cuenta no puede mantener dos sesiones abiertas: cada ingreso
-# reemplaza el identificador de sesión vigente, así que el token anterior deja
-# de servir. El cierre de sesión también lo invalida del lado del servidor, y
-# una cuenta bloqueada deja de funcionar en el momento.
+# Una misma cuenta no puede mantener dos sesiones abiertas: mientras haya una
+# sesión activa, un segundo ingreso se RECHAZA (409) y la sesión abierta sigue
+# intacta. La cuenta se libera al cerrar sesión o tras unos minutos sin
+# actividad. Una cuenta bloqueada deja de funcionar en el momento.
 #
 # Requiere el backend (3005) arriba.
 # Uso: python3 tests/test_sesion_unica.py
@@ -11,6 +11,7 @@ from api_helper import http, login, sql, scalar
 
 USUARIO = 'test_sesion_unica'
 DOCUMENTO = 'TEST-SESION-01'
+CREDENCIALES_ADMIN = {'username': 'admin', 'password': 'Prueba123!'}
 
 
 def limpiar():
@@ -22,27 +23,48 @@ def limpiar():
 
 limpiar()
 
-# --- Segundo ingreso: el token anterior queda invalidado ---------------------
+# --- Segundo ingreso: se rechaza y la sesión abierta sigue sirviendo ----------
 primero = login('admin')
+estado, _ = http('GET', '/api/auth/sesion', token=primero)
+assert estado == 200, f'el latido de la sesión abierta debe servir: {estado}'
+
+estado, data = http('POST', '/api/auth/login', CREDENCIALES_ADMIN)
+print('segundo ingreso con la misma cuenta ->', estado, '·', data.get('error'))
+assert estado == 409, f'el segundo ingreso debe rechazarse: {estado} {data}'
+assert data.get('codigo') == 'SESION_ACTIVA', data
+assert 'token' not in data, 'el ingreso rechazado no debe entregar token'
+
 estado, _ = http('GET', '/api/dashboard', token=primero)
-assert estado == 200, f'el primer ingreso debe servir: {estado}'
+assert estado == 200, 'la sesión abierta no debe cerrarse por el intento'
 
-segundo = login('admin')
-estado, data = http('GET', '/api/dashboard', token=primero)
-print('token anterior tras un segundo ingreso ->', estado, '·', data.get('error'))
-assert estado == 401, 'el token del ingreso anterior debe quedar invalidado'
-assert 'otro dispositivo' in data.get('error', ''), 'el mensaje debe explicar por qué se cerró'
+rechazos = scalar(
+    "SELECT COUNT(*) FROM bitacora_trazabilidad b JOIN usuarios u ON u.id = b.usuario_id "
+    "WHERE u.username = 'admin' AND b.accion = 'SESION_RECHAZADA'"
+)
+assert int(rechazos or 0) >= 1, 'el intento rechazado debe quedar en la bitácora'
+print('sesión abierta intacta · intento registrado en la bitácora')
 
-estado, _ = http('GET', '/api/dashboard', token=segundo)
-assert estado == 200, 'el ingreso vigente debe seguir sirviendo'
-
-# --- Cerrar sesión invalida el token en el servidor --------------------------
-estado, _ = http('POST', '/api/auth/logout', token=segundo)
+# --- Cerrar sesión libera la cuenta e invalida el token -----------------------
+estado, _ = http('POST', '/api/auth/logout', token=primero)
 assert estado == 200, f'logout: {estado}'
 
-estado, data = http('GET', '/api/dashboard', token=segundo)
+estado, data = http('GET', '/api/dashboard', token=primero)
 print('token tras cerrar sesión ->', estado, '·', data.get('error'))
 assert estado == 401, 'un token cerrado no debe volver a servir'
+
+estado, data = http('POST', '/api/auth/login', CREDENCIALES_ADMIN)
+assert estado == 200, f'tras cerrar sesión se debe poder ingresar: {estado} {data}'
+segundo = data['token']
+
+# --- Sesión abandonada (sin actividad): expira y la cuenta queda libre --------
+sql("UPDATE usuarios SET sesion_actividad = NOW() - INTERVAL 1 DAY WHERE username = 'admin'")
+estado, data = http('GET', '/api/dashboard', token=segundo)
+print('sesión inactiva ->', estado, '·', data.get('error'))
+assert estado == 401 and data.get('codigo') == 'SESION_EXPIRADA', 'una sesión inactiva debe expirar'
+
+estado, data = http('POST', '/api/auth/login', CREDENCIALES_ADMIN)
+assert estado == 200, f'tras la inactividad se debe poder ingresar: {estado} {data}'
+http('POST', '/api/auth/logout', token=data['token'])
 
 # --- Una cuenta bloqueada deja de servir en el momento -----------------------
 admin = login('admin')
@@ -75,9 +97,13 @@ assert estado == 401, 'una cuenta bloqueada no debe seguir usando su token'
 
 # --- Las sesiones de otras cuentas no se tocan --------------------------------
 gerente = login('gerente')
-login('admin')
+estado, _ = http('POST', '/api/auth/login', CREDENCIALES_ADMIN)
+assert estado == 409, 'admin sigue con su sesión abierta'
 estado, _ = http('GET', '/api/dashboard', token=gerente)
-assert estado == 200, 'el ingreso de otra cuenta no debe cerrar sesiones ajenas'
+assert estado == 200, 'el intento de otra cuenta no debe afectar sesiones ajenas'
 
+# Deja las cuentas libres para las demás pruebas.
+http('POST', '/api/auth/logout', token=admin)
+http('POST', '/api/auth/logout', token=gerente)
 limpiar()
 print('\nSesión única por cuenta: TODAS LAS PRUEBAS PASARON')

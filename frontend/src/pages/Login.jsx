@@ -10,7 +10,17 @@ export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  // Aviso que deja services/api.js cuando la sesión finalizó en el servidor
+  // (sesión única por cuenta): se muestra una sola vez.
+  const [error, setError] = useState(() => {
+    try {
+      const aviso = sessionStorage.getItem('sincoco_aviso_login') ?? ''
+      sessionStorage.removeItem('sincoco_aviso_login')
+      return aviso
+    } catch {
+      return ''
+    }
+  })
   const [enviando, setEnviando] = useState(false)
 
   // ¿Olvidó su contraseña? (HU-01): pedir el código y definir la contraseña nueva.
