@@ -41,6 +41,17 @@ export function AuthProvider({ children }) {
     }
   }
 
+  // Sesión única por cuenta: mientras la aplicación esté abierta se envía un
+  // latido para que el servidor no dé la sesión por abandonada (y así otro
+  // dispositivo no pueda ingresar). Si el navegador se cierra sin salir, la
+  // cuenta se libera sola tras unos minutos sin actividad.
+  useEffect(() => {
+    if (!user) return undefined
+    const latido = () => api.get('/auth/sesion').catch(() => {})
+    const intervalo = setInterval(latido, 4 * 60 * 1000)
+    return () => clearInterval(intervalo)
+  }, [user])
+
   /**
    * Cierra la sesión en el servidor y en el navegador. El servidor invalida el
    * token (sesión única por cuenta), así que no queda utilizable si alguien lo

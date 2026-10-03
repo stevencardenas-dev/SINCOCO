@@ -1,5 +1,34 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
+
+/*
+ * Bloqueo de scroll compartido entre todos los modales abiertos.
+ *
+ * Antes cada modal guardaba el `overflow` "previo" del body y lo restauraba al
+ * cerrarse. Con modales apilados (p. ej. "Registrar personal" + "Nuevo cargo")
+ * y efectos que se re-ejecutan en cada render, un modal podía capturar
+ * 'hidden' como valor previo y dejar la página sin scroll al cerrarse.
+ * Con un contador, el scroll solo se libera cuando se cierra el último modal.
+ */
+let modalesAbiertos = 0
+let overflowOriginal = ''
+// Pila de modales abiertos: Escape solo cierra el que está encima.
+const pilaModales = []
+
+function bloquearScroll() {
+  if (modalesAbiertos === 0) {
+    overflowOriginal = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+  }
+  modalesAbiertos += 1
+}
+
+function liberarScroll() {
+  modalesAbiertos = Math.max(0, modalesAbiertos - 1)
+  if (modalesAbiertos === 0) {
+    document.body.style.overflow = overflowOriginal
+  }
+}
 
 /**
  * Ventana emergente (modal) reutilizable.
@@ -11,22 +40,32 @@ import { XMarkIcon } from '@heroicons/react/24/outline'
  * Se cierra con Escape, con el botón de la esquina y haciendo clic fuera.
  */
 export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, ancho = 'max-w-lg' }) {
+  // Se guarda en una ref para que el efecto no se re-ejecute en cada render
+  // cuando el padre pasa una función nueva (p. ej. una flecha en línea).
+  const onCerrarRef = useRef(onCerrar)
+  onCerrarRef.current = onCerrar
+
   useEffect(() => {
     if (!abierto) return undefined
 
+    const id = {}
+    pilaModales.push(id)
+    bloquearScroll()
+
     const alPresionar = (e) => {
-      if (e.key === 'Escape') onCerrar()
+      if (e.key === 'Escape' && pilaModales[pilaModales.length - 1] === id) {
+        onCerrarRef.current?.()
+      }
     }
     document.addEventListener('keydown', alPresionar)
-    // Bloquea el scroll del fondo mientras el modal está abierto.
-    const overflowPrevio = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
 
     return () => {
       document.removeEventListener('keydown', alPresionar)
-      document.body.style.overflow = overflowPrevio
+      const i = pilaModales.indexOf(id)
+      if (i !== -1) pilaModales.splice(i, 1)
+      liberarScroll()
     }
-  }, [abierto, onCerrar])
+  }, [abierto])
 
   if (!abierto) return null
 

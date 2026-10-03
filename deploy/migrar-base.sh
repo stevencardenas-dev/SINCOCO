@@ -67,13 +67,13 @@ $MYSQL "$DB_NAME" -e "
   UNION ALL SELECT 'restablecimientos_password', COUNT(*) FROM restablecimientos_password
   UNION ALL SELECT 'trabajadores', COUNT(*) FROM trabajadores;"
 
-# Las dos columnas de sesión única: sin ellas el backend nuevo responde 401 en
+# Las columnas de sesión única: sin ellas el backend nuevo responde 401 en
 # cada petición (requireAuth consulta `usuarios.sesion_actual`).
 echo "--- columnas de sesión única ---"
 $MYSQL "$DB_NAME" -e "
   SELECT column_name, column_type FROM information_schema.columns
    WHERE table_schema = DATABASE() AND table_name = 'usuarios'
-     AND column_name IN ('sesion_actual', 'sesion_iniciada_en');"
+     AND column_name IN ('sesion_actual', 'sesion_iniciada_en', 'sesion_actividad');"
 
 # La matriz rol -> permisos: tras migrar debe salir ADMINISTRADOR 25,
 # GERENTE 6, MAESTRO_OBRA 3 y ENCARGADO_BODEGA 0. Si el administrador se queda
