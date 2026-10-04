@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowPathIcon,
+  ArrowUturnLeftIcon,
   FunnelIcon,
   MapPinIcon,
   PencilSquareIcon,
@@ -15,7 +16,7 @@ import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
-import { soloDigitos } from '../lib/format.js'
+import { fmtFecha, soloDigitos } from '../lib/format.js'
 
 /**
  * HU-04 (RF06 · RF07): registrar el personal con su cargo y especialidad.
@@ -28,6 +29,10 @@ import { soloDigitos } from '../lib/format.js'
  *   - la disponibilidad se deriva del estado y de las actividades asignadas.
  *     Por eso no hay casilla «Disponible para asignación»: el estado es lo que
  *     el usuario cambia y el sistema calcula el resto.
+ *
+ * Retirar a una persona no es un estado: es «Dar de baja» (HU-18), desde el
+ * formulario de edición y con confirmación. El trabajador queda Inactivo, sale
+ * de la lista y su cuenta se bloquea; se reactiva desde «Incluir dados de baja».
  */
 
 const VACIO = {
@@ -43,9 +48,9 @@ const VACIO = {
   estado: 'ACTIVO',
 }
 
+// Estados que se eligen a mano. INACTIVO solo lo deja «Dar de baja».
 const ESTADOS = [
   { value: 'ACTIVO', label: 'Activo' },
-  { value: 'INACTIVO', label: 'Inactivo' },
   { value: 'VACACIONES', label: 'Vacaciones' },
   { value: 'LICENCIA', label: 'Licencia' },
 ]
@@ -90,6 +95,11 @@ export default function Personal() {
   const [catalogoForm, setCatalogoForm] = useState({ nombre: '', descripcion: '', operativo: false })
   const [errorCatalogo, setErrorCatalogo] = useState('')
   const [guardandoCatalogo, setGuardandoCatalogo] = useState(false)
+
+  // HU-18: confirmación de «Dar de baja» (el trabajador que se va a retirar).
+  const [porDarDeBaja, setPorDarDeBaja] = useState(null)
+  const [errorBaja, setErrorBaja] = useState('')
+  const [dandoDeBaja, setDandoDeBaja] = useState(false)
 
   const cargar = () => {
     setError('')
@@ -193,6 +203,50 @@ export default function Personal() {
       estado: t.estado ?? 'ACTIVO',
     })
     setAbierto(true)
+  }
+
+  /** «⚠️ Dar de baja» del formulario de edición: abre la confirmación encima. */
+  const pedirBaja = () => {
+    setErrorBaja('')
+    setPorDarDeBaja(personal?.find((t) => t.id === editando) ?? null)
+  }
+
+  /** HU-18: baja lógica. El backend la rechaza si tiene trabajo en curso a su cargo. */
+  const confirmarBaja = async () => {
+    const t = porDarDeBaja
+    setErrorBaja('')
+    setDandoDeBaja(true)
+    try {
+      const { data } = await api.patch(`/trabajadores/${t.id}/baja`)
+      setPorDarDeBaja(null)
+      cerrarFormulario()
+      setError('')
+      setAviso(
+        `Se dio de baja a ${t.nombres} ${t.apellidos}.` +
+          (data.cuenta_bloqueada ? ` Su cuenta «${data.cuenta_bloqueada}» quedó bloqueada.` : ''),
+      )
+      cargar()
+    } catch (err) {
+      setErrorBaja(mensajeError(err, 'No se pudo dar de baja al trabajador.'))
+    } finally {
+      setDandoDeBaja(false)
+    }
+  }
+
+  /** HU-18: vuelve a la operación como Activo (y reabre la cuenta que cerró la baja). */
+  const reactivar = async (t) => {
+    setError('')
+    setAviso('')
+    try {
+      const { data } = await api.patch(`/trabajadores/${t.id}/reactivar`)
+      setAviso(
+        `Se reactivó a ${t.nombres} ${t.apellidos}.` +
+          (data.cuenta_reactivada ? ' Su cuenta de acceso también se reactivó.' : ''),
+      )
+      cargar()
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudo reactivar al trabajador.'))
+    }
   }
 
   /**
@@ -585,17 +639,67 @@ export default function Personal() {
             {/* Los errores de negocio se muestran aquí, dentro del formulario. */}
             <AlertaFormulario mensaje={errorForm} campo={campoForm} />
 
-            <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
+            <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
               <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
                 {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar trabajador'}
               </button>
               <button type="button" className="btn-ghost" onClick={cerrarFormulario}>
                 Cancelar
               </button>
+              {/* HU-18: retirar a la persona. Va aparte, pegado a la derecha, y
+                  pide confirmación antes de hacer nada. */}
+              {editando && (
+                <button type="button" className="btn-peligro ml-auto" onClick={pedirBaja}>
+                  <span aria-hidden="true">⚠️</span> Dar de baja
+                </button>
+              )}
             </div>
           </form>
         </Modal>
       )}
+
+      {/* Confirmación de «Dar de baja»: se abre encima del formulario de edición,
+          con el mismo estilo que las demás confirmaciones (Roles, Catálogo). */}
+      <Modal
+        abierto={porDarDeBaja !== null}
+        titulo={porDarDeBaja ? `¿Dar de baja a ${porDarDeBaja.nombres} ${porDarDeBaja.apellidos}?` : ''}
+        onCerrar={() => !dandoDeBaja && setPorDarDeBaja(null)}
+        ancho="max-w-md"
+      >
+        <p className="text-sm text-slate-600">Al dar de baja a esta persona:</p>
+        <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-slate-600">
+          <li>Deja de aparecer en la lista de personal y en la selección de responsables.</li>
+          <li>No podrá asignarse a proyectos ni actividades nuevas.</li>
+          <li>Si tiene cuenta para entrar al sistema, la cuenta se bloquea y su sesión se cierra.</li>
+          <li>No se borra nada: su historial se conserva y se puede reactivar desde «Incluir dados de baja».</li>
+        </ul>
+        <p className="mt-3 rounded-xl bg-accent-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-accent-200">
+          Si es responsable de proyectos o actividades en curso, primero hay que reasignarlos.
+        </p>
+        {errorBaja && (
+          <div className="mt-3">
+            <AlertaFormulario mensaje={errorBaja} />
+          </div>
+        )}
+        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            className="btn-primary disabled:opacity-60"
+            disabled={dandoDeBaja}
+            onClick={confirmarBaja}
+          >
+            {dandoDeBaja ? 'Dando de baja…' : 'Dar de baja'}
+          </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={dandoDeBaja}
+            onClick={() => setPorDarDeBaja(null)}
+          >
+            Cancelar
+          </button>
+        </div>
+      </Modal>
 
       {/* Alta rápida de un valor del catálogo sin salir del formulario. */}
       <Modal
@@ -736,7 +840,16 @@ export default function Personal() {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      {esAdmin && t.activo ? (
+                      {!t.activo ? (
+                        <div>
+                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_BADGE.INACTIVO}`}>
+                            Inactivo
+                          </span>
+                          {t.fecha_baja && (
+                            <p className="mt-1 text-xs text-slate-400">De baja desde {fmtFecha(t.fecha_baja)}</p>
+                          )}
+                        </div>
+                      ) : esAdmin ? (
                         <select
                           className="input py-1 text-xs"
                           aria-label={`Estado de ${t.nombres} ${t.apellidos}`}
@@ -766,13 +879,24 @@ export default function Personal() {
                       {/* En escritorio las acciones se apilan en vertical: en
                           horizontal se montaban unas sobre otras. */}
                       <div className="flex flex-col items-stretch gap-1.5">
-                        {esAdmin && (
+                        {/* Un registro dado de baja es historial: no se edita,
+                            solo se reactiva. */}
+                        {esAdmin && Boolean(t.activo) && (
                           <button
                             className="btn-accion btn-accion-editar"
                             onClick={() => abrirEditar(t)}
                             aria-label={`Actualizar información de ${t.nombres}`}
                           >
                             <PencilSquareIcon className="h-4 w-4" /> Editar
+                          </button>
+                        )}
+                        {esAdmin && !t.activo && (
+                          <button
+                            className="btn-accion btn-accion-ok"
+                            onClick={() => reactivar(t)}
+                            aria-label={`Reactivar a ${t.nombres} ${t.apellidos}`}
+                          >
+                            <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
                           </button>
                         )}
                       </div>

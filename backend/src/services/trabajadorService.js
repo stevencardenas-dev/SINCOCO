@@ -1,6 +1,5 @@
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
 import { resolverCargo, resolverEspecialidad } from './catalogoService.js'
 
@@ -29,7 +28,26 @@ export async function listarTrabajadores(filtros = {}) {
   return trabajadorRepository.listar(filtros)
 }
 
-const ESTADOS = ['ACTIVO', 'INACTIVO', 'VACACIONES', 'LICENCIA']
+/**
+ * Estados que se eligen a mano: situaciones temporales. INACTIVO no está aquí:
+ * es el estado que deja la baja lógica (HU-18) y solo se alcanza con «Dar de
+ * baja», que además oculta al trabajador, registra fecha y usuario y bloquea
+ * su cuenta.
+ */
+const ESTADOS = ['ACTIVO', 'VACACIONES', 'LICENCIA']
+
+function validarEstado(estado) {
+  if (estado === 'INACTIVO') {
+    throw new AppError(
+      'Para retirar a una persona use «Dar de baja»: el estado Inactivo ya no se asigna a mano',
+      400,
+      'estado',
+    )
+  }
+  if (!ESTADOS.includes(estado)) {
+    throw new AppError(`estado debe ser uno de: ${ESTADOS.join(', ')}`, 400, 'estado')
+  }
+}
 
 /**
  * La disponibilidad no se escribe a mano: se deriva del estado y del trabajo
@@ -97,6 +115,10 @@ const CAMPOS_EDITABLES = [
 export async function actualizarTrabajador(id, cambios, ctx = {}) {
   const actual = await trabajadorRepository.findById(id)
   if (!actual) throw new AppError('Trabajador no encontrado', 404)
+  // HU-18: un registro dado de baja es historial; primero hay que reactivarlo.
+  if (!actual.activo) {
+    throw new AppError('El trabajador está dado de baja; reactívelo antes de editarlo', 409)
+  }
 
   const campos = {}
   for (const campo of CAMPOS_EDITABLES) {
@@ -124,9 +146,7 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
   // Si cambia el estado, la disponibilidad se recalcula con la misma regla del
   // cambio de estado explícito.
   if (campos.estado !== undefined) {
-    if (!ESTADOS.includes(String(campos.estado))) {
-      throw new AppError(`estado debe ser uno de: ${ESTADOS.join(', ')}`, 400, 'estado')
-    }
+    validarEstado(String(campos.estado))
     campos.disponible = await calcularDisponible(id, campos.estado)
   }
 
@@ -155,22 +175,22 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
 }
 
 /**
- * Cambiar el estado del trabajador (Activo, Inactivo, Vacaciones, Licencia).
+ * Cambiar el estado temporal del trabajador (Activo, Vacaciones, Licencia).
  *
- * Reemplaza en la interfaz al "dar de baja": el estado INACTIVO ya existe en el
- * esquema y refleja la situación real sin archivar la ficha. La disponibilidad
- * se deriva: cualquier estado distinto de ACTIVO deja al trabajador no
- * disponible; al volver a ACTIVO recupera la disponibilidad solo si no tiene
- * actividades vigentes asignadas.
+ * Retirar a una persona no es un estado: es la baja lógica (`darDeBajaTrabajador`).
+ * La disponibilidad se deriva: cualquier estado distinto de ACTIVO deja al
+ * trabajador no disponible; al volver a ACTIVO recupera la disponibilidad solo
+ * si no tiene actividades vigentes asignadas.
  */
 export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
   const trabajador = await trabajadorRepository.findById(id)
   if (!trabajador) throw new AppError('Trabajador no encontrado', 404)
+  if (!trabajador.activo) {
+    throw new AppError('El trabajador está dado de baja; reactívelo antes de cambiar su estado', 409)
+  }
 
   const nuevo = String(estado ?? '').toUpperCase()
-  if (!ESTADOS.includes(nuevo)) {
-    throw new AppError(`estado debe ser uno de: ${ESTADOS.join(', ')}`, 400, 'estado')
-  }
+  validarEstado(nuevo)
   if (nuevo === trabajador.estado) {
     throw new AppError(`El trabajador ya está en estado ${nuevo}`, 409, 'estado')
   }
@@ -190,33 +210,101 @@ export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
   return trabajadorRepository.findById(id)
 }
 
+/** «a, b y 3 más»: resume una lista larga para el mensaje de error. */
+function resumir(nombres, maximo = 3) {
+  if (nombres.length <= maximo) return nombres.join(', ')
+  return `${nombres.slice(0, maximo).join(', ')} y ${nombres.length - maximo} más`
+}
+
 /**
- * HU-18 · criterio 4: un trabajador dado de baja lógica (activo = 0, con fecha
- * de baja) no puede asignarse a nuevos proyectos o actividades. El proyecto lo
- * valida al registrar (`proyectoService`); aquí se registra la baja.
+ * Dar de baja (HU-18): el trabajador sale de la operación sin borrarse.
+ *
+ * - Queda activo = 0 con fecha y usuario de la baja, estado INACTIVO y no
+ *   disponible; no aparece en los listados por defecto y no puede asignarse a
+ *   nuevos proyectos o actividades (HU-04 · criterio 4, validado en
+ *   `proyectoService` y `actividadService`).
+ * - Se rechaza si es responsable de proyectos o actividades en curso: primero
+ *   hay que reasignarlos, para no dejar trabajo a cargo de alguien que ya no está.
+ * - Si tiene cuenta de acceso, la cuenta también se da de baja y su sesión se
+ *   cierra. Nadie puede darse de baja a sí mismo.
  */
 export async function darDeBajaTrabajador(id, ctx = {}) {
   const trabajador = await trabajadorRepository.findById(id)
   if (!trabajador) throw new AppError('Trabajador no encontrado', 404)
+  if (!trabajador.activo) throw new AppError('El trabajador ya estaba dado de baja', 409)
 
-  const afectadas = await darDeBaja({ tabla: 'trabajadores', id, usuarioId: ctx.usuarioId })
+  const cuenta = await trabajadorRepository.cuentaVinculada(id)
+  if (cuenta && Number(cuenta.id) === Number(ctx.usuarioId)) {
+    throw new AppError('No puede darse de baja a sí mismo', 400)
+  }
+
+  const { proyectos, actividades } = await trabajadorRepository.responsabilidadesEnCurso(id)
+  if (proyectos.length || actividades.length) {
+    const partes = []
+    if (proyectos.length) {
+      partes.push(
+        `${proyectos.length === 1 ? 'del proyecto' : `de ${proyectos.length} proyectos`} ` +
+          resumir(proyectos.map((p) => p.nombre)),
+      )
+    }
+    if (actividades.length) {
+      partes.push(
+        `${actividades.length === 1 ? 'de la actividad' : `de ${actividades.length} actividades`} ` +
+          resumir(actividades.map((a) => `${a.nombre} (${a.proyecto})`)),
+      )
+    }
+    throw new AppError(
+      `No se puede dar de baja: es responsable ${partes.join(' y ')}. ` +
+        'Reasigne esas responsabilidades y vuelva a intentarlo.',
+      409,
+    )
+  }
+
+  // Solo se cierra una cuenta que hoy puede entrar: una ya bloqueada desde
+  // Usuarios se deja como está, y así la reactivación tampoco la reabre.
+  const cuentaActiva =
+    cuenta && Number(cuenta.activo) === 1 && cuenta.estado === 'ACTIVO' ? cuenta : null
+  const afectadas = await trabajadorRepository.darDeBajaConCuenta({
+    id,
+    usuarioId: ctx.usuarioId,
+    cuentaId: cuentaActiva?.id,
+  })
   if (!afectadas) throw new AppError('El trabajador ya estaba dado de baja', 409)
 
   await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'trabajadores',
-    registroId: Number(id), detalles: { numero_documento: trabajador.numero_documento }, ip: ctx.ip,
+    usuarioId: ctx.usuarioId,
+    accion: 'DAR_DE_BAJA',
+    tabla: 'trabajadores',
+    registroId: Number(id),
+    detalles: {
+      numero_documento: trabajador.numero_documento,
+      cuenta_bloqueada: cuentaActiva?.username ?? null,
+    },
+    ip: ctx.ip,
   })
-  return { id: Number(id), activo: 0 }
+  return { id: Number(id), activo: 0, cuenta_bloqueada: cuentaActiva?.username ?? null }
 }
 
-/** HU-18: reactivar un trabajador dado de baja. */
+/**
+ * HU-18: reactivar un trabajador dado de baja. Vuelve como ACTIVO, con la
+ * disponibilidad que le corresponda, y si su cuenta se cerró con esa baja
+ * también se reabre (una cuenta bloqueada aparte desde Usuarios no se toca).
+ */
 export async function reactivarTrabajador(id, ctx = {}) {
-  const afectadas = await reactivar({ tabla: 'trabajadores', id })
+  const disponible = await calcularDisponible(id, 'ACTIVO')
+  const { afectadas, cuentaReactivada } = await trabajadorRepository.reactivarConCuenta({
+    id,
+    disponible,
+  })
   if (!afectadas) throw new AppError('El trabajador no está dado de baja', 409)
 
   await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'trabajadores',
-    registroId: Number(id), ip: ctx.ip,
+    usuarioId: ctx.usuarioId,
+    accion: 'REACTIVAR',
+    tabla: 'trabajadores',
+    registroId: Number(id),
+    detalles: { cuenta_reactivada: cuentaReactivada },
+    ip: ctx.ip,
   })
-  return { id: Number(id), activo: 1 }
+  return { id: Number(id), activo: 1, cuenta_reactivada: cuentaReactivada }
 }

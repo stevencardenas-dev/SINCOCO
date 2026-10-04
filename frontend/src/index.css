@@ -29,7 +29,10 @@
   .btn-ghost {
     @apply inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-accent-300 hover:bg-accent-50 focus:outline-none focus:ring-2 focus:ring-accent-400 focus:ring-offset-2;
   }
-  .input {
+  /* Acción destructiva o irreversible a primera vista (p. ej. dar de baja). */
+  .btn-peligro {
+    @apply inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2;
+  }  .input {
     @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm outline-none transition focus:border-accent-400 focus:ring-2 focus:ring-accent-400/40;
   }
   /* Campo no editable: fondo gris y texto atenuado para verse de un vistazo. */
