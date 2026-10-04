@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 /*
@@ -69,16 +70,18 @@ export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, 
 
   if (!abierto) return null
 
-  return (
+  // Portal al body: así el desenfoque cubre toda la pantalla, incluido el
+  // encabezado fijo (que tiene su propio backdrop-blur y quedaba nítido).
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-brand-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/50 p-4 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={titulo}
       onClick={onCerrar}
     >
       <div
-        className={`max-h-[92vh] w-full ${ancho} overflow-y-auto rounded-t-3xl bg-white shadow-xl sm:rounded-2xl`}
+        className={`max-h-full w-full ${ancho} overflow-y-auto rounded-2xl bg-white shadow-xl`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
@@ -97,6 +100,7 @@ export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, 
         </div>
         <div className="px-6 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
