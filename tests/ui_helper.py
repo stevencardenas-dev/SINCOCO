@@ -17,6 +17,9 @@ def captura(page, nombre):
 
 def login(page, usuario='admin', password='Prueba123!'):
     """Inicia sesión y espera a que cargue el menú lateral."""
+    # Sesión única por cuenta: libera la sesión que haya dejado otra prueba.
+    from api_helper import liberar_sesion
+    liberar_sesion(usuario)
     page.goto(f'{BASE_UI}/login')
     page.wait_for_load_state('networkidle')
     page.fill('#username', usuario)

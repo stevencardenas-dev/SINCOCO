@@ -48,9 +48,10 @@ env:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Puerta de entrada: levanta MySQL 8 y el backend desde cero y corre las
-  # pruebas de API de los criterios de aceptación del sprint 1 (HU-01, HU-03,
-  # HU-04 y HU-18). Nada se despliega si esto falla.
+  # Puerta de entrada: levanta MySQL 8 y el backend desde cero, aplica las
+  # mismas migraciones que producción y corre las pruebas de API de los
+  # criterios de aceptación del sprint 1 (HU-01, HU-03, HU-04 y HU-18). Nada se
+  # despliega si esto falla.
   # ---------------------------------------------------------------------------
   pruebas:
     name: Pruebas de API (HU-01, HU-03, HU-04, HU-18)
@@ -106,6 +107,22 @@ jobs:
           mysql -h 127.0.0.1 -u root sincoco < docs/seed_permisos_prueba.sql
           mysql -h 127.0.0.1 -u root sincoco < docs/seed_proyectos_prueba.sql
 
+      # El dump docs/schema.sql es el de la entrega y NO trae lo que agregaron
+      # los sprints: las columnas de sesión y los permisos de acceso llegan por
+      # docs/migracion_*.sql. El backend nuevo consulta `usuarios.sesion_actual`
+      # en cada petición, así que aquí se aplican las mismas migraciones que
+      # producción (deploy/migrar-base.sh), antes de arrancarlo.
+      - name: Aplicar las migraciones de esquema
+        env:
+          DB_NAME: sincoco
+          MYSQL_PWD: raiz
+        run: |
+          for migracion in docs/migracion_*.sql; do
+            echo "::group::$migracion"
+            mysql -h 127.0.0.1 -u root "$DB_NAME" < "$migracion"
+            echo "::endgroup::"
+          done
+
       - name: Preparar el backend
         working-directory: backend
         run: |
@@ -135,7 +152,10 @@ jobs:
       - name: Ejecutar las pruebas
         working-directory: tests
         run: |
-          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py; do
+          # Las tres últimas cubren las funciones de este sprint: sesión única
+          # por cuenta, gestión de acceso a proyectos y actividades (RBAC) y la
+          # batería de casos límite (entradas imposibles → 400, nunca 500).
+          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py test_sesion_unica.py test_rbac_acceso_proyectos.py test_bordes_api.py; do
             echo "::group::$prueba"
             python3 "$prueba"
             echo "::endgroup::"
@@ -166,10 +186,14 @@ jobs:
   backend:
     name: Backend (EC2 + RDS)
     needs: [pruebas, migrar]
+    # La migración NO se puede saltar: el código nuevo consulta columnas y
+    # permisos que solo existen tras migrar. `saltar_pruebas=si` salta las
+    # pruebas, nunca la migración; sin ella, el backend dejaría a todo el mundo
+    # sin poder iniciar sesión.
     if: ${{ always()
           && (inputs.componente == 'todo' || inputs.componente == 'backend')
-          && (inputs.saltar_pruebas == 'si'
-              || (needs.pruebas.result == 'success' && needs.migrar.result == 'success')) }}
+          && needs.migrar.result == 'success'
+          && (inputs.saltar_pruebas == 'si' || needs.pruebas.result == 'success') }}
     runs-on: ubuntu-latest
 
     steps:

@@ -31,11 +31,23 @@ export async function registrar(req, res, next) {
  * GET /api/proyectos
  * Lista los proyectos activos para el módulo de proyectos.
  * `?incluirInactivos=1` incluye los dados de baja (HU-18).
+ * `?buscar=` `?estado=` `?cliente_id=` `?responsable_id=` filtran el listado
+ * desde la API, porque el volumen de proyectos no se resuelve solo en el
+ * navegador.
  */
 export async function listar(req, res, next) {
   try {
     const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
-    const proyectos = await listarProyectos({ incluirInactivos })
+    const proyectos = await listarProyectos(
+      {
+        incluirInactivos,
+        buscar: req.query.buscar ?? req.query.q ?? '',
+        estado: req.query.estado ?? '',
+        clienteId: req.query.cliente_id || null,
+        responsableId: req.query.responsable_id || null,
+      },
+      req.user,
+    )
     return res.json(proyectos)
   } catch (error) {
     return next(error)

@@ -17,7 +17,7 @@ export async function obtener(req, res, next) {
   }
 }
 
-/** PATCH /api/perfil -> actualizar documento, teléfono, correo, dirección y contraseña. */
+/** PATCH /api/perfil -> actualizar teléfono, correo, dirección y contraseña. */
 export async function actualizar(req, res, next) {
   try {
     const perfil = await actualizarPerfil(req.user.id, req.body, {

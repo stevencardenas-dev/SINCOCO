@@ -1,4 +1,10 @@
 import { AppError } from '../../utils/AppError.js'
+import {
+  LARGO,
+  revisarCorreo,
+  revisarLargo,
+  revisarTelefono,
+} from '../../utils/campos.js'
 
 export const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PASAPORTE']
 
@@ -46,13 +52,26 @@ export class RegistrarClienteDto {
 
     const texto = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim())
 
+    const numero_documento = String(body.numero_documento).trim()
+    const razon_social_nombre = String(body.razon_social_nombre).trim()
+    const email = texto(body.email)
+    const telefono = texto(body.telefono)
+    revisarLargo(numero_documento, LARGO.numero_documento, 'numero_documento')
+    revisarLargo(razon_social_nombre, LARGO.razon_social_nombre, 'razon_social_nombre')
+    revisarLargo(texto(body.nombre_contacto), LARGO.nombre_contacto, 'nombre_contacto')
+    revisarLargo(email, LARGO.email, 'email')
+    revisarLargo(telefono, LARGO.telefono, 'telefono')
+    revisarLargo(texto(body.direccion), LARGO.direccion, 'direccion')
+    revisarCorreo(email)
+    revisarTelefono(telefono)
+
     return new RegistrarClienteDto({
-      numero_documento: String(body.numero_documento).trim(),
+      numero_documento,
       tipo_documento: tipo,
-      razon_social_nombre: String(body.razon_social_nombre).trim(),
+      razon_social_nombre,
       nombre_contacto: texto(body.nombre_contacto),
-      telefono: texto(body.telefono),
-      email: texto(body.email),
+      telefono,
+      email,
       direccion: texto(body.direccion),
     })
   }

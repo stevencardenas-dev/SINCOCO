@@ -13,24 +13,37 @@ import catalogosRoutes from './routes/catalogos.js'
 import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
 import actividadesRoutes from './routes/actividades.js'
+import asignacionesRoutes from './routes/asignaciones.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { rutasSeguras } from './middleware/rutasSeguras.js'
+
+// Red de seguridad del proceso: si algo se escapa fuera de una ruta (una
+// promesa rechazada al leer la base, por ejemplo), queda en el log en vez de
+// terminar el proceso y dejar sin servicio a todos los conectados.
+process.on('unhandledRejection', (motivo) => {
+  console.error('[promesa rechazada sin capturar]', motivo)
+})
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
-app.use('/api/auth', authRoutes)
-app.use('/api/usuarios', usuariosRoutes)
-app.use('/api/roles', rolesRoutes)
-app.use('/api/auditoria', auditoriaRoutes)
-app.use('/api/dashboard', dashboardRoutes)
-app.use('/api/proyectos', proyectosRoutes)
-app.use('/api/clientes', clientesRoutes)
-app.use('/api/trabajadores', trabajadoresRoutes)
-app.use('/api/catalogos', catalogosRoutes)
-app.use('/api/perfil', perfilRoutes)
-app.use('/api/etapas', etapasRoutes)
-app.use('/api/actividades', actividadesRoutes)
+// `rutasSeguras` envuelve los controladores para que un AppError lanzado dentro
+// de un `async` llegue al errorHandler en vez de tumbar el proceso (ver el
+// comentario del middleware).
+app.use('/api/auth', rutasSeguras(authRoutes))
+app.use('/api/usuarios', rutasSeguras(usuariosRoutes))
+app.use('/api/roles', rutasSeguras(rolesRoutes))
+app.use('/api/auditoria', rutasSeguras(auditoriaRoutes))
+app.use('/api/dashboard', rutasSeguras(dashboardRoutes))
+app.use('/api/proyectos', rutasSeguras(proyectosRoutes))
+app.use('/api/clientes', rutasSeguras(clientesRoutes))
+app.use('/api/trabajadores', rutasSeguras(trabajadoresRoutes))
+app.use('/api/catalogos', rutasSeguras(catalogosRoutes))
+app.use('/api/perfil', rutasSeguras(perfilRoutes))
+app.use('/api/etapas', rutasSeguras(etapasRoutes))
+app.use('/api/actividades', rutasSeguras(actividadesRoutes))
+app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Recurso no encontrado' })

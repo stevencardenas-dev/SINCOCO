@@ -31,3 +31,22 @@ export function requirePermiso(...nombres) {
     }
   }
 }
+
+/**
+ * Consulta puntual de la matriz: ¿el rol tiene este permiso?
+ *
+ * Se usa cuando la decisión no es «entra o no entra» sino sobre qué datos
+ * entra (por ejemplo, el alcance de proyectos de `accesoService`).
+ */
+export async function rolTienePermiso(rolNombre, permiso) {
+  const [rows] = await pool.query(
+    `SELECT 1
+       FROM permisos p
+       JOIN roles_permisos rp ON rp.permiso_id = p.id
+       JOIN roles r ON r.id = rp.rol_id
+      WHERE r.nombre = ? AND p.nombre = ?
+      LIMIT 1`,
+    [rolNombre, permiso],
+  )
+  return rows.length > 0
+}

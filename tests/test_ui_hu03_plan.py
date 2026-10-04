@@ -49,7 +49,9 @@ with sync_playwright() as p:
     pg.locator('button:has-text("Actividad")').first.click()
     pg.wait_for_selector('input[id^="a-nombre-"]')
     pg.fill('input[id^="a-nombre-"]', 'TEST-UI-Actividad')
-    pg.select_option('select[id^="a-resp-"]', index=1)
+    # El responsable es un campo con búsqueda: se escribe y se elige.
+    pg.fill('input[id^="a-resp-"]', 'Prueba')
+    pg.locator('ul[id$="-opciones"] li', has_text='Prueba').first.click()
     pg.fill('input[id^="a-inicio-"]', '2026-10-05')
     pg.fill('input[id^="a-fin-"]', '2026-11-05')
     pg.click('button:has-text("Registrar actividad")')

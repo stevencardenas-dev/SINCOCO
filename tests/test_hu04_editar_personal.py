@@ -66,7 +66,7 @@ estado, r = http('PATCH', f'/api/trabajadores/{id_trabajador}', {
 }, token=admin)
 assert estado == 200, f'cargo operativo con especialidad debia dar 200, llego {estado}: {r}'
 assert r['trabajador']['cargo'] == 'Obrero'
-assert r['trabajador']['especialidad'] == 'Mamposteria'
+assert r['trabajador']['especialidad'] == 'Mampostería'
 print('operativo con especialidad ->', estado, r['trabajador']['cargo'])
 
 # Y a la inversa: quitar la especialidad a un cargo que ya es operativo -> 400

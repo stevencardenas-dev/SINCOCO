@@ -42,6 +42,15 @@ $MYSQL "$DB_NAME" < docs/migracion_catalogos.sql
 # --- 2b. Recuperación de contraseña (HU-01) --------------------------------
 # Crea la tabla de códigos de un solo uso si no existe (bases anteriores).
 $MYSQL "$DB_NAME" < docs/migracion_password_reset.sql
+
+# --- 2c. Seguridad y RBAC ---------------------------------------------------
+# Columnas de sesión única por cuenta, y los permisos de gestión de acceso a
+# proyectos y actividades. Son idempotentes: en una base nueva no hacen nada
+# (el seed de permisos ya los trae).
+$MYSQL "$DB_NAME" < docs/migracion_sesion_unica.sql
+$MYSQL "$DB_NAME" < docs/migracion_roles_gestionar.sql
+$MYSQL "$DB_NAME" < docs/migracion_rbac_acceso.sql
+
 $MYSQL "$DB_NAME" < docs/seed_catalogos_prueba.sql
 
 # --- 3. Roles, usuarios y trabajadores ------------------------------------

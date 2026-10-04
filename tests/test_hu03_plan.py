@@ -9,7 +9,7 @@
 #  3. las fechas de etapas y actividades quedan dentro del rango del proyecto.
 #  4. la actividad admite responsable y descripción.
 #  5. el estado inicial de etapas y actividades es PENDIENTE.
-from api_helper import http, login, limpiar, crear_proyecto, crear_trabajador, PREFIJO
+from api_helper import http, login, limpiar, crear_proyecto, crear_trabajador, PREFIJO, scalar
 
 limpiar()
 admin = login('admin')
@@ -75,13 +75,27 @@ estado, r = http('POST', '/api/actividades', dict(actividad, nombre='TEST-Activi
 assert estado == 400, f'se esperaba 400 por fecha, llego {estado}: {r}'
 print('actividad fuera de rango ->', estado, r['error'])
 
-# RBAC: el maestro de obra consulta el plan pero no lo define.
+# RBAC: el maestro de obra consulta el plan del proyecto al que está asignado,
+# pero no lo define. El acceso a proyectos y actividades se administra con
+# asignaciones_personal: sin asignación vigente el plan no se consulta.
 maestro = login('maestro')
+trabajador_maestro = int(scalar("SELECT trabajador_id FROM usuarios WHERE username='maestro'"))
+
+estado, r = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=maestro)
+assert estado == 403, f'sin asignación vigente el plan no se consulta, llego {estado}'
+print('maestro sin asignación ->', estado, r['error'])
+
+estado, r = http('POST', '/api/asignaciones', {
+    'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
+    'fecha_inicio': '2026-10-01', 'rol_en_proyecto': 'Maestro de obra',
+}, token=admin)
+assert estado == 201, f'asignar al maestro: {estado} {r}'
+
 estado, _ = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=maestro)
-assert estado == 200, f'el maestro debe poder listar etapas, llego {estado}'
+assert estado == 200, f'el maestro asignado debe poder listar etapas, llego {estado}'
 estado, r = http('POST', '/api/etapas', etapa, token=maestro)
 assert estado == 403, f'se esperaba 403 para maestro, llego {estado}: {r}'
-print('maestro lista sin definir ->', 'GET 200 / POST 403 OK')
+print('maestro asignado ->', 'GET 200 / POST 403 OK')
 
 # Listados: la etapa y la actividad creadas aparecen.
 estado, etapas = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=admin)

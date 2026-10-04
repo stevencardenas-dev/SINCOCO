@@ -1,7 +1,9 @@
+import { randomUUID } from 'node:crypto'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/pool.js'
 import { registrar } from '../db/bitacora.js'
+import { ACTIVIDAD_SQL, MINUTOS_INACTIVIDAD } from '../middleware/auth.js'
 import { solicitarRestablecimiento, restablecerPassword } from '../services/resetService.js'
 
 // HU-01: login — valida credenciales y estado de cuenta, emite JWT
@@ -27,16 +29,79 @@ export async function login(req, res) {
   const valid = await bcrypt.compare(password, user.password_hash)
   if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' })
 
-  await pool.query('UPDATE usuarios SET ultimo_acceso = NOW() WHERE id = ?', [user.id])
+  // Sesión única por cuenta: si la cuenta ya tiene una sesión activa, este
+  // segundo ingreso se rechaza y la sesión abierta sigue intacta (ver
+  // middleware/auth.js). La condición va dentro del UPDATE para que dos
+  // ingresos simultáneos no puedan pasar los dos.
+  const sesion = randomUUID()
+  const [resultado] = await pool.query(
+    `UPDATE usuarios
+        SET ultimo_acceso = NOW(), sesion_actual = ?, sesion_iniciada_en = NOW(), sesion_actividad = NOW()
+      WHERE id = ?
+        AND (sesion_actual IS NULL
+             OR ${ACTIVIDAD_SQL} IS NULL
+             OR ${ACTIVIDAD_SQL} < NOW() - INTERVAL ? MINUTE)`,
+    [sesion, user.id, MINUTOS_INACTIVIDAD],
+  )
+  if (resultado.affectedRows === 0) {
+    await registrar({
+      usuarioId: user.id, accion: 'SESION_RECHAZADA', tabla: 'usuarios',
+      registroId: user.id, ip: req.ip,
+      detalles: { motivo: 'La cuenta ya tiene una sesión activa' },
+    })
+    return res.status(409).json({
+      error:
+        'Esta cuenta ya tiene una sesión abierta en otro navegador o dispositivo. ' +
+        `Ciérrela allí o espere ${MINUTOS_INACTIVIDAD} minutos sin actividad para volver a ingresar.`,
+      codigo: 'SESION_ACTIVA',
+    })
+  }
   await registrar({
     usuarioId: user.id, accion: 'AUTENTICAR', tabla: 'usuarios',
     registroId: user.id, ip: req.ip,
   })
 
-  const token = jwt.sign({ id: user.id, username: user.username, rol: user.rol }, process.env.JWT_SECRET, {
-    expiresIn: '8h',
-  })
+  const token = jwt.sign(
+    { id: user.id, username: user.username, rol: user.rol, sid: sesion },
+    process.env.JWT_SECRET,
+    { expiresIn: '8h' },
+  )
   res.json({ token, user: { id: user.id, username: user.username, rol: user.rol } })
+}
+
+/**
+ * POST /api/auth/logout -> cerrar la sesión vigente.
+ *
+ * Deja la cuenta sin sesión activa: cualquier token emitido para ella pierde
+ * validez en la siguiente petición. La bitácora registra el cierre, igual que
+ * el ingreso.
+ */
+export async function logout(req, res, next) {
+  try {
+    await pool.query('UPDATE usuarios SET sesion_actual = NULL WHERE id = ? AND sesion_actual = ?', [
+      req.user.id,
+      req.user.sid,
+    ])
+    await registrar({
+      usuarioId: req.user.id,
+      accion: 'CERRAR_SESION',
+      tabla: 'usuarios',
+      registroId: req.user.id,
+      ip: req.ip,
+    })
+    return res.json({ cerrada: true })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/**
+ * GET /api/auth/sesion -> latido del frontend mientras la aplicación está
+ * abierta. requireAuth ya valida la sesión y registra la actividad, así que la
+ * cuenta no se da por abandonada aunque el usuario no haga clic en nada.
+ */
+export function latido(req, res) {
+  res.json({ activa: true })
 }
 
 /**

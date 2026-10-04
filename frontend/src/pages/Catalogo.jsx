@@ -52,7 +52,7 @@ const TABS = [
     etiqueta: 'cliente',
     articulo: 'el',
     nuevo: 'Nuevo cliente',
-    descripcion: 'Clientes que se pueden asociar a los proyectos (CU-02).',
+    descripcion: 'Clientes que se pueden asociar a los proyectos.',
   },
 ]
 
@@ -192,7 +192,7 @@ export default function Catalogo() {
     <div className="space-y-6">
       <PageHeader
         title="Catálogo"
-        subtitle="Cargos, especialidades y clientes de la empresa · RF01 · RF02 · RF06"
+        subtitle="Cargos, especialidades y clientes de la empresa"
       >
         <button type="button" className="btn-primary" onClick={abrirCrear}>
           <PlusIcon className="h-5 w-5" /> {tab.nuevo}
@@ -368,7 +368,7 @@ export default function Catalogo() {
                 </div>
                 <div>
                   <label htmlFor="cat-documento" className="label">Documento</label>
-                  <input id="cat-documento" className="input" value={form.numero_documento}
+                  <input id="cat-documento" className="input" maxLength={20} value={form.numero_documento}
                     onChange={(e) => setForm({ ...form, numero_documento: e.target.value })}
                     disabled={modal === 'editar'} required />
                   {modal === 'editar' && (
@@ -380,7 +380,7 @@ export default function Catalogo() {
               </div>
               <div>
                 <label htmlFor="cat-razon" className="label">Razón social / nombre</label>
-                <input id="cat-razon" className="input" value={form.razon_social_nombre}
+                <input id="cat-razon" className="input" maxLength={150} value={form.razon_social_nombre}
                   onChange={(e) => setForm({ ...form, razon_social_nombre: e.target.value })} required />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -410,12 +410,12 @@ export default function Catalogo() {
             <>
               <div>
                 <label htmlFor="cat-nombre" className="label">Nombre</label>
-                <input id="cat-nombre" className="input" value={form.nombre} required minLength={3}
+                <input id="cat-nombre" className="input" maxLength={100} value={form.nombre} required minLength={3}
                   onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
               </div>
               <div>
                 <label htmlFor="cat-descripcion" className="label">Descripción</label>
-                <input id="cat-descripcion" className="input" value={form.descripcion}
+                <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
               </div>
               {tipo === 'cargos' && (
@@ -458,8 +458,8 @@ export default function Catalogo() {
       >
         <p className="text-sm text-slate-600">
           «{porEliminar ? nombreDe(porEliminar) : ''}» dejará de aparecer en los formularios. No se
-          borra de la base (RN07): se marca como dado de baja, los registros que ya lo usan
-          conservan el dato y se puede reactivar.
+          borra de la base: se marca como dado de baja, los registros que ya lo usan conservan el
+          dato y se puede reactivar.
         </p>
         {porEliminar && Number(porEliminar.en_uso) > 0 && (
           <p className="mt-3 rounded-xl bg-accent-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-accent-200">

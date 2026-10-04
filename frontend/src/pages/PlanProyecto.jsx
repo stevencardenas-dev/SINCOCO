@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeftIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
+import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
+import { mensajeError } from '../lib/errores.js'
 import { fmtFecha } from '../lib/format.js'
 
 /**
@@ -15,6 +18,19 @@ import { fmtFecha } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', orden: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const ACCESO_VACIO = {
+  trabajador_id: '',
+  actividad_id: '',
+  rol_en_proyecto: '',
+  fecha_inicio: '',
+  fecha_fin_programada: '',
+}
+
+const ESTADO_ASIGNACION = {
+  ACTIVO: 'bg-emerald-50 text-emerald-700',
+  FINALIZADO: 'bg-slate-100 text-slate-600',
+  REASIGNADO: 'bg-amber-50 text-amber-700',
+}
 
 const ESTADO_BADGE = {
   PENDIENTE: 'bg-slate-100 text-slate-600',
@@ -39,6 +55,14 @@ export default function PlanProyecto() {
   const [abrirEtapa, setAbrirEtapa] = useState(false)
   const [actividadEn, setActividadEn] = useState(null)
   const [actividadForm, setActividadForm] = useState(ACTIVIDAD_VACIA)
+  // Errores de negocio dentro de cada formulario, no sobre la tabla.
+  const [errorEtapa, setErrorEtapa] = useState('')
+  const [errorActividad, setErrorActividad] = useState('')
+  // Gestión de acceso (RBAC): quién puede consultar este proyecto.
+  const [asignaciones, setAsignaciones] = useState([])
+  const [accesoForm, setAccesoForm] = useState(ACCESO_VACIO)
+  const [errorAcceso, setErrorAcceso] = useState('')
+  const [guardandoAcceso, setGuardandoAcceso] = useState(false)
 
   const cargar = () => {
     setError('')
@@ -47,12 +71,14 @@ export default function PlanProyecto() {
       api.get('/etapas', { params: { proyecto_id: id } }),
       api.get('/actividades', { params: { proyecto_id: id } }),
       api.get('/trabajadores').catch(() => ({ data: [] })),
+      api.get('/asignaciones', { params: { proyecto_id: id } }).catch(() => ({ data: [] })),
     ])
-      .then(([p, e, a, t]) => {
+      .then(([p, e, a, t, as]) => {
         setProyecto(p.data.find((x) => String(x.id) === String(id)) ?? null)
         setEtapas(e.data)
         setActividades(a.data)
         setResponsables(t.data)
+        setAsignaciones(as.data)
       })
       .catch(() => setError('No se pudo cargar el plan de trabajo.'))
   }
@@ -61,7 +87,7 @@ export default function PlanProyecto() {
 
   const crearEtapa = async (e) => {
     e.preventDefault()
-    setError('')
+    setErrorEtapa('')
     setAviso('')
     try {
       await api.post('/etapas', { ...etapaForm, proyecto_id: Number(id) })
@@ -70,13 +96,51 @@ export default function PlanProyecto() {
       setAviso('Etapa registrada.')
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar la etapa.')
+      setErrorEtapa(mensajeError(err, 'No se pudo registrar la etapa.'))
+    }
+  }
+
+  /** RBAC: asigna a un trabajador al proyecto o a una de sus actividades. */
+  const asignarPersonal = async (e) => {
+    e.preventDefault()
+    setErrorAcceso('')
+    setAviso('')
+    setGuardandoAcceso(true)
+    try {
+      const { data } = await api.post('/asignaciones', {
+        proyecto_id: Number(id),
+        trabajador_id: Number(accesoForm.trabajador_id),
+        actividad_id: accesoForm.actividad_id ? Number(accesoForm.actividad_id) : null,
+        rol_en_proyecto: accesoForm.rol_en_proyecto,
+        fecha_inicio: accesoForm.fecha_inicio,
+        fecha_fin_programada: accesoForm.fecha_fin_programada || null,
+      })
+      setAccesoForm(ACCESO_VACIO)
+      setAviso(`${data.asignacion.trabajador_nombre} tiene acceso al proyecto.`)
+      cargar()
+    } catch (err) {
+      setErrorAcceso(mensajeError(err, 'No se pudo asignar el personal.'))
+    } finally {
+      setGuardandoAcceso(false)
+    }
+  }
+
+  /** Retira el acceso vigente sin borrar la asignación (queda el historial). */
+  const finalizarAsignacion = async (a) => {
+    setErrorAcceso('')
+    setAviso('')
+    try {
+      await api.patch(`/asignaciones/${a.id}`, { estado: 'FINALIZADO' })
+      setAviso(`${a.trabajador_nombre}: acceso finalizado.`)
+      cargar()
+    } catch (err) {
+      setErrorAcceso(mensajeError(err, 'No se pudo finalizar la asignación.'))
     }
   }
 
   const crearActividad = async (e) => {
     e.preventDefault()
-    setError('')
+    setErrorActividad('')
     setAviso('')
     try {
       await api.post('/actividades', {
@@ -89,7 +153,7 @@ export default function PlanProyecto() {
       setAviso('Actividad registrada.')
       cargar()
     } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo registrar la actividad.')
+      setErrorActividad(mensajeError(err, 'No se pudo registrar la actividad.'))
     }
   }
 
@@ -103,8 +167,8 @@ export default function PlanProyecto() {
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
         subtitle={
           proyecto
-            ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)} · RF03 · RF04`
-            : 'Plan de trabajo · RF03 · RF04'
+            ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)}`
+            : 'Plan de trabajo'
         }
       >
         {esAdmin && (
@@ -117,8 +181,8 @@ export default function PlanProyecto() {
         </button>
       </PageHeader>
 
-      {error && <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>}
-      {aviso && <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{aviso}</p>}
+      {error && <AlertaFormulario mensaje={error} />}
+      {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       {esAdmin && abrirEtapa && (
         <form onSubmit={crearEtapa} className="card space-y-4 p-6">
@@ -126,7 +190,7 @@ export default function PlanProyecto() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="e-nombre" className="label">Nombre</label>
-              <input id="e-nombre" className="input" value={etapaForm.nombre}
+              <input id="e-nombre" className="input" maxLength={100} value={etapaForm.nombre}
                 onChange={(e) => setEtapaForm({ ...etapaForm, nombre: e.target.value })} required />
             </div>
             <div>
@@ -147,9 +211,10 @@ export default function PlanProyecto() {
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <AlertaFormulario mensaje={errorEtapa} />
             <button type="submit" className="btn-primary">Registrar etapa</button>
             <button type="button" className="btn-ghost"
-              onClick={() => { setAbrirEtapa(false); setEtapaForm(ETAPA_VACIA) }}>Cancelar</button>
+              onClick={() => { setAbrirEtapa(false); setEtapaForm(ETAPA_VACIA); setErrorEtapa('') }}>Cancelar</button>
           </div>
         </form>
       )}
@@ -204,13 +269,21 @@ export default function PlanProyecto() {
                 </div>
                 <div>
                   <label htmlFor={`a-resp-${et.id}`} className="label">Responsable</label>
-                  <select id={`a-resp-${et.id}`} className="input" value={actividadForm.responsable_id}
-                    onChange={(e) => setActividadForm({ ...actividadForm, responsable_id: e.target.value })}>
-                    <option value="">Sin asignar…</option>
-                    {responsables.map((t) => (
-                      <option key={t.id} value={t.id}>{t.nombres} {t.apellidos} — {t.cargo}</option>
-                    ))}
-                  </select>
+                  <BuscadorSelect
+                    id={`a-resp-${et.id}`}
+                    value={actividadForm.responsable_id}
+                    onChange={(v) => setActividadForm({ ...actividadForm, responsable_id: v })}
+                    opciones={[
+                      { value: '', label: 'Sin asignar' },
+                      ...responsables.map((t) => ({
+                        value: t.id,
+                        label: `${t.nombres} ${t.apellidos}`,
+                        sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
+                      })),
+                    ]}
+                    vacio="Sin asignar"
+                    placeholder="Escriba el nombre del responsable…"
+                  />
                 </div>
                 <div>
                   <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
@@ -222,9 +295,12 @@ export default function PlanProyecto() {
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={actividadForm.fecha_fin_programada}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_fin_programada: e.target.value })} required />
                 </div>
+                <div className="sm:col-span-2">
+                  <AlertaFormulario mensaje={errorActividad} />
+                </div>
                 <div className="sm:col-span-2 flex items-center gap-3">
                   <button type="submit" className="btn-primary">Registrar actividad</button>
-                  <button type="button" className="btn-ghost" onClick={() => setActividadEn(null)}>Cancelar</button>
+                  <button type="button" className="btn-ghost" onClick={() => { setActividadEn(null); setErrorActividad('') }}>Cancelar</button>
                 </div>
               </form>
             )}
@@ -267,8 +343,170 @@ export default function PlanProyecto() {
         )
       })}
 
+      {/* RBAC: gestión de acceso al proyecto. Solo quien puede administrarlo ve
+          el formulario; los demás roles no necesitan esta caja. */}
+      {esAdmin && proyecto && (
+        <div className="card overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Acceso al proyecto</h3>
+              <p className="text-xs text-slate-500">
+                Quién puede consultar este proyecto y sus actividades: solo las asignaciones vigentes dan acceso.
+              </p>
+            </div>
+            <span className="badge bg-slate-100 text-slate-600">
+              {asignaciones.filter((a) => a.estado === 'ACTIVO').length} con acceso vigente
+            </span>
+          </div>
+
+          <form
+            onSubmit={asignarPersonal}
+            className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2 xl:grid-cols-4"
+          >
+            <div className="xl:col-span-2">
+              <label htmlFor="ac-trabajador" className="label">Trabajador</label>
+              <BuscadorSelect
+                id="ac-trabajador"
+                value={accesoForm.trabajador_id}
+                onChange={(v) => setAccesoForm({ ...accesoForm, trabajador_id: v })}
+                opciones={responsables.map((t) => ({
+                  value: t.id,
+                  label: `${t.nombres} ${t.apellidos}`,
+                  sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
+                }))}
+                placeholder="Escriba el nombre del trabajador…"
+                requerido
+              />
+            </div>
+            <div>
+              <label htmlFor="ac-rol" className="label">Rol en el proyecto</label>
+              <input
+                id="ac-rol"
+                maxLength={100}
+                className="input"
+                placeholder="Residente, oficial…"
+                value={accesoForm.rol_en_proyecto}
+                onChange={(e) => setAccesoForm({ ...accesoForm, rol_en_proyecto: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ac-actividad" className="label">Actividad (opcional)</label>
+              <select
+                id="ac-actividad"
+                className="input"
+                value={accesoForm.actividad_id}
+                onChange={(e) => setAccesoForm({ ...accesoForm, actividad_id: e.target.value })}
+              >
+                <option value="">Todo el proyecto</option>
+                {actividades.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="ac-inicio" className="label">Inicio</label>
+              <input
+                id="ac-inicio"
+                type="date"
+                className="input"
+                required
+                value={accesoForm.fecha_inicio}
+                onChange={(e) => setAccesoForm({ ...accesoForm, fecha_inicio: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="ac-fin" className="label">Fin programado (opcional)</label>
+              <input
+                id="ac-fin"
+                type="date"
+                className="input"
+                value={accesoForm.fecha_fin_programada}
+                onChange={(e) => setAccesoForm({ ...accesoForm, fecha_fin_programada: e.target.value })}
+              />
+            </div>
+            <div className="flex items-end xl:col-span-2">
+              <button
+                type="submit"
+                className="btn-primary"
+                disabled={guardandoAcceso || !accesoForm.trabajador_id}
+              >
+                {guardandoAcceso ? 'Asignando…' : 'Dar acceso'}
+              </button>
+            </div>
+            {errorAcceso && (
+              <div className="sm:col-span-2 xl:col-span-4">
+                <AlertaFormulario mensaje={errorAcceso} />
+              </div>
+            )}
+          </form>
+
+          {asignaciones.length === 0 ? (
+            <p className="px-5 py-4 text-xs text-slate-400">
+              Todavía no hay asignaciones. El responsable del proyecto y quien tenga alcance total
+              siempre lo ven.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[720px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <th className="px-5 py-3 font-semibold">Trabajador</th>
+                    <th className="px-5 py-3 font-semibold">Rol en el proyecto</th>
+                    <th className="px-5 py-3 font-semibold">Actividad</th>
+                    <th className="px-5 py-3 font-semibold">Vigencia</th>
+                    <th className="px-5 py-3 font-semibold">Estado</th>
+                    <th className="px-5 py-3 font-semibold">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {asignaciones.map((a) => (
+                    <tr key={a.id}>
+                      <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
+                      <td className="px-5 py-3 text-slate-600">{a.rol_en_proyecto ?? '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">
+                        {a.actividad_nombre ?? 'Todo el proyecto'}
+                      </td>
+                      <td className="px-5 py-3 text-xs text-slate-500">
+                        {fmtFecha(a.fecha_inicio)}
+                        {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span
+                          className={`badge ${
+                            ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {a.estado}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        {a.estado === 'ACTIVO' ? (
+                          <div className="flex flex-col items-stretch gap-1.5">
+                            <button
+                              type="button"
+                              className="btn-accion btn-accion-peligro"
+                              onClick={() => finalizarAsignacion(a)}
+                            >
+                              Finalizar acceso
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin acciones</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       <p className="text-xs text-slate-400">
-        Criterio HU-03: las fechas de etapas y actividades se validan dentro del rango del proyecto.
+        Las fechas de las etapas y actividades se validan dentro del rango del proyecto.
       </p>
     </div>
   )

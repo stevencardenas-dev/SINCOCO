@@ -3,15 +3,22 @@ import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { validarFechasEnRango } from './etapaService.js'
+import { verificarAccesoProyecto } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
 
-export async function listarPorProyecto(proyectoId, { incluirInactivos = false } = {}) {
+// RBAC: las actividades de un proyecto solo se listan si el usuario tiene
+// acceso al proyecto (asignación vigente o alcance total de su rol).
+export async function listarPorProyecto(proyectoId, { incluirInactivos = false } = {}, usuario = null) {
+  await verificarAccesoProyecto(usuario, proyectoId)
   return actividadRepository.listarPorProyecto(proyectoId, incluirInactivos)
 }
 
-export async function listarPorEtapa(etapaId, { incluirInactivos = false } = {}) {
+export async function listarPorEtapa(etapaId, { incluirInactivos = false } = {}, usuario = null) {
+  const etapa = await etapaRepository.findById(etapaId)
+  if (!etapa) throw new AppError('La etapa indicada no existe', 404, 'etapa_id')
+  await verificarAccesoProyecto(usuario, etapa.proyecto_id)
   return actividadRepository.listarPorEtapa(etapaId, incluirInactivos)
 }
 

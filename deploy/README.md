@@ -173,7 +173,7 @@ instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
 
 | Job | Trabajo |
 |---|---|
-| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18 contra un backend recién arrancado. |
+| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds, aplica `docs/migracion_*.sql` (las mismas que producción, porque el código nuevo consulta `usuarios.sesion_actual`) y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18, más la batería de casos límite (`tests/test_bordes_api.py`), que exige que toda entrada imposible —texto larguísimo, número fuera de rango, fecha imposible, token viejo o id inexistente— devuelva 400/403/404 y nunca un 500, contra un backend recién arrancado. |
 | `migrar` | Deja el esquema del RDS al día aplicando `docs/migracion_*.sql` (idempotente, sin borrar datos) **antes** de tocar la instancia. Invoca el workflow reutilizable `migrar-base.yml`. |
 | `backend` | Empaqueta, sube a S3 y ejecuta `deploy/instalar-backend.sh` en la instancia con `deploy/remoto.sh` (SSM, sin SSH). |
 | `frontend` | `npm ci` + build, sincroniza a S3 e invalida `/` y `/index.html` en CloudFront. |
@@ -181,8 +181,11 @@ instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
 
 Los dos despliegues dependen de `pruebas`: **si un criterio de aceptación se
 rompe, no se publica**. Si hay una urgencia, el input `saltar_pruebas=si`
-permite desplegar igual. El grupo de concurrencia `desplegar-sincoco` evita que
-dos ejecuciones se pisen y nunca cancela un despliegue a medias.
+permite desplegar igual… salvo la migración: el job `backend` exige
+`needs.migrar.result == 'success'` sin excepción, porque un backend nuevo contra
+un esquema viejo deja a **todo el mundo** sin poder iniciar sesión. El grupo de
+concurrencia `desplegar-sincoco` evita que dos ejecuciones se pisen y nunca
+cancela un despliegue a medias.
 
 ### Desplegar a mano
 
@@ -199,10 +202,25 @@ esquema si ya existe y `FORZAR_ESQUEMA=1` **borra los datos**.
 
 Para cambios de esquema (columnas o tablas nuevas) se añade un
 `docs/migracion_<algo>.sql` **idempotente**: que compruebe `information_schema`
-antes de tocar nada, como los dos que ya existen. **No hay tabla de control**: se
+antes de tocar nada, como los cinco que ya existen:
+
+| Archivo | Qué deja en la base |
+|---|---|
+| `migracion_catalogos.sql` | tablas `cargos` y `especialidades`, y la conversión del texto libre anterior |
+| `migracion_password_reset.sql` | tabla `restablecimientos_password` (códigos de un solo uso) |
+| `migracion_rbac_acceso.sql` | permisos `proyectos.gestionar_acceso` y `proyectos.acceso_total`, y su asignación a ADMINISTRADOR y GERENTE |
+| `migracion_roles_gestionar.sql` | permiso `roles.gestionar` para ADMINISTRADOR (bases antiguas) |
+| `migracion_sesion_unica.sql` | columnas `usuarios.sesion_actual` y `sesion_iniciada_en` |
+
+**No hay tabla de control**: se
 aplican todos en orden alfabético cada vez, y como se protegen solos, repetirlos
 no hace daño. Basta con dejar el archivo en `docs/`; no hay que registrarlo en
-ningún sitio.
+ningún sitio. Al terminar, `deploy/migrar-base.sh` imprime en el log de SSM las
+columnas de sesión y la matriz **permisos por rol** (debe salir 25 / 6 / 3 / 0),
+que es la forma de comprobar desde el propio despliegue que la base quedó al día.
+
+El job `pruebas` aplica estas mismas migraciones sobre la base de CI: así la
+puerta de entrada reproduce el esquema de producción en vez de uno más viejo.
 
 Ese trabajo lo hace el workflow **`.github/workflows/migrar-base.yml`**:
 
@@ -216,6 +234,107 @@ Ese trabajo lo hace el workflow **`.github/workflows/migrar-base.yml`**:
 Empaqueta solo `docs/` en `sincoco-migraciones.tar.gz`, lo sube a S3 y ejecuta
 `deploy/migrar-base.sh` en la instancia por SSM. **Nunca** carga el esquema
 completo ni borra datos, y no reinicia el backend.
+
+### Puesta en producción de este sprint (runbook)
+
+Este sprint cambia las tres patas del despliegue: dependencias nuevas en el
+frontend, columnas y permisos nuevos en el esquema, y dos pruebas más en la
+puerta de entrada. El orden ya está resuelto dentro del workflow; esto es lo que
+hay que hacer desde fuera, en orden.
+
+#### 0. Antes de tocar Actions: que `main` tenga todo
+
+El pipeline compila y despliega **lo que esté en `main`**, no lo que hay en un
+portátil. Si algo de esto no está commiteado y empujado, el despliegue falla (o
+peor: publica a medias):
+
+| Hace falta en `main` | Si falta |
+|---|---|
+| `frontend/package.json` y `package-lock.json` con `leaflet`, `react-leaflet` y `react-phone-number-input` | `npm ci` falla: el lock no coincide con el `package.json` |
+| `docs/migracion_sesion_unica.sql` y `docs/migracion_rbac_acceso.sql` | la base no tendría `usuarios.sesion_actual` y **nadie podría iniciar sesión** |
+| `backend/src/**` nuevos (asignaciones, `accesoService`, `auth.js`, `authController.js`…) | el backend sigue siendo el viejo: sin sesión única ni RBAC de acceso |
+| `tests/test_sesion_unica.py` y `tests/test_rbac_acceso_proyectos.py` | el job `pruebas` falla con *can't open file* |
+| `.github/workflows/desplegar.yml` con el paso *Aplicar las migraciones de esquema* | la base de CI no tendría `sesion_actual` y todas las pruebas darían 401 |
+
+```bash
+git status --short                 # lo de arriba, sin `??` ni ` M`
+git log --oneline -5 origin/main   # main local y remoto alineados
+```
+
+#### 1. (Recomendado) Migrar la base antes de desplegar
+
+*Actions* → **Migrar base de datos** → *Run workflow* con un motivo. Es la misma
+migración que luego ejecuta el despliegue, pero lanzarla aparte permite leer el
+log de SSM con el backend viejo todavía en servicio. Si el despliegue se hace
+luego como `todo`, se repite sin daño (son idempotentes).
+
+En el log de SSM tienen que aparecer las dos columnas de sesión y la tabla de
+permisos por rol con **ADMINISTRADOR 25, GERENTE 6, MAESTRO_OBRA 3,
+ENCARGADO_BODEGA 0**. Si el administrador sale por debajo de 25, la pantalla
+*Acceso al proyecto* responderá 403 aunque el código esté bien: hay que revisar
+el log antes de seguir.
+
+#### 2. Desplegar
+
+*Actions* → **Desplegar SINCOCO en AWS** → *Run workflow*:
+
+- **rama**: `main`.
+- **componente**: `todo` (backend **y** frontend). Desplegar solo `frontend`
+  dejaría la interfaz nueva hablando con un backend viejo.
+- **motivo**: por ejemplo *"Sprint 1: mapa, teléfono con bandera, sesión única,
+  RBAC de acceso"*. Queda en el resumen de la ejecución.
+- **saltar_pruebas**: `no`.
+
+Orden interno: `pruebas` → `migrar` (RDS) → `backend` (EC2); `frontend` (S3 +
+CloudFront) cuelga de `pruebas`. **El backend no se instala si la migración
+falla.**
+
+#### 3. Verificar (cinco minutos)
+
+```bash
+# El servicio quedó arriba y nginx responde
+aws ssm send-command --document-name AWS-RunShellScript --instance-ids i-0c50888c3b1ee7fe6 \
+  --parameters 'commands=["systemctl is-active sincoco-backend nginx", "tail -n 20 /opt/sincoco/logs/backend.log"]'
+```
+
+Además, en el navegador:
+
+1. https://d2u6xogluht7jo.cloudfront.net carga con los assets nuevos (recarga con
+   Ctrl+F5 si el navegador conserva el `index.html` viejo: el workflow invalida
+   `/` y `/index.html`, así que tarda un minuto como mucho).
+2. **Iniciar sesión con la contraseña de siempre** funciona. Si responde
+   *"Sesión no válida. Vuelva a iniciar sesión."* con un token viejo, es lo
+   esperado (ver riesgos).
+3. Entrando con el mismo usuario desde otro navegador, la primera sesión queda
+   cerrada y avisa *"Su sesión se cerró: la cuenta ingresó desde otro
+   dispositivo"*.
+4. Como administrador, en *Proyectos* → un proyecto → *Acceso al proyecto* se
+   puede asignar personal con fechas; como gerente, el listado de proyectos
+   muestra todos.
+
+#### 4. Si algo sale mal
+
+| Síntoma | Qué hacer |
+|---|---|
+| Job `migrar` en rojo | El backend **no** se instaló: producción sigue con la versión anterior funcionando. Leer el log del comando SSM, corregir la migración en el repo, empujar y relanzar. |
+| Job `pruebas` en rojo | Nada se publicó. Correr las pruebas en local (`python3 tests/<prueba>.py` desde `tests/`, con el backend arriba) y arreglar. |
+| Job `backend` en rojo después de migrar | La base ya está migrada (eso no se revierte) y el servicio quedó como estaba: `systemctl status sincoco-backend`. Volver a lanzar solo `backend`. |
+| La interfaz se ve vieja | Recargar sin caché. Si sigue, invalidar `/` y `/index.html` en CloudFront (el workflow ya lo hace; la propagación tarda ~1 min). |
+| Hay que volver atrás | `git revert <commit>` y relanzar el despliegue sobre `main`: el workflow publica el commit que está en la rama. Las migraciones de este sprint son aditivas (columnas y permisos nuevos), así que **no hay que deshacer la base**: el código anterior las ignora. |
+
+#### Riesgos de este despliegue (y cómo se cubren)
+
+| Riesgo | Qué pasa realmente | Cubierto con |
+|---|---|---|
+| **Todas las sesiones abiertas se cierran una vez** | El login nuevo firma el token con un `sid` y `requireAuth` lo compara con `usuarios.sesion_actual`. Los tokens emitidos antes del despliegue no traen `sid`: reciben *"Sesión no válida. Vuelva a iniciar sesión."* y hay que volver a entrar (una sola vez). | Avisar antes del despliegue. Es justo el comportamiento pedido: una sesión por cuenta. |
+| Sesión única en dos dispositivos | Si alguien entra desde otro navegador, el primero queda fuera. | Comunicado; la bitácora registra cada `CERRAR_SESION`. |
+| Corte del backend | `instalar-backend.sh` reinicia el servicio: unos segundos con 502/504 en `/api/*`. | Desplegar en horario de baja actividad; el frontend no borra nada al recargar. |
+| Migración y código en desorden | Aplicar la migración *después* del backend dejaría cada petición en 401 (consulta `sesion_actual`). | `backend` depende de `migrar` con `success` obligatorio, incluso con `saltar_pruebas=si`. |
+| Dependencias nuevas del frontend | `npm ci` es estricto: si el `package-lock.json` no está en el repo, la compilación falla. | Los tres paquetes están en el lock versionados (`leaflet` 1.9.4, `react-leaflet` 4.2.1, `react-phone-number-input` 3.4.12). Verificado con la simulación del pipeline. |
+| Permisos nuevos en la base de producción | Si los permisos no llegan a la matriz, la interfaz muestra módulos que responden 403. | `migracion_rbac_acceso.sql` crea e inserta los permisos, y el log de la migración imprime la matriz (25 / 6 / 3 / 0). |
+| Datos de demostración | El despliegue **no** carga seeds ni borra datos: `migrar` solo aplica migraciones idempotentes. | Para recargar la base está `deploy/cargar-base.sh` (re-siembra y borra `roles_permisos`, así que se pierde lo que el administrador haya cambiado a mano). |
+| Caché del navegador y CloudFront | Los assets llevan hash y `index.html` se invalida: no queda mezcla de versiones. El **icono de la pestaña** también lleva hash porque vive en `frontend/src/assets/` y no en `public/`; si estuviera en `public/` se publicaría como `/favicon.svg` sin hash y, con `max-age=31536000, immutable`, un cambio de logo tardaría un año en verse. | El workflow ya lo hace en cada despliegue; las primeras 1.000 rutas/mes son gratis. |
+| Coste | No se enciende ningún recurso nuevo (mismos EC2/RDS/buckets). | Sigue en la capa gratuita mientras `free-tier-ec2` y `documents-db` estén detenidos. |
 
 ### Límites de la capa gratuita en CI
 
@@ -236,6 +355,10 @@ EC2/RDS**, que es lo que de verdad puede salirse de la capa gratuita.
   esquema*). `docs/schema.sql` **no** se aplica en producción, así que un cambio
   de esquema siempre necesita su `docs/migracion_*.sql` idempotente.
 - El despliegue del backend **reinicia el servicio** (unos segundos de corte).
+- El job `pruebas` corre las pruebas de **API**, no las de interfaz
+  (`test_ui_*.py`): esas necesitan Playwright y un navegador, y se ejecutan en
+  local antes de empujar. Un cambio solo de interfaz puede pasar el pipeline y
+  romper una pantalla, así que conviene correr la suite de UI a mano.
 - Reiniciar la instancia o cambiar su IP no rompe nada (hay IP elástica), pero
   cambiar el **DNS del origen** obligaría a actualizar CloudFront.
 
@@ -265,6 +388,7 @@ Para ejecutarlo a mano:
 export MYSQL_PWD="$(grep -m1 '^DB_PASSWORD=' /opt/sincoco/backend/.env | cut -d= -f2-)"
 EP=$(grep -m1 '^DB_HOST=' /opt/sincoco/backend/.env | cut -d= -f2-)
 mysql -h "$EP" -u sincoco < /tmp/schema-rds.sql
+for m in /tmp/sincoco-src/docs/migracion_*.sql; do mysql -h "$EP" -u sincoco sincoco < "$m"; done
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_usuarios_prueba.sql
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_permisos_prueba.sql
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_proyectos_prueba.sql
@@ -272,8 +396,10 @@ cd /opt/sincoco/backend && sudo -u ubuntu node scripts/seed.js
 ```
 
 > Sin `docs/seed_permisos_prueba.sql` el RBAC deja a todo el mundo sin permisos:
-> ese archivo es el que llena `roles_permisos` (ADMINISTRADOR 19, GERENTE 5,
-> MAESTRO_OBRA 3, ENCARGADO_BODEGA 0).
+> ese archivo es el que llena `roles_permisos` (ADMINISTRADOR 25, GERENTE 6,
+> MAESTRO_OBRA 3, ENCARGADO_BODEGA 0). Una base de un sprint anterior se queda
+> en 23/5/3/0 y llega a 25/6 con `migracion_rbac_acceso.sql`, que crea los dos
+> permisos nuevos y los inserta en la matriz; no hace falta recargar la base.
 
 > `deploy/cargar-base.sh` y `deploy/instalar-backend.sh` no usan `set -x` a
 > propósito: el trace de bash escribiría los secretos en el historial de
@@ -322,3 +448,18 @@ aws s3 rb s3://sincoco-deploy-388371826611 --force
 aws s3 rb s3://sincoco-frontend-388371826611 --force
 aws ssm delete-parameter --name /sincoco/backend-env --name /sincoco/origin-verify
 ```
+
+## Correo de recuperación de contraseña
+
+El backend envía el código de «¿Olvidó su contraseña?» por SMTP desde
+`administracion.sincoco@gmail.com`. Se activa añadiendo dos líneas al `.env` de
+producción en SSM (`/sincoco/backend-env`); sin ellas el sistema funciona igual y
+el administrador entrega el código desde el módulo de Usuarios.
+
+1. En la cuenta de Google: activar la verificación en 2 pasos y crear una
+   «contraseña de aplicación» (Cuenta de Google → Seguridad → Contraseñas de aplicaciones).
+2. Añadir al parámetro, conservando las variables que ya tiene:
+   `SMTP_USER=administracion.sincoco@gmail.com` y `SMTP_PASS=<contraseña de aplicación>`.
+3. Reiniciar el servicio (ver «Reiniciar tras cambiar el .env de SSM»).
+
+La instancia necesita salida a `smtp.gmail.com:587`.

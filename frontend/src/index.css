@@ -32,12 +32,74 @@
   .input {
     @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-800 placeholder-slate-400 shadow-sm outline-none transition focus:border-accent-400 focus:ring-2 focus:ring-accent-400/40;
   }
+  /* Campo no editable: fondo gris y texto atenuado para verse de un vistazo. */
+  .input-readonly {
+    @apply w-full cursor-not-allowed rounded-xl border border-slate-200 bg-slate-100 px-3.5 py-2.5 text-sm text-slate-500 shadow-sm outline-none;
+  }
   .label {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
   }
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
+  /* Botones de acción de las tablas: mismo tamaño, color según su función. */
+  .btn-accion {
+    @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition;
+  }
+  .btn-accion-editar {
+    @apply border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100;
+  }
+  .btn-accion-peligro {
+    @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100;
+  }
+  .btn-accion-ok {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100;
+  }
+}
+
+/* Mapa Leaflet dentro de los modales: el contenedor abre su propio contexto de
+   apilamiento para que los controles del mapa no queden sobre la ventana. */
+.leaflet-container {
+  z-index: 0;
+  font-family: inherit;
+}
+.leaflet-container:focus-visible {
+  outline: 2px solid #eab308;
+  outline-offset: 2px;
+}
+
+/* Teléfono con bandera del país (react-phone-number-input), ajustado al tema:
+   el país es un recuadro con la bandera y el número ocupa el resto. */
+.PhoneInput {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  width: 100%;
+  --PhoneInputCountryFlag-height: 1.15em;
+  --PhoneInputCountryFlag-borderColor: rgba(148, 163, 184, 0.45);
+  --PhoneInputCountrySelect-marginRight: 0;
+  --PhoneInputCountrySelectArrow-color: #64748b;
+  --PhoneInput-color--focus: #eab308;
+}
+.PhoneInput .PhoneInputCountry {
+  align-self: stretch;
+  padding: 0 0.625rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: #fff;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+.PhoneInput .PhoneInputCountryIcon--border {
+  background-color: transparent;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.45);
+}
+.PhoneInput .PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+}
+.telefono-error .PhoneInputCountry,
+.telefono-error input {
+  border-color: #f87171;
 }
 
 /* Thin scrollbars for the sidebar */

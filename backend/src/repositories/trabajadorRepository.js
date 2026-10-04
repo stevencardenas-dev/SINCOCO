@@ -49,16 +49,71 @@ export async function findByEmail(email) {
 }
 
 /**
- * Lista el catálogo de personal. Por defecto solo activos (HU-18: los
- * registros dados de baja no aparecen salvo petición explícita).
+ * Lista el catálogo de personal.
+ *
+ * Por defecto solo activos (HU-18: los registros dados de baja no aparecen
+ * salvo petición explícita). El volumen de personal obliga a poder buscar y
+ * filtrar desde la API (no solo en el navegador): `buscar` cruza nombres,
+ * apellidos, documento, correo, cargo y especialidad; `estado` y `cargo_id`
+ * filtran por columnas, y `disponible` por la bandera derivada.
  */
-export async function listar(incluirInactivos = false) {
+export async function listar({
+  incluirInactivos = false,
+  buscar = '',
+  estado = '',
+  cargoId = null,
+  disponible = null,
+} = {}) {
+  const condiciones = []
+  const params = []
+
+  if (!incluirInactivos) condiciones.push('t.activo = 1')
+
+  const texto = String(buscar ?? '').trim()
+  if (texto) {
+    condiciones.push(
+      `(t.nombres LIKE ? OR t.apellidos LIKE ? OR t.numero_documento LIKE ?
+        OR t.email LIKE ? OR c.nombre LIKE ? OR e.nombre LIKE ?)`,
+    )
+    const patron = `%${texto}%`
+    params.push(patron, patron, patron, patron, patron, patron)
+  }
+
+  if (estado) {
+    condiciones.push('t.estado = ?')
+    params.push(estado)
+  }
+  if (cargoId) {
+    condiciones.push('t.cargo_id = ?')
+    params.push(cargoId)
+  }
+  if (disponible !== null && disponible !== undefined && disponible !== '') {
+    condiciones.push('t.disponible = ?')
+    params.push(Number(disponible) ? 1 : 0)
+  }
+
   const [rows] = await pool.query(
     `SELECT ${CAMPOS} ${DESDE}
-     ${incluirInactivos ? '' : 'WHERE t.activo = 1'}
+     ${condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''}
      ORDER BY t.apellidos, t.nombres`,
+    params,
   )
   return rows.map(Trabajador.fromRow)
+}
+
+/**
+ * Actividades vigentes asignadas al trabajador: sirven para decidir su
+ * disponibilidad al volver a estado ACTIVO (regla de negocio del estado).
+ */
+export async function contarActividadesVigentes(id) {
+  const [[fila]] = await pool.query(
+    `SELECT COUNT(*) AS total
+       FROM actividades
+      WHERE responsable_id = ? AND activo = 1
+        AND estado IN ('PENDIENTE', 'EN_PROCESO')`,
+    [id],
+  )
+  return Number(fila?.total ?? 0)
 }
 
 export async function create(t) {

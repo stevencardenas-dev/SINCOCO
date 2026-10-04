@@ -1,10 +1,16 @@
 import { Router } from 'express'
-import { login, solicitarReset, restablecer } from '../controllers/authController.js'
+import { requireAuth } from '../middleware/auth.js'
+import { login, logout, latido, solicitarReset, restablecer } from '../controllers/authController.js'
 
 const router = Router()
 
 // HU-01: autenticación.
 router.post('/login', login)
+
+// Sesión única por cuenta: cerrar sesión libera la cuenta de inmediato y el
+// latido la mantiene activa mientras la aplicación siga abierta.
+router.post('/logout', requireAuth, logout)
+router.get('/sesion', requireAuth, latido)
 
 // HU-01: «¿Olvidó su contraseña?». Son públicas a propósito: el usuario no
 // tiene sesión. La solicitud no revela si la cuenta existe y el código es de un
