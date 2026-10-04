@@ -64,7 +64,13 @@ export async function marcarUsado(id) {
 }
 
 export async function actualizarPassword(usuarioId, passwordHash) {
-  await pool.query('UPDATE usuarios SET password_hash = ? WHERE id = ?', [passwordHash, usuarioId])
+  // Al recuperar la contraseña se cierra la sesión vigente: si el cambio viene
+  // de alguien que perdió el control de la cuenta, el intruso no conserva el
+  // token que ya tenía.
+  await pool.query(
+    'UPDATE usuarios SET password_hash = ?, sesion_actual = NULL WHERE id = ?',
+    [passwordHash, usuarioId],
+  )
 }
 
 /** Solicitudes pendientes de entregar, para el módulo de Usuarios. */

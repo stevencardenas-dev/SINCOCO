@@ -3,6 +3,7 @@ import {
   obtenerTrabajador,
   registrarTrabajador,
   actualizarTrabajador,
+  cambiarEstadoTrabajador,
   darDeBajaTrabajador,
   reactivarTrabajador,
 } from '../services/trabajadorService.js'
@@ -11,11 +12,21 @@ import { RegistrarTrabajadorDto } from '../dtos/trabajador/RegistrarTrabajadorDt
 /**
  * GET /api/trabajadores -> catálogo de personal (HU-04).
  * `?incluirInactivos=1` incluye los dados de baja (HU-18).
+ * `?buscar=` `?estado=` `?cargo_id=` `?disponible=` filtran el listado desde la
+ * API, porque el volumen de personal no se puede resolver solo en el navegador.
  */
 export async function listar(req, res, next) {
   try {
     const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
-    return res.json(await listarTrabajadores({ incluirInactivos }))
+    return res.json(
+      await listarTrabajadores({
+        incluirInactivos,
+        buscar: req.query.buscar ?? req.query.q ?? '',
+        estado: req.query.estado ?? '',
+        cargoId: req.query.cargo_id || null,
+        disponible: req.query.disponible ?? null,
+      }),
+    )
   } catch (error) {
     return next(error)
   }
@@ -48,6 +59,22 @@ export async function actualizar(req, res, next) {
       ip: req.ip,
     })
     return res.json({ message: 'Trabajador actualizado', trabajador })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/**
+ * PATCH /api/trabajadores/:id/estado -> cambiar el estado del trabajador.
+ * Reemplaza en la interfaz al "dar de baja": la disponibilidad se deriva.
+ */
+export async function cambiarEstado(req, res, next) {
+  try {
+    const trabajador = await cambiarEstadoTrabajador(req.params.id, req.body?.estado, {
+      usuarioId: req.user.id,
+      ip: req.ip,
+    })
+    return res.json({ message: `Estado actualizado a ${trabajador.estado}`, trabajador })
   } catch (error) {
     return next(error)
   }

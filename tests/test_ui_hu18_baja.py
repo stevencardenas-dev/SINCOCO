@@ -1,7 +1,12 @@
-# Prueba de interfaz de HU-18 (RN07): baja lógica desde la pantalla de personal.
+# Prueba de interfaz del estado del trabajador (HU-04 · HU-18).
 #
 # Requiere backend (3005) y frontend (5173) corriendo.
 # Uso: .venv/Scripts/python.exe tests/test_ui_hu18_baja.py
+#
+# La interfaz ya no ofrece «Dar de baja» en Personal: el estado se cambia con el
+# selector de la tabla. Al pasar a un estado distinto de Activo el trabajador
+# deja de estar disponible; al volver a Activo recupera la disponibilidad según
+# sus actividades vigentes.
 from playwright.sync_api import sync_playwright
 from api_helper import limpiar, crear_trabajador, login as login_api
 from ui_helper import login, ir_a, captura
@@ -19,36 +24,27 @@ with sync_playwright() as p:
 
     fila = pg.locator('table tbody tr', has_text='TEST-UI-CC-18')
     assert fila.count() == 1, 'el trabajador activo debe listarse'
+    # Al crearse queda Activo y disponible.
+    assert 'Disponible' in fila.inner_text(), 'al crear debe estar disponible'
 
-    # Criterio 2: dar de baja -> desaparece del listado activo.
-    fila.locator('button:has-text("Dar de baja")').click()
+    # Cambiar a Inactivo -> deja de estar disponible, sin desaparecer del listado.
+    fila.locator('select[aria-label^="Estado de"]').select_option(label='Inactivo')
     pg.wait_for_selector('[role=status]', timeout=10000)
-    print('baja ->', pg.locator('[role=status]').inner_text())
+    print('cambiar estado ->', pg.locator('[role=status]').inner_text())
     pg.wait_for_timeout(800)
-    assert pg.locator('table tbody tr', has_text='TEST-UI-CC-18').count() == 0, \
-        'criterio 2: el dado de baja no debe aparecer por defecto'
-    print('oculto por defecto -> OK')
+    fila = pg.locator('table tbody tr', has_text='TEST-UI-CC-18')
+    assert fila.count() == 1, 'el trabajador sigue en la lista, solo cambió de estado'
+    assert 'No disponible' in fila.inner_text(), 'un estado distinto de Activo no está disponible'
 
-    # Criterio 4: el filtro explícito lo muestra.
-    pg.click('text=Incluir dados de baja')
-    pg.wait_for_timeout(800)
-    assert pg.locator('table tbody tr', has_text='TEST-UI-CC-18').count() == 1, \
-        'criterio 4: debe aparecer con el filtro activo'
-    print('visible con filtro -> OK')
-
-    # Reactivar -> vuelve al estado activo.
-    pg.locator('table tbody tr', has_text='TEST-UI-CC-18').locator(
-        'button:has-text("Reactivar")').click()
+    # Volver a Activo -> recupera la disponibilidad.
+    fila.locator('select[aria-label^="Estado de"]').select_option(label='Activo')
     pg.wait_for_selector('[role=status]', timeout=10000)
-    print('reactivar ->', pg.locator('[role=status]').inner_text())
     pg.wait_for_timeout(800)
-    pg.click('text=Ocultar dados de baja')
-    pg.wait_for_timeout(800)
-    assert pg.locator('table tbody tr', has_text='TEST-UI-CC-18').count() == 1, \
-        'tras reactivar debe listarse como activo'
+    fila = pg.locator('table tbody tr', has_text='TEST-UI-CC-18')
+    assert 'Disponible' in fila.inner_text(), 'al volver a Activo debe quedar disponible de nuevo'
 
     captura(pg, 'hu18_baja')
     navegador.close()
 
 limpiar()
-print('\nHU-18 (interfaz): TODAS LAS PRUEBAS PASARON')
+print('\nEstado del trabajador (interfaz): TODAS LAS PRUEBAS PASARON')

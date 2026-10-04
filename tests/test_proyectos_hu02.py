@@ -14,7 +14,7 @@ import urllib.error
 import urllib.request
 
 # Utilidades compartidas para garantizar las precondiciones de datos.
-from api_helper import http as _http, scalar as _scalar
+from api_helper import http as _http, liberar_sesion, scalar as _scalar
 
 BASE = 'http://localhost:3005'
 
@@ -49,12 +49,19 @@ def http(metodo, ruta, cuerpo=None, token=None):
         return e.code, json.loads(e.read() or b'{}')
 
 # limpieza para poder relanzar la prueba sin tocar la base a mano
+# Solo se borran los proyectos de ESTA prueba (PRJ-HU02-%): la limpieza
+# anterior borraba todos los proyectos y se llevaba por delante los datos de
+# demostración y los de otras pruebas.
 limpieza = subprocess.run(mysql_args(['-e',
-    "DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='proyectos'; "
-    "DELETE FROM proyectos;"]), capture_output=True, text=True)
+    "DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='proyectos' "
+    "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
+    "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
+    "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
+    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%';"]), capture_output=True, text=True)
 assert limpieza.returncode == 0, 'limpieza de proyectos fallo: ' + limpieza.stderr
 print('db limpio')
 
+liberar_sesion('admin')  # sesión única por cuenta
 estado, login = http('POST', '/api/auth/login', {'username': 'admin', 'password': 'Prueba123!'})
 assert estado == 200, f'login admin fallo: {estado} {login}'
 token = login['token']
@@ -172,6 +179,7 @@ else:
     print('responsable de baja -> OMITIDO (sin acceso mysql para sembrar el caso)')
 
 # RBAC: un rol no autorizado no puede registrar
+liberar_sesion('bodega')
 estado, login_m = http('POST', '/api/auth/login', {'username': 'bodega', 'password': 'Prueba123!'})
 if estado == 200:
     estado, r = http('POST', '/api/proyectos', PROYECTO, token=login_m['token'])
@@ -179,6 +187,7 @@ if estado == 200:
     print('bodega crea proyecto ->', estado, r['error'])
 
 # RBAC: el maestro de obra consulta (su menu muestra Proyectos) pero no registra
+liberar_sesion('maestro')
 estado, login_mo = http('POST', '/api/auth/login', {'username': 'maestro', 'password': 'Prueba123!'})
 if estado == 200:
     estado, r = http('GET', '/api/proyectos', token=login_mo['token'])
@@ -199,5 +208,14 @@ q = subprocess.run(mysql_args(['-N', '-e',
     capture_output=True, text=True)
 assert int(q.stdout.strip()) >= 1, 'la bitacora debe registrar el alta del proyecto (RF31)'
 print('bitacora -> entrada CREAR en proyectos registrada')
+
+# Limpieza final: la prueba no deja proyectos de prueba en la base.
+subprocess.run(mysql_args(['-e',
+    "DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='proyectos' "
+    "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
+    "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
+    "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
+    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%';"]), capture_output=True, text=True)
+print('limpieza -> proyectos de prueba eliminados')
 
 print('\nHU-02: TODAS LAS PRUEBAS PASARON')

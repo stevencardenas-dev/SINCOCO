@@ -11,7 +11,17 @@ export default function Login() {
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  // Aviso que deja services/api.js cuando la sesión finalizó en el servidor
+  // (sesión única por cuenta): se muestra una sola vez.
+  const [error, setError] = useState(() => {
+    try {
+      const aviso = sessionStorage.getItem('sincoco_aviso_login') ?? ''
+      sessionStorage.removeItem('sincoco_aviso_login')
+      return aviso
+    } catch {
+      return ''
+    }
+  })
   const [enviando, setEnviando] = useState(false)
 
   // ¿Olvidó su contraseña? (HU-01): pedir el código y definir la contraseña nueva.
@@ -140,6 +150,7 @@ export default function Login() {
               </label>
               <input
                 id="username"
+                maxLength={50}
                 type="text"
                 autoComplete="username"
                 className="input"
@@ -164,11 +175,7 @@ export default function Login() {
               />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 text-slate-600">
-                <input type="checkbox" className="h-4 w-4 rounded border-slate-300 focus:ring-accent-400" />
-                Recordarme
-              </label>
+            <div className="flex items-center justify-end text-sm">
               <button
                 type="button"
                 onClick={() => { setRecuperarAbierto(true); setPaso('pedir'); setErrorRecuperar('') }}
@@ -193,9 +200,8 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="mt-6 rounded-xl bg-accent-50 px-4 py-3 text-xs leading-relaxed text-brand-800 ring-1 ring-accent-200">
-            <strong>Usuarios de prueba:</strong> admin · gerente · maestro · bodega —
-            contraseña <code>Prueba123!</code>. Cada rol ve un menú distinto (RF01 · RNF05).
+          <p className="mt-6 text-center text-xs leading-relaxed text-slate-400">
+            El acceso y el menú dependen del rol asignado a cada cuenta.
           </p>
         </div>
       </div>
@@ -207,7 +213,7 @@ export default function Login() {
         subtitulo={paso === 'pedir'
           ? 'Escriba su usuario o su correo empresarial'
           : paso === 'cambiar'
-            ? 'Escriba el código que le entregó el administrador y su contraseña nueva'
+            ? 'Escriba el código que recibió por correo y su contraseña nueva'
             : ''}
         onCerrar={() => { setRecuperarAbierto(false); setErrorRecuperar('') }}
       >
@@ -220,8 +226,9 @@ export default function Login() {
                 placeholder="admin" required />
             </div>
             <p className="rounded-xl bg-accent-50 px-4 py-3 text-xs leading-relaxed text-brand-800 ring-1 ring-accent-200">
-              Se genera un código de un solo uso válido por 30 minutos. Como el sistema no envía
-              correo, el administrador lo verá en el módulo de Usuarios y se lo entregará.
+              Le enviaremos por correo electrónico, desde administracion.sincoco@gmail.com, un
+              código de un solo uso válido por 30 minutos. Si no le llega, revise la carpeta de
+              spam o pídale el código al administrador.
             </p>
 
             {errorRecuperar && (
@@ -297,7 +304,7 @@ export default function Login() {
               Su contraseña quedó actualizada. Ya puede ingresar con ella.
             </p>
             <p className="text-sm text-slate-500">
-              El cambio quedó registrado en la bitácora de trazabilidad (RN07).
+              El cambio quedó registrado en la bitácora de trazabilidad.
             </p>
             <div className="border-t border-slate-100 pt-4">
               <button type="button" className="btn-primary"

@@ -3,53 +3,16 @@ import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
+import { validarFechasEnRango } from '../utils/fechas.js'
+import { verificarAccesoProyecto } from './accesoService.js'
 
-/**
- * Normaliza una fecha a 'YYYY-MM-DD' para comparar solo el día.
- * Las columnas DATE vuelven como Date (medianoche local) y las del formulario
- * como texto, así que no se pueden comparar directamente sin caer en
- * diferencias de zona horaria.
- */
-function aFechaDia(valor) {
-  if (!valor) return null
-  if (typeof valor === 'string') return valor.slice(0, 10)
-  const d = new Date(valor)
-  const mes = String(d.getMonth() + 1).padStart(2, '0')
-  const dia = String(d.getDate()).padStart(2, '0')
-  return `${d.getFullYear()}-${mes}-${dia}`
-}
+// La regla de fechas vive en utils/fechas.js (la comparten etapas, actividades
+// y asignaciones). Se reexporta para no romper a quien ya la importaba de aquí.
+export { validarFechasEnRango }
 
-/**
- * HU-03 · criterio 3: las fechas programadas de etapas y actividades deben
- * mantenerse dentro del rango de fechas del proyecto.
- */
-export function validarFechasEnRango(inicio, fin, proyecto) {
-  const pInicio = aFechaDia(proyecto.fecha_inicio_programada)
-  const pFin = aFechaDia(proyecto.fecha_fin_programada)
-
-  for (const [campo, valor] of [['fecha_inicio_programada', inicio], ['fecha_fin_programada', fin]]) {
-    const f = aFechaDia(valor)
-    if (!f) continue
-    if (pInicio && f < pInicio) {
-      throw new AppError('La fecha no puede ser anterior al inicio del proyecto', 400, campo)
-    }
-    if (pFin && f > pFin) {
-      throw new AppError('La fecha no puede ser posterior al fin del proyecto', 400, campo)
-    }
-  }
-
-  const i = aFechaDia(inicio)
-  const f = aFechaDia(fin)
-  if (i && f && i > f) {
-    throw new AppError(
-      'La fecha de inicio de la actividad debe ser anterior a la de fin',
-      400,
-      'fecha_fin_programada',
-    )
-  }
-}
-
-export async function listarEtapas(proyectoId, { incluirInactivos = false } = {}) {
+/** Lista las etapas del proyecto si el usuario tiene acceso a él (RBAC). */
+export async function listarEtapas(proyectoId, { incluirInactivos = false } = {}, usuario = null) {
+  await verificarAccesoProyecto(usuario, proyectoId)
   return etapaRepository.listarPorProyecto(proyectoId, incluirInactivos)
 }
 

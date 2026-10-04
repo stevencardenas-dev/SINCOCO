@@ -63,7 +63,18 @@ def http(metodo, ruta, cuerpo=None, token=None):
         return e.code, json.loads(e.read() or b'{}')
 
 
+def liberar_sesion(usuario):
+    """Cierra en la base la sesión abierta de la cuenta.
+
+    Sesión única por cuenta: mientras una sesión esté activa, un segundo
+    ingreso se rechaza (409). Cada archivo de prueba es un proceso nuevo que
+    vuelve a ingresar con los mismos usuarios, así que antes de cada login se
+    libera la cuenta, como si la sesión anterior se hubiera cerrado."""
+    sql(f"UPDATE usuarios SET sesion_actual = NULL WHERE username = '{usuario}'")
+
+
 def login(usuario, password='Prueba123!'):
+    liberar_sesion(usuario)
     estado, data = http('POST', '/api/auth/login', {'username': usuario, 'password': password})
     assert estado == 200, f'login de {usuario} fallo: {estado} {data}'
     return data['token']
@@ -81,6 +92,13 @@ def limpiar():
         "WHERE tabla_afectada IN ('proyectos','etapas_proyecto','actividades',"
         "'trabajadores','clientes','usuarios') "
         "AND fecha_registro >= NOW() - INTERVAL 1 HOUR"
+    )
+    # Las asignaciones de personal (acceso a proyectos y actividades) van primero:
+    # la FK del proyecto es RESTRICT y sin borrarlas el proyecto no se puede eliminar.
+    sql(
+        "DELETE FROM asignaciones_personal "
+        "WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%') "
+        "OR trabajador_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%')"
     )
     sql("DELETE FROM actividades WHERE nombre LIKE 'TEST-%'")
     sql("DELETE FROM etapas_proyecto WHERE nombre LIKE 'TEST-%'")

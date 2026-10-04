@@ -6,6 +6,20 @@
 export const fmtCOP = (n) =>
   new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
 
+/**
+ * Monto abreviado para tarjetas e indicadores, donde no cabe el peso completo:
+ * 850.000.000 -> "$ 850 M" y 1.250.000.000 -> "$ 1,3 B". Se aproxima a una
+ * cifra decimal y quien necesite el valor exacto lo ve en el `title`.
+ */
+export const fmtCOPCompacto = (n) => {
+  const valor = Number(n) || 0
+  const abs = Math.abs(valor)
+  const corto = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 1 })
+  if (abs >= 1_000_000_000) return `$ ${corto.format(valor / 1_000_000_000)} B`
+  if (abs >= 1_000_000) return `$ ${corto.format(valor / 1_000_000)} M`
+  return fmtCOP(valor)
+}
+
 export const fmtFecha = (iso) => {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso

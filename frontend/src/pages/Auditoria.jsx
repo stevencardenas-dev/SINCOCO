@@ -96,7 +96,7 @@ export default function Auditoria() {
     <div className="space-y-6">
       <PageHeader
         title="Trazabilidad y auditoría"
-        subtitle="Quién realizó cada operación crítica y cuándo · RF31 · RF32 · HU-17"
+        subtitle="Quién realizó cada operación crítica y cuándo"
       >
         <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
           <ArrowPathIcon className={`h-4 w-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar

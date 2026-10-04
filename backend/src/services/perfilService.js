@@ -2,21 +2,29 @@ import bcrypt from 'bcrypt'
 import * as perfilRepository from '../repositories/perfilRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
+import {
+  LARGO,
+  revisarCorreo,
+  revisarLargo,
+  revisarPassword,
+  revisarTelefono,
+} from '../utils/campos.js'
 
 /**
  * Información personal de quien está conectado (HU-01 · HU-04).
  *
- * Cada usuario puede consultar sus datos y corregir los suyos: documento,
- * teléfono, correo de contacto y dirección de su ficha de trabajador, más su
- * contraseña. El correo empresarial (`usuarios.email`) y el rol son datos de la
- * empresa y solo los cambia el administrador; el cargo y la especialidad salen
- * del catálogo y tampoco se editan aquí.
+ * Cada usuario puede consultar sus datos y corregir los suyos: teléfono, correo
+ * de contacto y dirección de su ficha de trabajador, más su contraseña. El
+ * número de documento es la identidad de la ficha y no se modifica (igual que en
+ * /api/trabajadores/:id). El correo empresarial (`usuarios.email`) y el rol son
+ * datos de la empresa y solo los cambia el administrador; el cargo y la
+ * especialidad salen del catálogo y tampoco se editan aquí.
  *
  * Todo cambio queda en la bitácora (RF31 · RN07): la contraseña se registra
  * como el hecho de haberla cambiado, nunca su valor.
  */
 
-const CAMPOS_EDITABLES = ['numero_documento', 'telefono', 'email', 'direccion']
+const CAMPOS_EDITABLES = ['telefono', 'email', 'direccion']
 const LARGO_MINIMO_PASSWORD = 8
 
 /** Forma la respuesta de GET /api/perfil separando cuenta y ficha. */
@@ -76,17 +84,6 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
       )
     }
 
-    if (campos.numero_documento !== undefined) {
-      const documento = String(campos.numero_documento).trim()
-      if (!documento) {
-        throw new AppError('El número de documento no puede quedar vacío', 400, 'numero_documento')
-      }
-      if (await perfilRepository.documentoEnUso(documento, perfil.trabajador.id)) {
-        throw new AppError('Ya existe un trabajador con ese número de documento', 409, 'numero_documento')
-      }
-      campos.numero_documento = documento
-    }
-
     if (campos.email !== undefined) {
       campos.email = textoOpcional(campos.email)
       if (await perfilRepository.emailEnUso(campos.email, perfil.trabajador.id)) {
@@ -97,6 +94,14 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
     for (const campo of ['telefono', 'direccion']) {
       if (campos[campo] !== undefined) campos[campo] = textoOpcional(campos[campo])
     }
+
+    // Las mismas reglas de forma que usa HU-04: sin esto, un teléfono de 40
+    // caracteres o un correo sin forma llegaban a la base desde el perfil.
+    revisarLargo(campos.telefono, LARGO.telefono, 'telefono')
+    revisarLargo(campos.email, LARGO.email, 'email')
+    revisarLargo(campos.direccion, LARGO.direccion, 'direccion')
+    revisarCorreo(campos.email)
+    revisarTelefono(campos.telefono)
 
     await perfilRepository.actualizarTrabajador(perfil.trabajador.id, campos)
 
@@ -133,7 +138,9 @@ export async function actualizarPerfil(usuarioId, cambios = {}, ctx = {}) {
     const hashActual = await perfilRepository.findPasswordHash(usuarioId)
     const coincide = hashActual ? await bcrypt.compare(String(cambios.password_actual), hashActual) : false
     if (!coincide) {
-      throw new AppError('La contraseña actual no es correcta', 401, 'password_actual')
+      // 400 y no 401: la sesión es válida; lo que no coincide es el campo. Con
+      // 401 el cliente cerraría la sesión en vez de mostrar el error del campo.
+      throw new AppError('La contraseña actual no es correcta', 400, 'password_actual')
     }
 
     await perfilRepository.cambiarPassword(usuarioId, await bcrypt.hash(password, 10))

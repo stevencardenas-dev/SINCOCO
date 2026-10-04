@@ -3,10 +3,13 @@ import {
   ArrowPathIcon,
   IdentificationIcon,
   KeyIcon,
+  MapPinIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
 import CampoPassword from '../components/CampoPassword.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
+import TelefonoPais from '../components/TelefonoPais.jsx'
 import api from '../services/api'
 import { fmtFechaHora } from '../lib/format.js'
 
@@ -17,12 +20,13 @@ import { fmtFechaHora } from '../lib/format.js'
  * cuenta de acceso (usuario, rol, correo empresarial, último acceso) y los de su
  * ficha de trabajador (documento, contacto, cargo y especialidad del catálogo).
  *
- * Editable: número de documento, teléfono, correo de contacto, dirección y la
- * contraseña. El correo empresarial lo administra la empresa, y el rol, el
- * cargo y la especialidad los cambia el administrador en Usuarios y Catálogo.
+ * Editable: teléfono, correo de contacto, dirección y la contraseña. El número
+ * de documento no se modifica: es la identidad de la ficha. El correo empresarial
+ * lo administra la empresa, y el rol, el cargo y la especialidad los cambia el
+ * administrador en Usuarios y Catálogo.
  */
 
-const VACIO_DATOS = { numero_documento: '', telefono: '', email: '', direccion: '' }
+const VACIO_DATOS = { telefono: '', email: '', direccion: '' }
 const VACIO_CLAVE = { password_actual: '', password: '', repetir: '' }
 
 export default function Perfil() {
@@ -33,6 +37,8 @@ export default function Perfil() {
 
   const [datos, setDatos] = useState(VACIO_DATOS)
   const [guardandoDatos, setGuardandoDatos] = useState(false)
+  // Selector de ubicación en el mapa (Leaflet) para la dirección.
+  const [mapaAbierto, setMapaAbierto] = useState(false)
 
   const [clave, setClave] = useState(VACIO_CLAVE)
   const [errorClave, setErrorClave] = useState('')
@@ -41,7 +47,6 @@ export default function Perfil() {
   const aplicar = (data) => {
     setPerfil(data)
     setDatos({
-      numero_documento: data.trabajador?.numero_documento ?? '',
       telefono: data.trabajador?.telefono ?? '',
       email: data.trabajador?.email ?? '',
       direccion: data.trabajador?.direccion ?? '',
@@ -108,7 +113,7 @@ export default function Perfil() {
     <div className="space-y-6">
       <PageHeader
         title="Mi información personal"
-        subtitle="Sus datos de acceso y su ficha de trabajador · HU-01 · HU-04"
+        subtitle="Sus datos de acceso y su ficha de trabajador"
       >
         <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
           <ArrowPathIcon className="h-4 w-4" /> Actualizar
@@ -127,6 +132,17 @@ export default function Perfil() {
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando su información…
         </div>
       )}
+
+      {/* Mapa para la dirección personal: devuelve el texto al formulario. */}
+      <SelectorUbicacion
+        abierto={mapaAbierto}
+        valorInicial={datos.direccion}
+        onCerrar={() => setMapaAbierto(false)}
+        onAceptar={(texto) => {
+          setDatos((d) => ({ ...d, direccion: texto }))
+          setMapaAbierto(false)
+        }}
+      />
 
       {perfil && (
         <>
@@ -186,47 +202,70 @@ export default function Perfil() {
             ) : (
               <>
                 <p className="mt-1 text-sm text-slate-500">
-                  Edite su documento, teléfono, correo de contacto y dirección. El cargo y la
-                  especialidad los asigna el administrador desde el catálogo.
+                  Edite su teléfono, correo de contacto y dirección. El número de documento, el
+                  cargo y la especialidad no se editan aquí: el documento es la identidad de su
+                  ficha, y el cargo y la especialidad los asigna el administrador desde el catálogo.
                 </p>
                 <form onSubmit={guardarDatos} className="mt-5 space-y-5">
                   <div className="grid gap-5 sm:grid-cols-2">
                     <div>
                       <label htmlFor="mi-nombre" className="label">Nombre completo</label>
-                      <input id="mi-nombre" className="input" disabled
+                      <input id="mi-nombre" className="input-readonly" disabled
                         value={`${trabajador.nombres} ${trabajador.apellidos}`} />
                     </div>
                     <div>
                       <label htmlFor="mi-tipo" className="label">Tipo de documento</label>
-                      <input id="mi-tipo" className="input" disabled value={trabajador.tipo_documento ?? ''} />
+                      <input id="mi-tipo" className="input-readonly" disabled value={trabajador.tipo_documento ?? ''} />
                     </div>
                     <div>
                       <label htmlFor="mi-documento" className="label">Número de documento</label>
-                      <input id="mi-documento" className={campo('numero_documento')} value={datos.numero_documento}
-                        onChange={(e) => setDatos({ ...datos, numero_documento: e.target.value })} required />
+                      <input id="mi-documento" className="input-readonly" disabled
+                        value={trabajador.numero_documento ?? ''} />
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Solo lectura: el número de documento no se puede modificar.
+                      </p>
                     </div>
                     <div>
                       <label htmlFor="mi-telefono" className="label">Teléfono</label>
-                      <input id="mi-telefono" className={campo('telefono')} value={datos.telefono}
-                        onChange={(e) => setDatos({ ...datos, telefono: e.target.value })} />
+                      <TelefonoPais
+                        id="mi-telefono"
+                        value={datos.telefono}
+                        onChange={(v) => setDatos({ ...datos, telefono: v })}
+                        error={errorCampo === 'telefono'}
+                      />
                     </div>
                     <div>
                       <label htmlFor="mi-email" className="label">Correo de contacto</label>
-                      <input id="mi-email" type="email" className={campo('email')} value={datos.email}
+                      <input id="mi-email" type="email" maxLength={150} className={campo('email')} value={datos.email}
                         onChange={(e) => setDatos({ ...datos, email: e.target.value })} />
                     </div>
-                    <div>
+                    <div className="sm:col-span-2">
                       <label htmlFor="mi-direccion" className="label">Dirección</label>
-                      <input id="mi-direccion" className={campo('direccion')} value={datos.direccion}
-                        onChange={(e) => setDatos({ ...datos, direccion: e.target.value })} />
+                      <div className="flex gap-2">
+                        <input
+                          id="mi-direccion"
+                          maxLength={255}
+                          className={campo('direccion')}
+                          placeholder="Escriba la dirección o selecciónela en el mapa"
+                          value={datos.direccion}
+                          onChange={(e) => setDatos({ ...datos, direccion: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          className="btn-ghost shrink-0"
+                          onClick={() => setMapaAbierto(true)}
+                        >
+                          <MapPinIcon className="h-4 w-4" /> Mapa
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label htmlFor="mi-cargo" className="label">Cargo</label>
-                      <input id="mi-cargo" className="input" disabled value={trabajador.cargo ?? ''} />
+                      <input id="mi-cargo" className="input-readonly" disabled value={trabajador.cargo ?? ''} />
                     </div>
                     <div>
                       <label htmlFor="mi-especialidad" className="label">Especialidad</label>
-                      <input id="mi-especialidad" className="input" disabled value={trabajador.especialidad ?? 'Sin especialidad'} />
+                      <input id="mi-especialidad" className="input-readonly" disabled value={trabajador.especialidad ?? 'Sin especialidad'} />
                     </div>
                   </div>
 

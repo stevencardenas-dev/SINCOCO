@@ -25,8 +25,21 @@ export function exigirEspecialidadSiOperativo(cargo, especialidad) {
 }
 
 /** Lista el personal activo para el catálogo de personal y de responsables. */
-export async function listarTrabajadores({ incluirInactivos = false } = {}) {
-  return trabajadorRepository.listar(incluirInactivos)
+export async function listarTrabajadores(filtros = {}) {
+  return trabajadorRepository.listar(filtros)
+}
+
+const ESTADOS = ['ACTIVO', 'INACTIVO', 'VACACIONES', 'LICENCIA']
+
+/**
+ * La disponibilidad no se escribe a mano: se deriva del estado y del trabajo
+ * asignado. Un trabajador que no está ACTIVO no está disponible, y al volver a
+ * ACTIVO solo queda disponible si no tiene actividades vigentes a su cargo.
+ */
+async function calcularDisponible(id, estado) {
+  if (estado !== 'ACTIVO') return 0
+  const vigentes = await trabajadorRepository.contarActividadesVigentes(id)
+  return vigentes > 0 ? 0 : 1
 }
 
 /** Obtiene un trabajador por id. */
@@ -75,9 +88,10 @@ export async function registrarTrabajador(dto, ctx = {}) {
  * Editar los datos del personal. Solo se actualizan los campos enviados.
  * Si cambia el cargo o la especialidad, se vuelve a aplicar la regla.
  */
+// `disponible` no es editable a mano: se deriva del estado y de las
+// actividades asignadas (ver calcularDisponible).
 const CAMPOS_EDITABLES = [
-  'nombres', 'apellidos', 'email', 'telefono', 'direccion',
-  'estado', 'disponible',
+  'nombres', 'apellidos', 'email', 'telefono', 'direccion', 'estado',
 ]
 
 export async function actualizarTrabajador(id, cambios, ctx = {}) {
@@ -107,6 +121,15 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
     throw new AppError('No hay campos que actualizar', 400)
   }
 
+  // Si cambia el estado, la disponibilidad se recalcula con la misma regla del
+  // cambio de estado explícito.
+  if (campos.estado !== undefined) {
+    if (!ESTADOS.includes(String(campos.estado))) {
+      throw new AppError(`estado debe ser uno de: ${ESTADOS.join(', ')}`, 400, 'estado')
+    }
+    campos.disponible = await calcularDisponible(id, campos.estado)
+  }
+
   if (campos.email) {
     const porEmail = await trabajadorRepository.findByEmail(campos.email)
     if (porEmail && Number(porEmail.id) !== Number(id)) {
@@ -125,6 +148,42 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
     tabla: 'trabajadores',
     registroId: Number(id),
     detalles: { cambios },
+    ip: ctx.ip,
+  })
+
+  return trabajadorRepository.findById(id)
+}
+
+/**
+ * Cambiar el estado del trabajador (Activo, Inactivo, Vacaciones, Licencia).
+ *
+ * Reemplaza en la interfaz al "dar de baja": el estado INACTIVO ya existe en el
+ * esquema y refleja la situación real sin archivar la ficha. La disponibilidad
+ * se deriva: cualquier estado distinto de ACTIVO deja al trabajador no
+ * disponible; al volver a ACTIVO recupera la disponibilidad solo si no tiene
+ * actividades vigentes asignadas.
+ */
+export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
+  const trabajador = await trabajadorRepository.findById(id)
+  if (!trabajador) throw new AppError('Trabajador no encontrado', 404)
+
+  const nuevo = String(estado ?? '').toUpperCase()
+  if (!ESTADOS.includes(nuevo)) {
+    throw new AppError(`estado debe ser uno de: ${ESTADOS.join(', ')}`, 400, 'estado')
+  }
+  if (nuevo === trabajador.estado) {
+    throw new AppError(`El trabajador ya está en estado ${nuevo}`, 409, 'estado')
+  }
+
+  const disponible = await calcularDisponible(id, nuevo)
+  await trabajadorRepository.update(id, { estado: nuevo, disponible })
+
+  await bitacora({
+    usuarioId: ctx.usuarioId,
+    accion: 'CAMBIAR_ESTADO',
+    tabla: 'trabajadores',
+    registroId: Number(id),
+    detalles: { antes: trabajador.estado, despues: nuevo, disponible },
     ip: ctx.ip,
   })
 

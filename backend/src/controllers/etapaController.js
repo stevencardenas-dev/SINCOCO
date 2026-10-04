@@ -9,7 +9,9 @@ export async function listar(req, res, next) {
   try {
     const proyectoId = req.query.proyecto_id
     if (!proyectoId) throw new AppError('proyecto_id es requerido', 400, 'proyecto_id')
-    return res.json(await listarEtapas(proyectoId, { incluirInactivos: incluir(req.query) }))
+    return res.json(
+      await listarEtapas(proyectoId, { incluirInactivos: incluir(req.query) }, req.user),
+    )
   } catch (error) {
     return next(error)
   }
