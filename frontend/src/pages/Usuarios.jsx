@@ -1,5 +1,16 @@
 import { useEffect, useState } from 'react'
-import { CheckCircleIcon, KeyIcon, LockClosedIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowPathIcon,
+  CheckCircleIcon,
+  KeyIcon,
+  LockClosedIcon,
+  PlusIcon,
+  UserPlusIcon,
+} from '@heroicons/react/24/outline'
+import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import BuscadorSelect from '../components/BuscadorSelect.jsx'
+import CampoPassword from '../components/CampoPassword.jsx'
+import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
 import { fmtFechaHora } from '../lib/format.js'
@@ -232,10 +243,10 @@ export default function Usuarios() {
               <label htmlFor="u-password" className="label">
                 Contraseña
               </label>
-              <input
+              <CampoPassword
                 id="u-password"
-                type="password"
-                className="input"
+                maxLength={72}
+                autoComplete="new-password"
                 minLength={8}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
