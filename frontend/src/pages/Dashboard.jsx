@@ -23,6 +23,7 @@ import {
   YAxis,
 } from 'recharts'
 import StatCard from '../components/StatCard.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import {
@@ -69,14 +70,16 @@ export default function Dashboard() {
   const cargar = () => {
     setCargando(true)
     setError('')
-    api
+    return api
       .get('/dashboard')
       .then((res) => setDatos(res.data))
       .catch(() => setError('No se pudieron cargar los indicadores del panel.'))
       .finally(() => setCargando(false))
   }
 
-  useEffect(cargar, [])
+  useEffect(() => {
+    cargar()
+  }, [])
 
   const hoy = new Date().toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -104,14 +107,9 @@ export default function Dashboard() {
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
             Buen día, {user?.username ?? 'Usuario'}
           </h2>
-          <button
-            type="button"
-            onClick={cargar}
-            className="btn-ghost ml-auto text-xs"
-            disabled={cargando}
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar
-          </button>
+          <span className="ml-auto">
+            <BotonActualizar onClick={cargar} cargando={cargando} />
+          </span>
         </div>
         <p className="mt-1 text-sm text-slate-500">
           Resumen operativo de la constructora: proyectos, inventario, personal y costos.

@@ -18,7 +18,7 @@ export default function Layout() {
 
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex min-h-screen flex-col lg:pl-72">
+      <div className="flex min-h-screen flex-col lg:pl-64">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 px-4 py-8 sm:px-6 lg:px-10">
           <Outlet />

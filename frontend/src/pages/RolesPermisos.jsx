@@ -10,6 +10,7 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
@@ -59,6 +60,8 @@ export default function RolesPermisos() {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
   const [filtro, setFiltro] = useState('')
+  // Celular: en vez de la matriz, se elige un rol y se ven sus permisos.
+  const [rolVerId, setRolVerId] = useState(null)
 
   // Alta/edición de roles.
   const [modalRol, setModalRol] = useState(null) // 'crear' | 'editar'
@@ -77,13 +80,15 @@ export default function RolesPermisos() {
 
   const cargar = () => {
     setError('')
-    api
+    return api
       .get('/roles/permisos')
       .then((res) => setDatos(res.data))
       .catch((err) => setError(mensajeError(err, 'No se pudo cargar la matriz de roles y permisos.')))
   }
 
-  useEffect(cargar, [])
+  useEffect(() => {
+    cargar()
+  }, [])
 
   if (error) {
     return (
@@ -123,6 +128,7 @@ export default function RolesPermisos() {
   )
 
   const totalConcedidos = asignaciones.length
+  const rolVer = roles.find((r) => r.id === rolVerId) ?? null
 
   const abrirCrear = () => {
     setRolForm(ROL_VACIO)
@@ -220,9 +226,7 @@ export default function RolesPermisos() {
         <button type="button" className="btn-primary" onClick={abrirCrear}>
           <PlusIcon className="h-5 w-5" /> Nuevo rol
         </button>
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -294,8 +298,30 @@ export default function RolesPermisos() {
         ))}
       </div>
 
-      {/* Matriz editable */}
-      <div className="card overflow-hidden">
+      {/* Celular: lista de roles; cada uno abre sus permisos. */}
+      <div className="card p-5 md:hidden">
+        <h3 className="text-base font-semibold text-slate-900">Ver permisos por rol</h3>
+        <p className="mt-1 text-xs text-slate-500">Elija un rol para ver y administrar sus permisos.</p>
+        <ul className="mt-3 divide-y divide-slate-100">
+          {roles.map((r) => (
+            <li key={r.id}>
+              <button
+                type="button"
+                onClick={() => setRolVerId(r.id)}
+                className="flex w-full items-center justify-between gap-3 py-3 text-left"
+              >
+                <span className="text-sm font-semibold text-slate-800">{ROL_LABEL[r.nombre] ?? r.nombre}</span>
+                <span className="text-xs text-slate-500">
+                  {r.permisos_activos} / {permisos.length}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Matriz editable (escritorio) */}
+      <div className="card hidden overflow-hidden md:block">
         <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-200 px-5 py-4">
           <h3 className="text-base font-semibold text-slate-900">Matriz rol → permiso</h3>
           <p className="text-xs text-slate-500">
@@ -389,6 +415,55 @@ export default function RolesPermisos() {
         Leída de la base el {new Date(datos.generado_en).toLocaleString('es-CO')} ·{' '}
         {totalConcedidos} filas en roles_permisos
       </p>
+
+      {/* Permisos de un rol (celular) */}
+      <Modal
+        abierto={rolVer != null}
+        titulo={rolVer ? `Permisos: ${ROL_LABEL[rolVer.nombre] ?? rolVer.nombre}` : ''}
+        subtitulo={rolVer ? `${rolVer.permisos_activos} de ${permisos.length} permisos concedidos` : ''}
+        onCerrar={() => setRolVerId(null)}
+      >
+        {rolVer && (
+          <div className="space-y-4">
+            {modulos.map((modulo) => (
+              <div key={modulo}>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  {MODULO_LABEL[modulo] ?? modulo}
+                </p>
+                <ul className="divide-y divide-slate-100">
+                  {visibles
+                    .filter((p) => (p.modulo ?? 'otros') === modulo)
+                    .map((p) => {
+                      const tiene = concedido.has(`${rolVer.id}:${p.id}`)
+                      return (
+                        <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                          <div className="min-w-0">
+                            <p className="break-all font-mono text-xs font-semibold text-slate-800">{p.nombre}</p>
+                            <p className="text-xs text-slate-500">{p.descripcion}</p>
+                          </div>
+                          <button
+                            type="button"
+                            aria-pressed={tiene}
+                            aria-label={`${tiene ? 'Quitar' : 'Conceder'} ${p.nombre}`}
+                            onClick={() => alternarPermiso(rolVer, p)}
+                            className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border transition ${
+                              tiene
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : 'border-slate-200 bg-white text-slate-300'
+                            }`}
+                          >
+                            {tiene ? <CheckIcon className="h-4 w-4" /> : '—'}
+                          </button>
+                        </li>
+                      )
+                    })}
+                </ul>
+              </div>
+            ))}
+            <AlertaFormulario mensaje={errorPermiso} />
+          </div>
+        )}
+      </Modal>
 
       {/* Crear / editar rol */}
       <Modal

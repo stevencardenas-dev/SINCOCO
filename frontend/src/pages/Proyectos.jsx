@@ -5,12 +5,14 @@ import {
   BuildingOffice2Icon,
   ClipboardDocumentListIcon,
   FolderIcon,
-  FunnelIcon,
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
@@ -102,12 +104,14 @@ export default function Proyectos() {
   const [errorCliente, setErrorCliente] = useState('')
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
+  // Celular: la tabla conserva pocas columnas y el resto va en la ficha.
+  const [ficha, setFicha] = useState(null)
 
   const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
 
   const cargar = () => {
     setError(null)
-    api
+    return api
       .get('/proyectos', {
         params: {
           ...(incluirInactivos ? { incluirInactivos: 1 } : {}),
@@ -128,7 +132,9 @@ export default function Proyectos() {
     api.get('/trabajadores').then((res) => setResponsables(res.data)).catch(() => {})
   }
 
-  useEffect(cargar, [incluirInactivos, filtros])
+  useEffect(() => {
+    cargar()
+  }, [incluirInactivos, filtros])
   useEffect(cargarCatalogos, [esAdmin])
 
   // La búsqueda de la barra superior puede cambiar estando ya en esta pantalla.
@@ -272,24 +278,19 @@ export default function Proyectos() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       {/* Búsqueda y filtros del listado (corren en la base) */}
-      <form
-        className="card space-y-4 p-5"
-        onSubmit={(e) => e.preventDefault()}
-        aria-label="Filtros de proyectos"
+      <FiltrosDesplegable
+        titulo="Buscar proyectos"
+        ariaLabel="Filtros de proyectos"
+        activos={[filtros.buscar, filtros.estado].filter(Boolean).length}
+        abiertoInicial={Boolean(filtros.buscar)}
       >
-        <div className="flex items-center gap-2 text-slate-900">
-          <FunnelIcon className="h-5 w-5 text-brand-600" />
-          <h3 className="text-base font-semibold">Buscar proyectos</h3>
-        </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="xl:col-span-2">
             <label htmlFor="prj-buscar" className="label">
@@ -341,7 +342,7 @@ export default function Proyectos() {
               ' · solo se listan los proyectos donde está asignado o de los que es responsable'}
           </p>
         )}
-      </form>
+      </FiltrosDesplegable>
 
       {esAdmin && (
         <Modal
@@ -691,17 +692,18 @@ export default function Proyectos() {
       {proyectos !== null && proyectos.length > 0 && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-sm">
+            <table className="w-full text-left text-sm md:min-w-[720px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">Proyecto</th>
-                  <th className="px-5 py-3.5 font-semibold">Responsable</th>
-                  <th className="px-5 py-3.5 font-semibold">Ubicación</th>
-                  <th className="px-5 py-3.5 font-semibold">Presupuesto</th>
-                  <th className="px-5 py-3.5 font-semibold">Estado</th>
-                  <th className="px-5 py-3.5 font-semibold">Avance</th>
-                  <th className="px-5 py-3.5 font-semibold">Plan</th>
-                  <th className="px-5 py-3.5 font-semibold">Acciones</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Proyecto</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Responsable</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Ubicación</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Presupuesto</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Avance</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Plan</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Acciones</th>
+                  <EncabezadoFicha />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -710,25 +712,25 @@ export default function Proyectos() {
                   const avance = Number(p.porcentaje_avance_total)
                   return (
                     <tr key={p.id} className="transition hover:bg-slate-50/70">
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-3 md:px-5 md:py-4">
                         <p className="font-semibold text-slate-900">{p.nombre}</p>
                         <p className="text-xs text-slate-400">
                           {p.codigo} · {p.cliente_nombre} · {fmtFecha(p.fecha_inicio_programada)}
                         </p>
                       </td>
-                      <td className="px-5 py-4 text-slate-600">{p.responsable_nombre}</td>
-                      <td className="max-w-[14rem] px-5 py-4 text-slate-600">
+                      <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">{p.responsable_nombre}</td>
+                      <td className="hidden max-w-[14rem] px-5 py-4 text-slate-600 md:table-cell">
                         <span className="block truncate" title={p.ubicacion}>
                           {p.ubicacion}
                         </span>
                       </td>
-                      <td className="px-5 py-4 font-medium tabular-nums text-slate-700">
+                      <td className="hidden px-5 py-4 font-medium tabular-nums text-slate-700 md:table-cell">
                         {fmtCOP(Number(p.presupuesto_inicial))}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="hidden px-5 py-4 md:table-cell">
                         <span className={`badge ring-1 ${est.cls}`}>{est.label}</span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="hidden px-5 py-4 md:table-cell">
                         <div className="flex items-center gap-3">
                           <div className="h-2 w-28 overflow-hidden rounded-full bg-brand-100">
                             <div
@@ -741,12 +743,12 @@ export default function Proyectos() {
                           </span>
                         </div>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="hidden px-5 py-4 md:table-cell">
                         <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
                           <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
                         </Link>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="hidden px-5 py-4 md:table-cell">
                         {/* En escritorio las acciones se apilan en vertical: en
                             horizontal se montaban unas sobre otras. */}
                         <div className="flex flex-col items-stretch gap-1.5">
@@ -770,6 +772,7 @@ export default function Proyectos() {
                           )}
                         </div>
                       </td>
+                      <CeldaFicha onClick={() => setFicha(p)} etiqueta={p.nombre} />
                     </tr>
                   )
                 })}
@@ -777,6 +780,55 @@ export default function Proyectos() {
             </table>
           </div>
         </div>
+      )}
+
+      {ficha && (
+        <Ficha
+          abierto
+          titulo={ficha.nombre}
+          subtitulo={ficha.codigo}
+          onCerrar={() => setFicha(null)}
+          campos={[
+            ['Cliente', ficha.cliente_nombre],
+            ['Responsable', ficha.responsable_nombre],
+            ['Ubicación', ficha.ubicacion],
+            ['Presupuesto', fmtCOP(Number(ficha.presupuesto_inicial))],
+            ['Estado', (estadoProyecto[ficha.estado?.toLowerCase()] ?? estadoProyecto.planificacion).label],
+            ['Avance', `${Number(ficha.porcentaje_avance_total)}%`],
+            ['Inicio', fmtFecha(ficha.fecha_inicio_programada)],
+            ['Fin', fmtFecha(ficha.fecha_fin_programada)],
+          ]}
+        >
+          <Link to={`/proyectos/${ficha.id}`} className="btn-ghost text-xs">
+            <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
+          </Link>
+          {esAdmin && ficha.activo && (
+            <button
+              type="button"
+              className="btn-accion btn-accion-editar"
+              onClick={() => {
+                const p = ficha
+                setFicha(null)
+                abrirEditar(p)
+              }}
+            >
+              <PencilSquareIcon className="h-4 w-4" /> Editar
+            </button>
+          )}
+          {esAdmin && (
+            <button
+              type="button"
+              className={`btn-accion ${ficha.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
+              onClick={() => {
+                const p = ficha
+                setFicha(null)
+                cambiarBaja(p)
+              }}
+            >
+              {ficha.activo ? 'Dar de baja' : 'Reactivar'}
+            </button>
+          )}
+        </Ficha>
       )}
 
       <p className="text-xs text-slate-400">
