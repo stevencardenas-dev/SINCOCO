@@ -53,6 +53,43 @@ export async function crear(req, res) {
   }
 }
 
+// Editar los datos de la cuenta: nombre de usuario y correo empresarial. El rol,
+// el estado y la baja tienen sus propias rutas y permisos. Una cuenta dada de
+// baja es historial: primero se reactiva.
+export async function editar(req, res) {
+  const id = Number(req.params.id)
+  const { username, email } = req.body
+  if (!username || !email) {
+    return res.status(400).json({ error: 'username y email son requeridos' })
+  }
+  revisarLargo(username, LARGO.username, 'username')
+  revisarLargo(email, LARGO.email, 'email')
+  revisarCorreo(email)
+
+  const [filas] = await pool.query('SELECT id, username, email, activo FROM usuarios WHERE id = ?', [id])
+  const actual = filas[0]
+  if (!actual) return res.status(404).json({ error: 'Usuario no encontrado' })
+  if (!actual.activo) {
+    return res.status(409).json({ error: 'La cuenta está dada de baja; reactívela antes de editarla' })
+  }
+
+  try {
+    await pool.query('UPDATE usuarios SET username = ?, email = ? WHERE id = ?', [username, email, id])
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') {
+      const campo = /email/.test(err.message) ? 'email' : 'username'
+      return res.status(409).json({ error: `${campo} ya existe`, campo })
+    }
+    throw err
+  }
+  await registrar({
+    usuarioId: req.user.id, accion: 'ACTUALIZAR', tabla: 'usuarios', registroId: id,
+    detalles: { antes: { username: actual.username, email: actual.email }, despues: { username, email } },
+    ip: req.ip,
+  })
+  res.json({ id, username, email })
+}
+
 /**
  * GET /api/usuarios/solicitudes-reset -> códigos de recuperación pendientes.
  *

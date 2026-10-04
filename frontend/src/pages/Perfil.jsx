@@ -114,11 +114,10 @@ export default function Perfil() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} />}
         title="Mi información personal"
         subtitle="Sus datos de acceso y su ficha de trabajador"
       >
-        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && (

@@ -166,7 +166,7 @@ export default function PlanProyecto() {
         <ArrowLeftIcon className="h-4 w-4" /> Volver a proyectos
       </Link>
 
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} />}
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
         subtitle={
           proyecto
@@ -179,7 +179,6 @@ export default function PlanProyecto() {
             <PlusIcon className="h-5 w-5" /> Nueva etapa
           </button>
         )}
-        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}

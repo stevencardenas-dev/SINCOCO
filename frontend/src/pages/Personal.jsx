@@ -294,7 +294,7 @@ export default function Personal() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} />}
         title="Personal"
         subtitle="Registrar personal con su cargo y especialidad"
       >
@@ -315,7 +315,6 @@ export default function Personal() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}

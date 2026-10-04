@@ -196,7 +196,7 @@ export default function Catalogo() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} />}
         title="Catálogo"
         subtitle="Cargos, especialidades y clientes de la empresa"
       >
@@ -206,7 +206,6 @@ export default function Catalogo() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {/* Pestañas: un catálogo a la vez, misma mecánica para los tres. */}

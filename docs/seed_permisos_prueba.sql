@@ -13,6 +13,7 @@
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('usuarios.listar',          'Listar usuarios del sistema',              'usuarios'),
   ('usuarios.crear',           'Registrar usuarios y asignarles rol',      'usuarios'),
+  ('usuarios.editar',          'Editar el usuario y el correo de una cuenta', 'usuarios'),
   ('usuarios.cambiar_rol',     'Cambiar el rol de un usuario existente',   'usuarios'),
   ('usuarios.cambiar_estado',  'Bloquear o activar una cuenta',            'usuarios'),
   -- Administración de la matriz rol -> permiso (crear/editar/eliminar roles y
@@ -76,9 +77,9 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
 -- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
 --
 -- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`
--- y los dos permisos de `catalogos` quedan solo en el administrador: no
+-- `usuarios.editar` y los dos permisos de `catalogos` quedan solo en el administrador: no
 -- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
--- ya se los da a ADMINISTRADOR. Total: 25 permisos.
+-- ya se los da a ADMINISTRADOR. Total: 26 permisos.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).

@@ -256,7 +256,7 @@ export default function Proyectos() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} />}
         title="Proyectos"
         subtitle="Registro, etapas, actividades y seguimiento de avance"
       >
@@ -278,7 +278,6 @@ export default function Proyectos() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}

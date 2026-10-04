@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
-  crear, listar, cambiarEstado, listarRoles,
+  crear, editar, listar, cambiarEstado, listarRoles,
   listarTrabajadoresSinCuenta, cambiarRol, baja, reactivarCtrl,
   listarSolicitudesReset,
 } from '../controllers/usuariosController.js'
@@ -18,6 +18,8 @@ router.get('/solicitudes-reset', requirePermiso('usuarios.listar'), listarSolici
 router.get('/roles', requirePermiso('usuarios.crear', 'usuarios.cambiar_rol'), listarRoles)
 router.get('/trabajadores-disponibles', requirePermiso('usuarios.crear'), listarTrabajadoresSinCuenta)
 router.post('/', requirePermiso('usuarios.crear'), crear)
+// Editar los datos de la cuenta (usuario y correo).
+router.patch('/:id', requirePermiso('usuarios.editar'), editar)
 router.patch('/:id/estado', requirePermiso('usuarios.cambiar_estado'), cambiarEstado)
 router.patch('/:id/rol', requirePermiso('usuarios.cambiar_rol'), cambiarRol)
 
