@@ -104,6 +104,24 @@ export function latido(req, res) {
   res.json({ activa: true })
 }
 
+/** GET /api/auth/permisos -> nombres de los permisos del rol del usuario. */
+export async function misPermisos(req, res, next) {
+  try {
+    const [rows] = await pool.query(
+      `SELECT p.nombre
+         FROM permisos p
+         JOIN roles_permisos rp ON rp.permiso_id = p.id
+         JOIN roles r ON r.id = rp.rol_id
+        WHERE r.nombre = ?
+        ORDER BY p.nombre`,
+      [req.user.rol],
+    )
+    return res.json({ permisos: rows.map((r) => r.nombre) })
+  } catch (error) {
+    return next(error)
+  }
+}
+
 /**
  * POST /api/auth/solicitar-reset -> «¿Olvidó su contraseña?» (HU-01).
  *

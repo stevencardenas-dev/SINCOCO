@@ -37,6 +37,7 @@ export async function registrarActividad(dto, ctx = {}) {
 
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
   if (!proyecto) throw new AppError('El proyecto de la etapa no existe', 404, 'etapa_id')
+  await verificarAccesoProyecto(ctx.usuario, proyecto.id)
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto)
 
@@ -75,6 +76,7 @@ export async function registrarActividad(dto, ctx = {}) {
 export async function darDeBajaActividad(id, ctx = {}) {
   const actividad = await actividadRepository.findById(id)
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
 
   const afectadas = await darDeBaja({ tabla: 'actividades', id, usuarioId: ctx.usuarioId })
   if (!afectadas) throw new AppError('La actividad ya estaba dada de baja', 409)
@@ -88,6 +90,9 @@ export async function darDeBajaActividad(id, ctx = {}) {
 
 /** HU-18: reactivar una actividad dada de baja. */
 export async function reactivarActividad(id, ctx = {}) {
+  const actividad = await actividadRepository.findById(id)
+  if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
   const afectadas = await reactivar({ tabla: 'actividades', id })
   if (!afectadas) throw new AppError('La actividad no está dada de baja', 409)
 

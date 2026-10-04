@@ -22,18 +22,17 @@ ESPECIALIDADES = '/api/catalogos/especialidades'
 TOKEN = {usuario: login(usuario) for usuario in ('admin', 'gerente', 'maestro', 'bodega')}
 
 # --- 1. RBAC de los catálogos -----------------------------------------------
-# La lectura la necesita el formulario de personal (admin y gerente).
-assert http('GET', CARGOS, token=TOKEN['admin'])[0] == 200
-assert http('GET', CARGOS, token=TOKEN['gerente'])[0] == 200
-for rol in ('maestro', 'bodega'):
-    estado, _ = http('GET', CARGOS, token=TOKEN[rol])
-    assert estado == 403, f'{rol} no debe leer el catálogo: {estado}'
+# La lectura la necesita quien consulta personal (admin, gerente y maestro de obra).
+for rol in ('admin', 'gerente', 'maestro'):
+    assert http('GET', CARGOS, token=TOKEN[rol])[0] == 200, f'{rol} debe leer el catálogo'
+estado, _ = http('GET', CARGOS, token=TOKEN['bodega'])
+assert estado == 403, f'bodega no debe leer el catálogo: {estado}'
 assert http('GET', ESPECIALIDADES, token=TOKEN['admin'])[0] == 200
 
 # Un catálogo que no existe se rechaza por el tipo de la ruta.
 estado, r = http('GET', '/api/catalogos/colores', token=TOKEN['admin'])
 assert estado == 404, f'catálogo inexistente: {estado} {r}'
-print('RBAC ->', 'admin 200 · gerente 200 · maestro/bodega 403 · catálogo inexistente 404')
+print('RBAC ->', 'admin/gerente/maestro 200 · bodega 403 · catálogo inexistente 404')
 
 # --- 2. Alta en el catálogo --------------------------------------------------
 NOMBRE_CARGO = f'{PREFIJO}-Cargo de prueba'

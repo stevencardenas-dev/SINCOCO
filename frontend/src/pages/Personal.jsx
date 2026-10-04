@@ -72,8 +72,12 @@ const CATALOGO_TITULO = {
 const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', disponible: '' }
 
 export default function Personal() {
-  const { user } = useAuth()
-  const esAdmin = user?.rol === 'ADMINISTRADOR'
+  const { puede } = useAuth()
+  // La interfaz sigue la matriz de permisos, no el nombre del rol.
+  const puedeCrear = puede('trabajadores.crear')
+  const puedeEditar = puede('trabajadores.editar')
+  const puedeBaja = puede('trabajadores.dar_baja')
+  const puedeCatalogos = puede('catalogos.gestionar')
 
   const [personal, setPersonal] = useState(null)
   const [error, setError] = useState('')
@@ -296,7 +300,7 @@ export default function Personal() {
         title="Personal"
         subtitle="Registrar personal con su cargo y especialidad"
       >
-        {esAdmin && (
+        {puedeCrear && (
           <button
             className="btn-primary"
             onClick={() => {
@@ -409,7 +413,7 @@ export default function Personal() {
       </FiltrosDesplegable>
 
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
-      {esAdmin && (
+      {(puedeCrear || puedeEditar) && (
         <Modal
           abierto={abierto}
           titulo={editando ? 'Actualizar información del trabajador' : 'Registrar personal'}
@@ -542,7 +546,7 @@ export default function Personal() {
                       {c.operativo ? ' · obra' : ''}
                     </option>
                   ))}
-                  {esAdmin && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
+                  {puedeCatalogos && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
                 </select>
                 <p className="mt-1 text-xs text-slate-500">
                   {cargoElegido
@@ -576,7 +580,7 @@ export default function Personal() {
                       {e2.nombre}
                     </option>
                   ))}
-                  {esAdmin && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
+                  {puedeCatalogos && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
                 </select>
                 <p className="mt-1 text-xs text-slate-500">
                   Obligatoria para los cargos marcados como de obra (maestro de obra, oficial,
@@ -861,7 +865,7 @@ export default function Personal() {
                         <p className="mt-1 text-xs text-slate-400">De baja desde {fmtFecha(t.fecha_baja)}</p>
                       )}
                     </div>
-                  ) : esAdmin ? (
+                  ) : puedeEditar ? (
                     <select
                       className="input py-1 text-xs"
                       aria-label={`Estado de ${t.nombres} ${t.apellidos}`}
@@ -894,7 +898,7 @@ export default function Personal() {
                 acciones: true,
                 // Un registro dado de baja es historial: no se edita, solo se reactiva.
                 celda: (t, enFicha) => {
-                  if (!esAdmin) return null
+                  if (t.activo ? !puedeEditar : !puedeBaja) return null
                   const botones = t.activo ? (
                     <button
                       className="btn-accion btn-accion-editar"

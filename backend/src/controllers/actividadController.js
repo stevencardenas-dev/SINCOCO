@@ -31,7 +31,7 @@ export async function listar(req, res, next) {
 export async function registrar(req, res, next) {
   try {
     const dto = RegistrarActividadDto.fromRequestBody(req.body)
-    const actividad = await registrarActividad(dto, { usuarioId: req.user.id, ip: req.ip })
+    const actividad = await registrarActividad(dto, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.status(201).json({ message: 'Actividad registrada correctamente', actividad })
   } catch (error) {
     return next(error)
@@ -41,7 +41,7 @@ export async function registrar(req, res, next) {
 /** PATCH /api/actividades/:id/baja -> HU-18. */
 export async function baja(req, res, next) {
   try {
-    const resultado = await darDeBajaActividad(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    const resultado = await darDeBajaActividad(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Actividad dada de baja', ...resultado })
   } catch (error) {
     return next(error)
@@ -51,7 +51,7 @@ export async function baja(req, res, next) {
 /** PATCH /api/actividades/:id/reactivar -> HU-18. */
 export async function reactivarCtrl(req, res, next) {
   try {
-    const resultado = await reactivarActividad(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    const resultado = await reactivarActividad(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Actividad reactivada', ...resultado })
   } catch (error) {
     return next(error)

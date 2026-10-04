@@ -11,6 +11,8 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  // Permisos vigentes del rol (roles_permisos): la interfaz muestra solo lo que el rol puede hacer.
+  const [permisos, setPermisos] = useState([])
 
   useEffect(() => {
     const stored = localStorage.getItem('sincoco_user')
@@ -41,6 +43,24 @@ export function AuthProvider({ children }) {
     }
   }
 
+  useEffect(() => {
+    if (!user) {
+      setPermisos([])
+      return undefined
+    }
+    let vigente = true
+    api
+      .get('/auth/permisos')
+      .then((res) => vigente && setPermisos(res.data.permisos ?? []))
+      .catch(() => vigente && setPermisos([]))
+    return () => {
+      vigente = false
+    }
+  }, [user])
+
+  /** ¿El rol tiene al menos uno de estos permisos? */
+  const puede = (...nombres) => nombres.some((n) => permisos.includes(n))
+
   // Sesión única por cuenta: mientras la aplicación esté abierta se envía un
   // latido para que el servidor no dé la sesión por abandonada (y así otro
   // dispositivo no pueda ingresar). Si el navegador se cierra sin salir, la
@@ -68,7 +88,7 @@ export function AuthProvider({ children }) {
     setUser(null)
   }
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, loading, login, logout, permisos, puede }}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

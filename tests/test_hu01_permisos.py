@@ -6,7 +6,8 @@
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 26 · GERENTE 6 · MAESTRO_OBRA 3 · ENCARGADO_BODEGA 0.
+#   ADMIN 27 · GERENTE 18 · MAESTRO_OBRA 10 · ENCARGADO_BODEGA 0
+#   (GERENTE y MAESTRO_OBRA según docs/migracion_permisos_gerente_maestro.sql).
 #   (20 desde que HU-17 añadió `auditoria.listar`; 22 con los dos permisos de
 #   `catalogos`; 23 con `roles.gestionar`; 25 con la gestión de acceso a
 #   proyectos y actividades: `proyectos.gestionar_acceso` —solo ADMIN— y
@@ -21,9 +22,9 @@ ESPERADO_GET = {
     'gerente': {'/api/usuarios': 403, '/api/clientes': 200, '/api/trabajadores': 200,
                 '/api/proyectos': 200, '/api/roles/permisos': 403, '/api/auditoria': 403,
                 '/api/catalogos/cargos': 200},
-    'maestro': {'/api/usuarios': 403, '/api/clientes': 403, '/api/trabajadores': 403,
+    'maestro': {'/api/usuarios': 403, '/api/clientes': 200, '/api/trabajadores': 200,
                 '/api/proyectos': 200, '/api/roles/permisos': 403, '/api/auditoria': 403,
-                '/api/catalogos/cargos': 403},
+                '/api/catalogos/cargos': 200},
     'bodega': {'/api/usuarios': 403, '/api/clientes': 403, '/api/trabajadores': 403,
                '/api/proyectos': 403, '/api/roles/permisos': 403, '/api/auditoria': 403,
                '/api/catalogos/cargos': 403},
@@ -44,9 +45,9 @@ for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
         'SELECT COUNT(*) FROM roles_permisos rp JOIN roles r ON r.id = rp.rol_id '
         f"WHERE r.nombre='{rol}'"
     )
-assert conteos['ADMINISTRADOR'] == '26', f'ADMIN debe tener 26 permisos: {conteos}'
-assert conteos['GERENTE'] == '6', f'GERENTE debe tener 6 permisos: {conteos}'
-assert conteos['MAESTRO_OBRA'] == '3', f'MAESTRO_OBRA debe tener 3 permisos: {conteos}'
+assert conteos['ADMINISTRADOR'] == '27', f'ADMIN debe tener 27 permisos: {conteos}'
+assert conteos['GERENTE'] == '18', f'GERENTE debe tener 18 permisos: {conteos}'
+assert conteos['MAESTRO_OBRA'] == '10', f'MAESTRO_OBRA debe tener 10 permisos: {conteos}'
 assert conteos['ENCARGADO_BODEGA'] == '0', f'BODEGA no debe tener permisos: {conteos}'
 print('matriz en roles_permisos ->', conteos)
 

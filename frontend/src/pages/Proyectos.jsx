@@ -74,8 +74,13 @@ const ESTADOS = [
 ]
 
 export default function Proyectos() {
-  const { user } = useAuth()
-  const esAdmin = user?.rol === 'ADMINISTRADOR'
+  const { puede } = useAuth()
+  // La interfaz sigue la matriz de permisos, no el nombre del rol.
+  const puedeCrear = puede('proyectos.registrar')
+  const puedeEditar = puede('proyectos.editar')
+  const puedeBaja = puede('proyectos.dar_baja')
+  const puedeCrearCliente = puede('clientes.crear')
+  const gestionaProyectos = puedeCrear || puedeEditar
 
   // El buscador de la barra superior navega a /proyectos?buscar=…
   const [parametros] = useSearchParams()
@@ -124,16 +129,16 @@ export default function Proyectos() {
   }
 
   const cargarCatalogos = () => {
-    if (!esAdmin) return
+    if (!gestionaProyectos) return
     // El responsable es un trabajador activo (HU-04), no un usuario del sistema.
-    api.get('/clientes').then((res) => setClientes(res.data)).catch(() => {})
-    api.get('/trabajadores').then((res) => setResponsables(res.data)).catch(() => {})
+    if (puede('clientes.listar')) api.get('/clientes').then((res) => setClientes(res.data)).catch(() => {})
+    if (puede('trabajadores.listar')) api.get('/trabajadores').then((res) => setResponsables(res.data)).catch(() => {})
   }
 
   useEffect(() => {
     cargar()
   }, [incluirInactivos, filtros])
-  useEffect(cargarCatalogos, [esAdmin])
+  useEffect(cargarCatalogos, [gestionaProyectos])
 
   // La búsqueda de la barra superior puede cambiar estando ya en esta pantalla.
   useEffect(() => {
@@ -238,7 +243,7 @@ export default function Proyectos() {
   const hayFiltros = Boolean(filtros.buscar || filtros.estado)
   // El backend limita el listado al alcance del rol (RBAC): estos roles ven
   // todos los proyectos; los demás, solo los asignados.
-  const veTodos = ['ADMINISTRADOR', 'GERENTE'].includes(user?.rol)
+  const veTodos = puede('proyectos.acceso_total')
 
   const opcionesClientes = clientes.map((c) => ({
     value: c.id,
@@ -258,7 +263,7 @@ export default function Proyectos() {
         title="Proyectos"
         subtitle="Registro, etapas, actividades y seguimiento de avance"
       >
-        {esAdmin && (
+        {puedeCrear && (
           <button
             type="button"
             className="btn-primary"
@@ -341,7 +346,7 @@ export default function Proyectos() {
         )}
       </FiltrosDesplegable>
 
-      {esAdmin && (
+      {gestionaProyectos && (
         <Modal
           abierto={abierto}
           titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto'}
@@ -402,14 +407,16 @@ export default function Proyectos() {
                   error={campoForm === 'cliente_id'}
                   requerido
                 />
-                <button
-                  type="button"
-                  className="mt-1 text-xs font-medium text-brand-700 hover:underline"
-                  onClick={() => setClienteAbierto((v) => !v)}
-                >
-                  <BuildingOffice2Icon className="mr-1 inline h-4 w-4" />
-                  El cliente no está en la lista: registrarlo
-                </button>
+                {puedeCrearCliente && (
+                  <button
+                    type="button"
+                    className="mt-1 text-xs font-medium text-brand-700 hover:underline"
+                    onClick={() => setClienteAbierto((v) => !v)}
+                  >
+                    <BuildingOffice2Icon className="mr-1 inline h-4 w-4" />
+                    El cliente no está en la lista: registrarlo
+                  </button>
+                )}
               </div>
               <div>
                 <label htmlFor="p-responsable" className="label">
@@ -561,7 +568,7 @@ export default function Proyectos() {
       />
 
       {/* CU-02 Alt 2: alta rápida del cliente dentro de su propia ventana. */}
-      {esAdmin && (
+      {puedeCrearCliente && (
         <Modal
           abierto={clienteAbierto}
           titulo="Registrar cliente"
@@ -679,9 +686,9 @@ export default function Proyectos() {
           <p className="text-xs text-slate-500">
             {hayFiltros
               ? 'Ajuste o limpie los filtros para ver más resultados.'
-              : esAdmin
+              : puedeCrear
                 ? 'Registre el primer proyecto con el botón «Nuevo proyecto».'
-                : 'El administrador todavía no ha registrado proyectos.'}
+                : 'Todavía no hay proyectos registrados para usted.'}
           </p>
         </div>
       )}
@@ -767,10 +774,10 @@ export default function Proyectos() {
                 titulo: 'Acciones',
                 acciones: true,
                 celda: (p, enFicha) => {
-                  if (!esAdmin) return null
+                  if (!puedeEditar && !puedeBaja) return null
                   const botones = (
                     <>
-                      {p.activo && (
+                      {p.activo && puedeEditar && (
                         <button
                           className="btn-accion btn-accion-editar"
                           onClick={() => abrirEditar(p)}
@@ -779,13 +786,15 @@ export default function Proyectos() {
                           <PencilSquareIcon className="h-4 w-4" /> Editar
                         </button>
                       )}
-                      <button
-                        className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
-                        onClick={() => cambiarBaja(p)}
-                        aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
-                      >
-                        {p.activo ? 'Dar de baja' : 'Reactivar'}
-                      </button>
+                      {puedeBaja && (
+                        <button
+                          className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
+                          onClick={() => cambiarBaja(p)}
+                          aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
+                        >
+                          {p.activo ? 'Dar de baja' : 'Reactivar'}
+                        </button>
+                      )}
                     </>
                   )
                   return enFicha ? botones : <div className="flex flex-col items-stretch gap-1.5">{botones}</div>
