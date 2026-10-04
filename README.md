@@ -64,8 +64,8 @@ Contraseña `Prueba123!` para los cuatro. Cada rol ve un menú distinto.
 | Usuario | Rol | Alcance |
 |---|---|---|
 | `admin` | ADMINISTRADOR | todo el sistema |
-| `gerente` | GERENTE | seguimiento, costos, reportes |
-| `maestro` | MAESTRO_OBRA | proyectos, materiales, incidencias |
+| `gerente` | GERENTE | gestión de proyectos, clientes, personal y plan; seguimiento, costos, reportes |
+| `maestro` | MAESTRO_OBRA | edita sus proyectos y gestiona su plan (etapas y actividades); materiales, incidencias |
 | `bodega` | ENCARGADO_BODEGA | materiales, herramientas, alertas |
 
 El **trabajador operativo no inicia sesión**: es actor del negocio, no del

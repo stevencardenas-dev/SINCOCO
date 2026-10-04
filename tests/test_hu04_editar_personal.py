@@ -128,13 +128,16 @@ estado, r = http('PATCH', f'/api/trabajadores/{id_trabajador}', {'correo': 'no.e
 assert estado == 400, f'solo campos desconocidos debia dar 400, llego {estado}: {r}'
 print('sin cambios -> 400')
 
-# --- RBAC: GERENCE lista el personal pero no puede editarlo -------------------
+# --- RBAC: el gerente gestiona el personal; el maestro de obra solo lo consulta ---
 gerente = login('gerente')
 estado, r = http('GET', '/api/trabajadores', token=gerente)
 assert estado == 200, f'gerente debe poder listar personal: {estado} {r}'
-estado, r = http('PATCH', f'/api/trabajadores/{id_trabajador}', {'nombres': 'Pirata'}, token=gerente)
-assert estado == 403, f'gerente editando personal debia dar 403, llego {estado}: {r}'
-print('rbac -> gerente lista (200) pero no edita (403)')
+estado, r = http('PATCH', f'/api/trabajadores/{id_trabajador}', {'nombres': 'Gerente'}, token=gerente)
+assert estado == 200, f'gerente editando personal debia dar 200, llego {estado}: {r}'
+maestro = login('maestro')
+estado, r = http('PATCH', f'/api/trabajadores/{id_trabajador}', {'nombres': 'Pirata'}, token=maestro)
+assert estado == 403, f'maestro editando personal debia dar 403, llego {estado}: {r}'
+print('rbac -> gerente edita (200) · maestro lista pero no edita (403)')
 
 limpiar()
 print('\nHU-04 (edicion): TODAS LAS PRUEBAS PASARON')

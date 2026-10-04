@@ -43,8 +43,11 @@ const ESTADO_BADGE = {
 
 export default function PlanProyecto() {
   const { id } = useParams()
-  const { user } = useAuth()
-  const esAdmin = user?.rol === 'ADMINISTRADOR'
+  const { puede } = useAuth()
+  // La interfaz sigue la matriz de permisos, no el nombre del rol.
+  const puedeEtapas = puede('etapas.crear')
+  const puedeActividades = puede('actividades.crear')
+  const puedeAcceso = puede('proyectos.gestionar_acceso')
 
   const [proyecto, setProyecto] = useState(null)
   const [etapas, setEtapas] = useState([])
@@ -174,7 +177,7 @@ export default function PlanProyecto() {
             : 'Plan de trabajo'
         }
       >
-        {esAdmin && (
+        {puedeEtapas && (
           <button className="btn-primary" onClick={() => setAbrirEtapa((v) => !v)}>
             <PlusIcon className="h-5 w-5" /> Nueva etapa
           </button>
@@ -184,7 +187,7 @@ export default function PlanProyecto() {
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
-      {esAdmin && abrirEtapa && (
+      {puedeEtapas && abrirEtapa && (
         <form onSubmit={crearEtapa} className="card space-y-4 p-6">
           <h3 className="text-base font-semibold text-slate-900">Definir etapa</h3>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -221,7 +224,7 @@ export default function PlanProyecto() {
 
       {etapas.length === 0 && (
         <div className="card px-6 py-14 text-center text-sm text-slate-500">
-          Este proyecto aún no tiene etapas. {esAdmin && 'Defina la primera con «Nueva etapa».'}
+          Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}
         </div>
       )}
 
@@ -246,7 +249,7 @@ export default function PlanProyecto() {
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                   {et.estado?.replace('_', ' ').toLowerCase()}
                 </span>
-                {esAdmin && (
+                {puedeActividades && (
                   <button
                     className="btn-ghost text-xs"
                     onClick={() => {
@@ -260,7 +263,7 @@ export default function PlanProyecto() {
               </div>
             </div>
 
-            {esAdmin && actividadEn === et.id && (
+            {puedeActividades && actividadEn === et.id && (
               <form onSubmit={crearActividad} className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2">
                 <div>
                   <label htmlFor={`a-nombre-${et.id}`} className="label">Nombre de la actividad</label>
@@ -345,7 +348,7 @@ export default function PlanProyecto() {
 
       {/* RBAC: gestión de acceso al proyecto. Solo quien puede administrarlo ve
           el formulario; los demás roles no necesitan esta caja. */}
-      {esAdmin && proyecto && (
+      {puedeAcceso && proyecto && (
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div>

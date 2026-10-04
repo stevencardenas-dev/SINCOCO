@@ -2,7 +2,7 @@ import * as clienteRepository from '../repositories/clienteRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
-import { alcanceDeUsuario } from './accesoService.js'
+import { alcanceDeUsuario, verificarAccesoProyecto } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
@@ -145,6 +145,8 @@ const CAMPOS_EDITABLES = [
 const ESTADOS_VALIDOS = ['PLANIFICACION', 'EN_EJECUCION', 'PAUSADO', 'FINALIZADO', 'CANCELADO']
 
 export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
+  // RBAC: quien edita sin alcance total solo puede hacerlo en sus proyectos.
+  await verificarAccesoProyecto(ctx.usuario, id)
   const actual = await proyectoRepository.findById(id)
   if (!actual) throw new AppError('Proyecto no encontrado', 404)
 
@@ -245,6 +247,7 @@ export async function listarProyectos(filtros = {}, usuario = null) {
  * se registra la fecha y el usuario, y se conserva el historial.
  */
 export async function darDeBajaProyecto(id, ctx = {}) {
+  await verificarAccesoProyecto(ctx.usuario, id)
   const proyecto = await proyectoRepository.findById(id)
   if (!proyecto) throw new AppError('Proyecto no encontrado', 404)
 
@@ -260,6 +263,7 @@ export async function darDeBajaProyecto(id, ctx = {}) {
 
 /** HU-18: reactivar un proyecto dado de baja previamente. */
 export async function reactivarProyecto(id, ctx = {}) {
+  await verificarAccesoProyecto(ctx.usuario, id)
   const afectadas = await reactivar({ tabla: 'proyectos', id })
   if (!afectadas) throw new AppError('El proyecto no está dado de baja', 409)
 

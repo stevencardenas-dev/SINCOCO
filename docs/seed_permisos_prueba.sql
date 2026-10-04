@@ -23,6 +23,7 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('clientes.crear',           'Registrar clientes',                       'clientes'),
   ('proyectos.listar',         'Consultar el listado de proyectos',        'proyectos'),
   ('proyectos.registrar',      'Registrar un proyecto',                    'proyectos'),
+  ('proyectos.editar',         'Editar la información de un proyecto',     'proyectos'),
   ('proyectos.dar_baja',       'Dar de baja lógica un proyecto',           'proyectos'),
   -- Gestión de acceso (RBAC): asignar personal a proyectos y actividades, y
   -- ver todos los proyectos en vez de solo los asignados.
@@ -57,29 +58,43 @@ SELECT r.`id`, p.`id`
 FROM `roles` r CROSS JOIN `permisos` p
 WHERE r.`nombre` = 'ADMINISTRADOR';
 
--- GERENTE: consulta de proyectos, personal, plan y clientes (sin edición).
+-- GERENTE (dueño de la constructora): gestiona la operación del negocio —
+-- proyectos, clientes, personal, plan de trabajo y asignación de personal—.
+-- No recibe usuarios, roles, catálogos ni auditoría: son del administrador.
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'GERENTE'
   AND p.`nombre` IN (
-    'clientes.listar', 'proyectos.listar', 'proyectos.acceso_total',
-    'trabajadores.listar', 'etapas.listar', 'actividades.listar'
+    'clientes.listar', 'clientes.crear',
+    'proyectos.listar', 'proyectos.registrar', 'proyectos.editar', 'proyectos.dar_baja',
+    'proyectos.acceso_total', 'proyectos.gestionar_acceso',
+    'trabajadores.listar', 'trabajadores.crear', 'trabajadores.editar', 'trabajadores.dar_baja',
+    'etapas.listar', 'etapas.crear', 'etapas.dar_baja',
+    'actividades.listar', 'actividades.crear', 'actividades.dar_baja'
   );
 
--- MAESTRO_OBRA: consulta de proyectos y del plan de trabajo.
+-- MAESTRO_OBRA: gestiona el plan de trabajo (etapas y actividades) y edita sus
+-- proyectos; no los crea, no los da de baja ni asigna personal. Su alcance se
+-- limita a los proyectos donde está asignado. clientes.listar y
+-- trabajadores.listar alimentan los selectores de cliente y de responsable.
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'MAESTRO_OBRA'
-  AND p.`nombre` IN ('proyectos.listar', 'etapas.listar', 'actividades.listar');
+  AND p.`nombre` IN (
+    'proyectos.listar', 'proyectos.editar',
+    'etapas.listar', 'etapas.crear', 'etapas.dar_baja',
+    'actividades.listar', 'actividades.crear', 'actividades.dar_baja',
+    'clientes.listar', 'trabajadores.listar'
+  );
 
 -- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
 --
 -- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`
--- `usuarios.editar` y los dos permisos de `catalogos` quedan solo en el administrador: no
--- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
--- ya se los da a ADMINISTRADOR. Total: 26 permisos.
+-- `usuarios.editar`, los de `usuarios` y los dos permisos de `catalogos` quedan solo en el
+-- administrador: no aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN
+-- de arriba ya se los da a ADMINISTRADOR. Total: 27 permisos.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).

@@ -84,6 +84,9 @@ trabajador_maestro = int(scalar("SELECT trabajador_id FROM usuarios WHERE userna
 estado, r = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=maestro)
 assert estado == 403, f'sin asignación vigente el plan no se consulta, llego {estado}'
 print('maestro sin asignación ->', estado, r['error'])
+# Tiene el permiso etapas.crear, pero sin asignación vigente no actúa sobre el proyecto.
+estado, r = http('POST', '/api/etapas', etapa, token=maestro)
+assert estado == 403, f'sin asignación el maestro no define etapas, llego {estado}: {r}'
 
 estado, r = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
@@ -93,9 +96,9 @@ assert estado == 201, f'asignar al maestro: {estado} {r}'
 
 estado, _ = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=maestro)
 assert estado == 200, f'el maestro asignado debe poder listar etapas, llego {estado}'
-estado, r = http('POST', '/api/etapas', etapa, token=maestro)
-assert estado == 403, f'se esperaba 403 para maestro, llego {estado}: {r}'
-print('maestro asignado ->', 'GET 200 / POST 403 OK')
+estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa del maestro'), token=maestro)
+assert estado == 201, f'el maestro asignado define etapas, llego {estado}: {r}'
+print('maestro asignado ->', 'GET 200 / POST 201 OK')
 
 # Listados: la etapa y la actividad creadas aparecen.
 estado, etapas = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=admin)

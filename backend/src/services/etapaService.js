@@ -24,6 +24,7 @@ export async function listarEtapas(proyectoId, { incluirInactivos = false } = {}
 export async function registrarEtapa(dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(dto.proyecto_id)
   if (!proyecto) throw new AppError('El proyecto indicado no existe', 404, 'proyecto_id')
+  await verificarAccesoProyecto(ctx.usuario, dto.proyecto_id)
   if (!proyecto.activo) throw new AppError('El proyecto está dado de baja', 400, 'proyecto_id')
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto)
@@ -56,6 +57,7 @@ export async function registrarEtapa(dto, ctx = {}) {
 export async function darDeBajaEtapa(id, ctx = {}) {
   const etapa = await etapaRepository.findById(id)
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
+  await verificarAccesoProyecto(ctx.usuario, etapa.proyecto_id)
 
   const afectadas = await darDeBaja({ tabla: 'etapas_proyecto', id, usuarioId: ctx.usuarioId })
   if (!afectadas) throw new AppError('La etapa ya estaba dada de baja', 409)
@@ -69,6 +71,9 @@ export async function darDeBajaEtapa(id, ctx = {}) {
 
 /** HU-18: reactivar una etapa dada de baja. */
 export async function reactivarEtapa(id, ctx = {}) {
+  const etapa = await etapaRepository.findById(id)
+  if (!etapa) throw new AppError('Etapa no encontrada', 404)
+  await verificarAccesoProyecto(ctx.usuario, etapa.proyecto_id)
   const afectadas = await reactivar({ tabla: 'etapas_proyecto', id })
   if (!afectadas) throw new AppError('La etapa no está dada de baja', 409)
 

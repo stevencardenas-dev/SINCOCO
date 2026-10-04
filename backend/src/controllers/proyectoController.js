@@ -14,7 +14,7 @@ export async function registrar(req, res, next) {
   try {
     const dto = RegistrarProyectoDto.fromRequestBody(req.body)
     const proyecto = await registrarProyecto(dto, {
-      usuarioId: req.user.id,
+      usuario: req.user, usuarioId: req.user.id,
       ip: req.ip,
     })
 
@@ -59,7 +59,7 @@ export async function listar(req, res, next) {
 export async function actualizar(req, res, next) {
   try {
     const proyecto = await actualizarProyecto(req.params.id, req.body, {
-      usuarioId: req.user.id,
+      usuario: req.user, usuarioId: req.user.id,
       ip: req.ip,
     })
     return res.json({ message: 'Proyecto actualizado', proyecto })
@@ -70,7 +70,7 @@ export async function actualizar(req, res, next) {
 
 export async function baja(req, res, next) {
   try {
-    const resultado = await darDeBajaProyecto(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    const resultado = await darDeBajaProyecto(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Proyecto dado de baja', ...resultado })
   } catch (error) {
     return next(error)
@@ -80,7 +80,7 @@ export async function baja(req, res, next) {
 /** PATCH /api/proyectos/:id/reactivar -> HU-18. */
 export async function reactivarCtrl(req, res, next) {
   try {
-    const resultado = await reactivarProyecto(req.params.id, { usuarioId: req.user.id, ip: req.ip })
+    const resultado = await reactivarProyecto(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Proyecto reactivado', ...resultado })
   } catch (error) {
     return next(error)

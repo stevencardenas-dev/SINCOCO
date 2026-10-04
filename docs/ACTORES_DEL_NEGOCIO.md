@@ -1,6 +1,8 @@
 # ACTORES DEL NEGOCIO
 
 ## 1. Administrador
+Conserva **todos los permisos del sistema**: además de las funciones propias de la administración técnica (accesos, roles, catálogos y auditoría), puede realizar cualquier operación de los demás roles.
+
 **Funciones principales:**
 * **Gestión de Accesos:** Gestionar usuarios, roles y permisos de acceso al sistema.
 * **Gestión de Proyectos:** Registrar, editar y consultar los proyectos de vivienda.
@@ -17,11 +19,20 @@
 * **Monitoreo Ejecutivo:** Consultar el dashboard principal con indicadores visuales del avance, estado y costos consolidados de los proyectos.
 * **Alertas y Notificaciones:** Recibir y visualizar alertas automáticas sobre actividades atrasadas y herramientas pendientes de devolución.
 * **Toma de Decisiones:** Generar y exportar reportes filtrados (en formatos PDF o Excel) para apoyar la toma de decisiones.
+* **Gestión de Proyectos:** Registrar, editar y dar de baja (o reactivar) los proyectos de la constructora, y registrar los clientes a los que pertenecen.
+* **Planificación:** Definir las etapas y actividades del plan de trabajo de cualquier proyecto y darlas de baja cuando corresponda.
+* **Gestión de Personal:** Registrar, editar y dar de baja al personal, y asignarlo a proyectos y actividades.
+
+*Límites:* el gerente ve todos los proyectos, pero **no administra usuarios, roles, permisos ni catálogos, ni consulta la auditoría**: son funciones del administrador. Así quien decide sobre la operación del negocio no puede concederse accesos ni alterar la trazabilidad.
 
 ---
 
 ## 3. Maestro de obra / Responsable de proyecto
+Su alcance se limita a **los proyectos donde está asignado**.
+
 **Funciones principales:**
+* **Gestión del Proyecto:** Editar la información de sus proyectos (no los crea, no los da de baja ni asigna personal a ellos).
+* **Planificación:** Definir y dar de baja (o reactivar) las etapas y actividades del plan de trabajo de sus proyectos.
 * **Gestión Operativa:** Gestionar las actividades asignadas dentro del plan de trabajo.
 * **Seguimiento de Avance:** Registrar el porcentaje de avance periódico de las actividades y adjuntar evidencias (fotografías, documentos u observaciones).
 * **Control de Materiales:** Solicitar materiales necesarios para el proyecto y registrar su consumo real por actividad.
