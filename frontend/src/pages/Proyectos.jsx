@@ -777,7 +777,7 @@ export default function Proyectos() {
                   if (!puedeEditar && !puedeBaja) return null
                   const botones = (
                     <>
-                      {p.activo && puedeEditar && (
+                      {!!p.activo && puedeEditar && (
                         <button
                           className="btn-accion btn-accion-editar"
                           onClick={() => abrirEditar(p)}
