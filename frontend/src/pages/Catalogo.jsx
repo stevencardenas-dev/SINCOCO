@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
-import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import { TablaFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
 
@@ -86,8 +86,6 @@ export default function Catalogo() {
   const [errorForm, setErrorForm] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [porEliminar, setPorEliminar] = useState(null)
-  // Celular: la tabla conserva Nombre y Descripción; el resto va en la ficha.
-  const [ficha, setFicha] = useState(null)
 
   const tab = TABS.find((t) => t.id === tipo)
 
@@ -255,170 +253,112 @@ export default function Catalogo() {
             <span>{totalActivos} activos de {datos.length} registros</span>
             <span>Los registros en uso conservan el dato aunque se den de baja</span>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm md:min-w-[760px]">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">{tipo === 'clientes' ? 'Cliente' : 'Nombre'}</th>
-                  {tipo === 'clientes' ? (
-                    <>
-                      <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Documento</th>
-                      <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Contacto</th>
-                    </>
-                  ) : (
-                    <>
-                      <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Descripción</th>
-                      <th className="hidden px-5 py-3.5 font-semibold md:table-cell">En uso</th>
-                    </>
-                  )}
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
-                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acciones</th>
-                  <EncabezadoFicha />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {datos.map((fila) => (
-                  <tr key={fila.id} className={`transition hover:bg-slate-50/70 ${fila.activo ? '' : 'bg-slate-50/60'}`}>
-                    <td className="px-3 py-3 md:px-5 md:py-4">
-                      <p className="font-semibold text-slate-800">{nombreDe(fila)}</p>
-                      {tipo === 'cargos' && Number(fila.operativo) === 1 && (
-                        <span className="badge mt-1 bg-accent-50 text-brand-700 ring-1 ring-accent-200">
-                          Cargo de obra
-                        </span>
-                      )}
-                    </td>
-                    {tipo === 'clientes' ? (
-                      <>
-                        <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">
-                          {fila.tipo_documento} {fila.numero_documento}
-                        </td>
-                        <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
-                          {fila.nombre_contacto ?? '—'}
-                          {fila.telefono && <p className="text-xs text-slate-400">{fila.telefono}</p>}
-                        </td>
-                      </>
-                    ) : (
-                      <>
-                        <td className="max-w-md px-3 py-3 text-slate-600 md:px-5 md:py-4">{fila.descripcion ?? '—'}</td>
-                        <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
-                          {Number(fila.en_uso) > 0
-                            ? `${fila.en_uso} ${Number(fila.en_uso) === 1 ? 'trabajador' : 'trabajadores'}`
-                            : '—'}
-                        </td>
-                      </>
-                    )}
-                    <td className="hidden px-5 py-4 md:table-cell">
-                      <span className={`badge ring-1 ${
-                        fila.activo
-                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                          : 'bg-slate-100 text-slate-500 ring-slate-200'
-                      }`}>
-                        {fila.activo ? 'Activo' : 'Dado de baja'}
-                      </span>
-                    </td>
-                    <td className="hidden px-5 py-4 md:table-cell">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          className="btn-ghost text-xs"
-                          onClick={() => abrirEditar(fila)}
-                        >
-                          <PencilSquareIcon className="h-4 w-4" /> Editar
-                        </button>
-                        {fila.activo ? (
-                          <button
-                            type="button"
-                            className="btn-ghost text-xs"
-                            onClick={() => setPorEliminar(fila)}
-                          >
-                            <TrashIcon className="h-4 w-4" /> Eliminar
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            className="btn-ghost text-xs"
-                            onClick={() => reactivar(fila)}
-                          >
-                            <ArrowPathIcon className="h-4 w-4" /> Reactivar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <CeldaFicha onClick={() => setFicha(fila)} etiqueta={nombreDe(fila)} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {ficha && (
-        <Ficha
-          abierto
-          titulo={nombreDe(ficha)}
-          subtitulo={tab.etiqueta}
-          onCerrar={() => setFicha(null)}
-          campos={
-            tipo === 'clientes'
-              ? [
-                  ['Documento', `${ficha.tipo_documento} ${ficha.numero_documento}`],
-                  ['Contacto', ficha.nombre_contacto],
-                  ['Teléfono', ficha.telefono],
-                  ['Correo', ficha.email],
-                  ['Dirección', ficha.direccion],
-                  ['Estado', ficha.activo ? 'Activo' : 'Dado de baja'],
-                ]
-              : [
-                  ['Descripción', ficha.descripcion],
-                  ...(tipo === 'cargos' ? [['Cargo de obra', Number(ficha.operativo) === 1 ? 'Sí' : 'No']] : []),
-                  [
-                    'En uso',
-                    Number(ficha.en_uso) > 0
-                      ? `${ficha.en_uso} ${Number(ficha.en_uso) === 1 ? 'trabajador' : 'trabajadores'}`
-                      : null,
-                  ],
-                  ['Estado', ficha.activo ? 'Activo' : 'Dado de baja'],
-                ]
-          }
-        >
-          <button
-            type="button"
-            className="btn-ghost text-xs"
-            onClick={() => {
-              const f = ficha
-              setFicha(null)
-              abrirEditar(f)
+          <TablaFicha
+            filas={datos}
+            minWidth="md:min-w-[760px]"
+            filaClase={(f) => `transition hover:bg-slate-50/70 ${f.activo ? '' : 'bg-slate-50/60'}`}
+            ficha={{
+              titulo: nombreDe,
+              subtitulo: () => tab.etiqueta,
+              extras: (f) =>
+                tipo === 'clientes'
+                  ? [
+                      ['Correo', f.email],
+                      ['Dirección', f.direccion],
+                    ]
+                  : [],
             }}
-          >
-            <PencilSquareIcon className="h-4 w-4" /> Editar
-          </button>
-          {ficha.activo ? (
-            <button
-              type="button"
-              className="btn-ghost text-xs"
-              onClick={() => {
-                const f = ficha
-                setFicha(null)
-                setPorEliminar(f)
-              }}
-            >
-              <TrashIcon className="h-4 w-4" /> Eliminar
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-ghost text-xs"
-              onClick={() => {
-                const f = ficha
-                setFicha(null)
-                reactivar(f)
-              }}
-            >
-              <ArrowPathIcon className="h-4 w-4" /> Reactivar
-            </button>
-          )}
-        </Ficha>
+            columnas={[
+              {
+                titulo: tipo === 'clientes' ? 'Cliente' : 'Nombre',
+                movil: true,
+                celda: (f) => (
+                  <>
+                    <p className="font-semibold text-slate-800">{nombreDe(f)}</p>
+                    {tipo === 'cargos' && Number(f.operativo) === 1 && (
+                      <span className="badge mt-1 bg-accent-50 text-brand-700 ring-1 ring-accent-200">
+                        Cargo de obra
+                      </span>
+                    )}
+                  </>
+                ),
+              },
+              ...(tipo === 'clientes'
+                ? [
+                    {
+                      titulo: 'Documento',
+                      movil: true,
+                      tdClase: 'text-slate-600',
+                      celda: (f) => `${f.tipo_documento} ${f.numero_documento}`,
+                    },
+                    {
+                      titulo: 'Contacto',
+                      tdClase: 'text-slate-600',
+                      celda: (f) => (
+                        <>
+                          {f.nombre_contacto ?? '—'}
+                          {f.telefono && <p className="text-xs text-slate-400">{f.telefono}</p>}
+                        </>
+                      ),
+                    },
+                  ]
+                : [
+                    {
+                      titulo: 'Descripción',
+                      movil: true,
+                      tdClase: 'max-w-md text-slate-600',
+                      celda: (f) => f.descripcion ?? '—',
+                    },
+                    {
+                      titulo: 'En uso',
+                      tdClase: 'text-slate-600',
+                      celda: (f) =>
+                        Number(f.en_uso) > 0
+                          ? `${f.en_uso} ${Number(f.en_uso) === 1 ? 'trabajador' : 'trabajadores'}`
+                          : '—',
+                    },
+                  ]),
+              {
+                titulo: 'Estado',
+                celda: (f) => (
+                  <span
+                    className={`badge ring-1 ${
+                      f.activo
+                        ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                        : 'bg-slate-100 text-slate-500 ring-slate-200'
+                    }`}
+                  >
+                    {f.activo ? 'Activo' : 'Dado de baja'}
+                  </span>
+                ),
+              },
+              {
+                titulo: 'Acciones',
+                acciones: true,
+                derecha: true,
+                celda: (f, enFicha) => {
+                  const botones = (
+                    <>
+                      <button type="button" className="btn-ghost text-xs" onClick={() => abrirEditar(f)}>
+                        <PencilSquareIcon className="h-4 w-4" /> Editar
+                      </button>
+                      {f.activo ? (
+                        <button type="button" className="btn-ghost text-xs" onClick={() => setPorEliminar(f)}>
+                          <TrashIcon className="h-4 w-4" /> Eliminar
+                        </button>
+                      ) : (
+                        <button type="button" className="btn-ghost text-xs" onClick={() => reactivar(f)}>
+                          <ArrowPathIcon className="h-4 w-4" /> Reactivar
+                        </button>
+                      )}
+                    </>
+                  )
+                  return enFicha ? botones : <div className="flex items-center justify-end gap-2">{botones}</div>
+                },
+              },
+            ]}
+          />
+        </div>
       )}
 
       {/* Crear / editar un registro del catálogo */}

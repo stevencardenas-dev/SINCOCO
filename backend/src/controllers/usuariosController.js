@@ -110,10 +110,16 @@ export async function listar(req, res) {
   const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
   const [rows] = await pool.query(
     `SELECT u.id, u.username, u.email, u.estado, u.rol_id, u.activo, r.nombre AS rol,
-            TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS trabajador
+            TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS trabajador,
+            t.tipo_documento AS trab_tipo_documento, t.numero_documento AS trab_numero_documento,
+            t.email AS trab_email, t.telefono AS trab_telefono, t.direccion AS trab_direccion,
+            t.estado AS trab_estado, t.activo AS trab_activo,
+            c.nombre AS trab_cargo, e.nombre AS trab_especialidad
      FROM usuarios u
      JOIN roles r ON r.id = u.rol_id
      LEFT JOIN trabajadores t ON t.id = u.trabajador_id
+     LEFT JOIN cargos c ON c.id = t.cargo_id
+     LEFT JOIN especialidades e ON e.id = t.especialidad_id
      ${incluirInactivos ? '' : 'WHERE u.activo = 1'}
      ORDER BY u.id`,
   )
