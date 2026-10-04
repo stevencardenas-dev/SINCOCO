@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
+import CampoPassword from '../components/CampoPassword.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
@@ -269,11 +270,10 @@ export default function Usuarios() {
               <label htmlFor="u-password" className="label">
                 Contraseña
               </label>
-              <input
+              <CampoPassword
                 id="u-password"
                 maxLength={72}
-                type="password"
-                className="input"
+                autoComplete="new-password"
                 minLength={8}
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
