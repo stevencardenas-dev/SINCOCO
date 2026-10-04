@@ -321,7 +321,7 @@ PERMISOS_NEGADOS = [
     ('maestro', 'POST', '/api/asignaciones'),
     ('gerente', 'GET', '/api/usuarios'),
     ('gerente', 'GET', '/api/roles/permisos'),
-    ('gerente', 'POST', '/api/asignaciones'),
+    ('gerente', 'POST', '/api/usuarios'),
 ]
 for rol, metodo, ruta in PERMISOS_NEGADOS:
     caso(f'{rol} → {metodo} {ruta} → 403',
