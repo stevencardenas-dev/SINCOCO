@@ -129,16 +129,28 @@ export default function Login() {
       </div>
 
       {/* Form panel */}
-      <div className="flex w-full items-center justify-center bg-white px-6 py-12 lg:w-1/2">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 lg:hidden">            <div className="flex items-center gap-3">
-              <Logo className="h-11 w-11" />
+      <div className="relative flex w-full items-center justify-center overflow-hidden bg-gradient-to-b from-brand-900 via-brand-900 to-brand-950 px-5 py-10 lg:w-1/2 lg:bg-none lg:bg-white lg:px-6 lg:py-12">
+        {/* Celular: mismo fondo grafito con resplandores amarillos del panel de marca */}
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent-400/25 blur-3xl lg:hidden" />
+        <div className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl lg:hidden" />
+
+        <div className="relative w-full max-w-sm">
+          <div className="mb-6 lg:hidden">
+            <div className="flex items-center gap-3">
+              <Logo className="h-12 w-12" />
               <div>
-                <p className="text-lg font-bold text-slate-900">SINCOCO</p>
-                <p className="text-xs text-slate-500">Control de proyectos de construcción</p>
+                <p className="text-xl font-bold text-white">SINCOCO</p>
+                <p className="text-xs text-slate-400">Control de proyectos de construcción</p>
               </div>
             </div>
+            <div className="mt-5 h-px bg-gradient-to-r from-accent-400 via-accent-400/40 to-transparent" />
+            <p className="mt-4 text-lg font-bold leading-snug tracking-tight text-white">
+              Planee, ejecute y dé <span className="text-accent-300">trazabilidad</span> a sus obras.
+            </p>
           </div>
+
+          {/* Celular: el formulario va en una tarjeta blanca; en escritorio, sin tarjeta */}
+          <div className="rounded-3xl border-t-4 border-accent-400 bg-white p-6 shadow-2xl lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none">
 
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Iniciar sesión</h1>
           <p className="mt-1.5 text-sm text-slate-500">Ingrese sus credenciales para acceder al sistema.</p>
@@ -202,6 +214,11 @@ export default function Login() {
 
           <p className="mt-6 text-center text-xs leading-relaxed text-slate-400">
             El acceso y el menú dependen del rol asignado a cada cuenta.
+          </p>
+          </div>
+
+          <p className="mt-6 text-center text-[11px] text-slate-400 lg:hidden">
+            Constructora XYZ · Cúcuta
           </p>
         </div>
       </div>
