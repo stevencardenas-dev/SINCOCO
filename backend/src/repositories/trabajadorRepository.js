@@ -15,7 +15,7 @@ const CAMPOS = `t.id, t.numero_documento, t.tipo_documento, t.nombres, t.apellid
                 t.email, t.telefono, t.direccion,
                 t.cargo_id, c.nombre AS cargo, c.operativo AS cargo_operativo,
                 t.especialidad_id, e.nombre AS especialidad,
-                t.disponible, t.estado, t.activo`
+                t.disponible, t.estado, t.activo, t.fecha_baja`
 
 const DESDE = `FROM trabajadores t
                JOIN cargos c ON c.id = t.cargo_id
@@ -114,6 +114,120 @@ export async function contarActividadesVigentes(id) {
     [id],
   )
   return Number(fila?.total ?? 0)
+}
+
+/**
+ * Responsabilidades en curso que impiden dar de baja al trabajador: proyectos
+ * activos que no han terminado y actividades activas sin completar de las que
+ * es responsable (solo en proyectos que siguen en curso).
+ */
+export async function responsabilidadesEnCurso(id) {
+  const [proyectos] = await pool.query(
+    `SELECT codigo, nombre, estado
+       FROM proyectos
+      WHERE responsable_id = ? AND activo = 1
+        AND estado IN ('PLANIFICACION', 'EN_EJECUCION', 'PAUSADO')
+      ORDER BY nombre`,
+    [id],
+  )
+  const [actividades] = await pool.query(
+    `SELECT a.nombre, a.estado, p.nombre AS proyecto
+       FROM actividades a
+       JOIN etapas_proyecto e ON e.id = a.etapa_id
+       JOIN proyectos p ON p.id = e.proyecto_id
+      WHERE a.responsable_id = ? AND a.activo = 1 AND a.estado <> 'COMPLETADA'
+        AND e.activo = 1
+        AND p.activo = 1 AND p.estado IN ('PLANIFICACION', 'EN_EJECUCION', 'PAUSADO')
+      ORDER BY p.nombre, a.nombre`,
+    [id],
+  )
+  return { proyectos, actividades }
+}
+
+/** Cuenta de acceso vinculada al trabajador (cada trabajador tiene una como máximo). */
+export async function cuentaVinculada(id) {
+  const [rows] = await pool.query(
+    'SELECT id, username, estado, activo, fecha_baja FROM usuarios WHERE trabajador_id = ? LIMIT 1',
+    [id],
+  )
+  return rows[0] ?? null
+}
+
+/**
+ * Baja lógica del trabajador (HU-18): queda INACTIVO, no disponible, con fecha y
+ * usuario de la baja. Si tiene una cuenta activa, la cuenta se da de baja en la
+ * misma transacción, con la MISMA fecha: así la reactivación sabe qué cuentas
+ * cerró esta baja y no reabre una que el administrador bloqueó por su cuenta.
+ * Devuelve las filas afectadas del trabajador (0 si ya estaba de baja).
+ */
+export async function darDeBajaConCuenta({ id, usuarioId, cuentaId }) {
+  const conexion = await pool.getConnection()
+  try {
+    await conexion.beginTransaction()
+    const [resultado] = await conexion.query(
+      `UPDATE trabajadores
+          SET activo = 0, fecha_baja = NOW(), baja_por_usuario_id = ?,
+              estado = 'INACTIVO', disponible = 0
+        WHERE id = ? AND activo = 1`,
+      [usuarioId ?? null, id],
+    )
+    if (resultado.affectedRows && cuentaId) {
+      // La cuenta copia la fecha exacta del trabajador (ver reactivarConCuenta).
+      await conexion.query(
+        `UPDATE usuarios
+            SET activo = 0, baja_por_usuario_id = ?, estado = 'INACTIVO', sesion_actual = NULL,
+                fecha_baja = (SELECT fecha_baja FROM trabajadores WHERE id = ?)
+          WHERE id = ? AND activo = 1 AND estado = 'ACTIVO'`,
+        [usuarioId ?? null, id, cuentaId],
+      )
+    }
+    await conexion.commit()
+    return resultado.affectedRows
+  } catch (error) {
+    await conexion.rollback()
+    throw error
+  } finally {
+    conexion.release()
+  }
+}
+
+/**
+ * Reactiva al trabajador como ACTIVO con la disponibilidad indicada y, si su
+ * cuenta se cerró con esta misma baja (misma fecha), también la reabre.
+ * Devuelve { afectadas, cuentaReactivada }.
+ */
+export async function reactivarConCuenta({ id, disponible }) {
+  const conexion = await pool.getConnection()
+  try {
+    await conexion.beginTransaction()
+    // Primero la cuenta: se compara con la fecha de baja del trabajador antes de
+    // borrarla. Solo se reabre si se cerró con esta baja (misma fecha).
+    const [cuenta] = await conexion.query(
+      `UPDATE usuarios u
+         JOIN trabajadores t ON t.id = u.trabajador_id
+          SET u.activo = 1, u.fecha_baja = NULL, u.baja_por_usuario_id = NULL, u.estado = 'ACTIVO'
+        WHERE t.id = ? AND t.activo = 0 AND u.activo = 0 AND u.fecha_baja = t.fecha_baja`,
+      [id],
+    )
+    const [resultado] = await conexion.query(
+      `UPDATE trabajadores
+          SET activo = 1, fecha_baja = NULL, baja_por_usuario_id = NULL,
+              estado = 'ACTIVO', disponible = ?
+        WHERE id = ? AND activo = 0`,
+      [disponible, id],
+    )
+    if (!resultado.affectedRows) {
+      await conexion.rollback()
+      return { afectadas: 0, cuentaReactivada: false }
+    }
+    await conexion.commit()
+    return { afectadas: 1, cuentaReactivada: cuenta.affectedRows > 0 }
+  } catch (error) {
+    await conexion.rollback()
+    throw error
+  } finally {
+    conexion.release()
+  }
 }
 
 export async function create(t) {

@@ -51,6 +51,10 @@ $MYSQL "$DB_NAME" < docs/migracion_sesion_unica.sql
 $MYSQL "$DB_NAME" < docs/migracion_roles_gestionar.sql
 $MYSQL "$DB_NAME" < docs/migracion_rbac_acceso.sql
 
+# --- 2d. Personal: «Inactivo» = dado de baja (HU-04 · HU-18) ----------------
+# Alinea los trabajadores que quedaron en INACTIVO sin baja lógica (y al revés).
+$MYSQL "$DB_NAME" < docs/migracion_personal_baja.sql
+
 $MYSQL "$DB_NAME" < docs/seed_catalogos_prueba.sql
 
 # --- 3. Roles, usuarios y trabajadores ------------------------------------

@@ -21,6 +21,7 @@ export class Trabajador {
     disponible,
     estado,
     activo,
+    fecha_baja,
   }) {
     this.id = id
     this.numero_documento = numero_documento
@@ -40,6 +41,8 @@ export class Trabajador {
     this.disponible = disponible
     this.estado = estado
     this.activo = activo
+    // HU-18: fecha de la baja lógica (null mientras esté activo).
+    this.fecha_baja = fecha_baja ?? null
   }
 
   static fromRow(row) {
