@@ -10,6 +10,9 @@ import {
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
+import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
@@ -55,6 +58,9 @@ export default function Usuarios() {
   const [guardando, setGuardando] = useState(false)
   // CU-01 Alt 3: id del usuario cuyo rol se está editando en la tabla.
   const [editandoRol, setEditandoRol] = useState(null)
+  // Búsqueda en el listado (desplegable) y ficha del celular.
+  const [filtros, setFiltros] = useState({ buscar: '', rol_id: '', estado: '' })
+  const [fichaId, setFichaId] = useState(null)
   // HU-18: filtro explícito para consultar las cuentas dadas de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   // HU-01: solicitudes de contraseña esperando que el administrador entregue el
@@ -73,12 +79,11 @@ export default function Usuarios() {
     setCargando(false)
   }
 
-  const cargarSolicitudes = () => {
+  const cargarSolicitudes = () =>
     api
       .get('/usuarios/solicitudes-reset')
       .then((res) => setSolicitudes(res.data))
       .catch(() => {})
-  }
 
   useEffect(() => {
     cargar().catch(() => {
@@ -159,6 +164,18 @@ export default function Usuarios() {
 
   const etiquetaRol = (u) => ROL_LABEL[u.rol] ?? u.rol ?? 'Sin rol'
 
+  const texto = filtros.buscar.trim().toLowerCase()
+  const visibles = usuarios.filter(
+    (u) =>
+      (!texto ||
+        u.username.toLowerCase().includes(texto) ||
+        (u.email ?? '').toLowerCase().includes(texto)) &&
+      (!filtros.rol_id || String(u.rol_id) === filtros.rol_id) &&
+      (!filtros.estado || u.estado === filtros.estado),
+  )
+  const hayFiltros = Boolean(filtros.buscar || filtros.rol_id || filtros.estado)
+  const ficha = usuarios.find((u) => u.id === fichaId) ?? null
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -176,9 +193,13 @@ export default function Usuarios() {
         >
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar
+          onClick={() =>
+            cargar().catch(() => {
+              setError('No se pudo cargar la lista de usuarios.')
+            })
+          }
+        />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
@@ -194,9 +215,7 @@ export default function Usuarios() {
                 Solicitudes de contraseña ({solicitudes.length})
               </h3>
             </div>
-            <button type="button" onClick={cargarSolicitudes} className="btn-ghost text-xs">
-              Actualizar solicitudes
-            </button>
+            <BotonActualizar onClick={cargarSolicitudes} titulo="Actualizar solicitudes" />
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Entregue el código a la persona: lo necesita en «¿Olvidó su contraseña?» del login. Cada
@@ -348,30 +367,103 @@ export default function Usuarios() {
         </form>
       )}
 
+      <FiltrosDesplegable
+        titulo="Buscar usuarios"
+        ariaLabel="Filtros de usuarios"
+        activos={[filtros.buscar, filtros.rol_id, filtros.estado].filter(Boolean).length}
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="xl:col-span-2">
+            <label htmlFor="usr-buscar" className="label">
+              Búsqueda
+            </label>
+            <input
+              id="usr-buscar"
+              type="search"
+              className="input"
+              placeholder="Usuario o correo"
+              value={filtros.buscar}
+              onChange={(e) => setFiltros((f) => ({ ...f, buscar: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label htmlFor="usr-rol" className="label">
+              Rol
+            </label>
+            <select
+              id="usr-rol"
+              className="input"
+              value={filtros.rol_id}
+              onChange={(e) => setFiltros((f) => ({ ...f, rol_id: e.target.value }))}
+            >
+              <option value="">Todos</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {ROL_LABEL[r.nombre] ?? r.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="usr-estado" className="label">
+              Estado
+            </label>
+            <select
+              id="usr-estado"
+              className="input"
+              value={filtros.estado}
+              onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
+            >
+              <option value="">Todos</option>
+              {Object.keys(ESTADO_BADGE).map((e2) => (
+                <option key={e2} value={e2}>
+                  {e2}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className="btn-ghost"
+            disabled={!hayFiltros}
+            onClick={() => setFiltros({ buscar: '', rol_id: '', estado: '' })}
+          >
+            Limpiar filtros
+          </button>
+          <p className="text-xs text-slate-500">
+            {visibles.length} {visibles.length === 1 ? 'usuario' : 'usuarios'}{' '}
+            {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
+          </p>
+        </div>
+      </FiltrosDesplegable>
+
       {cargando ? (
         <div className="card px-6 py-16 text-center text-sm text-slate-500">Cargando usuarios…</div>
       ) : (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[680px] text-left text-sm">
+            <table className="w-full text-left text-sm md:min-w-[680px]">
               <thead>
                 <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">Usuario</th>
-                  <th className="px-5 py-3.5 font-semibold">Correo empresarial</th>
-                  <th className="px-5 py-3.5 font-semibold">Rol</th>
-                  <th className="px-5 py-3.5 font-semibold">Estado</th>
-                  <th className="px-5 py-3.5 text-right font-semibold">Acceso</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Usuario</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Correo empresarial</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Rol</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
+                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acceso</th>
+                  <EncabezadoFicha />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {usuarios.length === 0 && (
-                  <FilaVacia columnas={5}>
+                {visibles.length === 0 && (
+                  <FilaVacia columnas={6}>
                     No hay usuarios que mostrar con estos filtros.
                   </FilaVacia>
                 )}
-                {usuarios.map((u) => (
+                {visibles.map((u) => (
                   <tr key={u.id} className={u.activo ? '' : 'bg-slate-50/60'}>
-                    <td className="px-5 py-4 font-medium text-slate-800">
+                    <td className="px-3 py-3 font-medium text-slate-800 md:px-5 md:py-4">
                       {u.username}
                       {!u.activo && (
                         <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
@@ -379,8 +471,8 @@ export default function Usuarios() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{u.email}</td>
-                    <td className="px-5 py-4 text-slate-600">
+                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">{u.email}</td>
+                    <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">
                       {/* A una cuenta dada de baja no se le cambia el rol: se muestra
                           su rol tal cual (nunca un número de relleno). */}
                       {editandoRol === u.id && u.activo ? (
@@ -411,7 +503,7 @@ export default function Usuarios() {
                         <span>{etiquetaRol(u)}</span>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="hidden px-5 py-4 md:table-cell">
                       <span
                         className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                           ESTADO_BADGE[u.estado] ?? 'bg-slate-100 text-slate-600'
@@ -420,7 +512,7 @@ export default function Usuarios() {
                         {u.estado}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right">
+                    <td className="hidden px-5 py-4 text-right md:table-cell">
                       {u.activo ? (
                         <button
                           onClick={() => cambiarEstado(u)}
@@ -451,12 +543,64 @@ export default function Usuarios() {
                         </button>
                       )}
                     </td>
+                    <CeldaFicha onClick={() => setFichaId(u.id)} etiqueta={u.username} />
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {ficha && (
+        <Ficha
+          abierto
+          titulo={ficha.username}
+          subtitulo={etiquetaRol(ficha)}
+          onCerrar={() => setFichaId(null)}
+          campos={[
+            ['Correo', ficha.email],
+            ['Rol', etiquetaRol(ficha)],
+            ['Estado', ficha.activo ? ficha.estado : `${ficha.estado} · dado de baja`],
+          ]}
+        >
+          {ficha.activo ? (
+            <>
+              <div className="w-full">
+                <label htmlFor="ficha-rol" className="label">
+                  Cambiar rol
+                </label>
+                <select
+                  id="ficha-rol"
+                  className="input"
+                  value={ficha.rol_id ?? ''}
+                  onChange={(e) => cambiarRol(ficha, e.target.value)}
+                >
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {ROL_LABEL[r.nombre] ?? r.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="button" className="btn-ghost text-xs" onClick={() => cambiarEstado(ficha)}>
+                {ficha.estado === 'ACTIVO' ? (
+                  <>
+                    <LockClosedIcon className="h-4 w-4" /> Bloquear
+                  </>
+                ) : (
+                  <>
+                    <CheckCircleIcon className="h-4 w-4" /> Activar
+                  </>
+                )}
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn-ghost text-xs" onClick={() => reactivar(ficha)}>
+              <ArrowPathIcon className="h-4 w-4" /> Reactivar
+            </button>
+          )}
+        </Ficha>
       )}
     </div>
   )

@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowPathIcon,
-  FunnelIcon,
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
@@ -82,6 +84,8 @@ export default function Personal() {
   // HU-18: por defecto no se muestran los registros dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   const [filtros, setFiltros] = useState(SIN_FILTROS)
+  // Celular: la tabla conserva pocas columnas y el resto va en la ficha.
+  const [ficha, setFicha] = useState(null)
 
   // Catálogos del cargo y la especialidad.
   const [cargos, setCargos] = useState([])
@@ -93,7 +97,7 @@ export default function Personal() {
 
   const cargar = () => {
     setError('')
-    api
+    return api
       .get('/trabajadores', {
         params: {
           ...(incluirInactivos ? { incluirInactivos: 1 } : {}),
@@ -112,7 +116,9 @@ export default function Personal() {
     api.get('/catalogos/especialidades').then((res) => setEspecialidades(res.data)).catch(() => {})
   }
 
-  useEffect(cargar, [incluirInactivos, filtros])
+  useEffect(() => {
+    cargar()
+  }, [incluirInactivos, filtros])
   useEffect(cargarCatalogos, [])
 
   /** Cambiar el estado reemplaza al «dar de baja»: la disponibilidad se deriva. */
@@ -255,24 +261,18 @@ export default function Personal() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       {/* Búsqueda y filtros (corren en la base por el volumen de personal) */}
-      <form
-        className="card space-y-4 p-5"
-        onSubmit={(e) => e.preventDefault()}
-        aria-label="Filtros de personal"
+      <FiltrosDesplegable
+        titulo="Buscar personal"
+        ariaLabel="Filtros de personal"
+        activos={Object.values(filtros).filter((v) => v !== '').length}
       >
-        <div className="flex items-center gap-2 text-slate-900">
-          <FunnelIcon className="h-5 w-5 text-brand-600" />
-          <h3 className="text-base font-semibold">Buscar personal</h3>
-        </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="xl:col-span-2">
             <label htmlFor="per-buscar" className="label">
@@ -355,7 +355,7 @@ export default function Personal() {
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
           </p>
         )}
-      </form>
+      </FiltrosDesplegable>
 
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
       {esAdmin && (
@@ -696,22 +696,23 @@ export default function Personal() {
       {personal !== null && personal.length > 0 && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[860px] text-left text-sm">
+            <table className="w-full text-left text-sm md:min-w-[860px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">Trabajador</th>
-                  <th className="px-5 py-3.5 font-semibold">Documento</th>
-                  <th className="px-5 py-3.5 font-semibold">Cargo</th>
-                  <th className="px-5 py-3.5 font-semibold">Contacto</th>
-                  <th className="px-5 py-3.5 font-semibold">Estado</th>
-                  <th className="px-5 py-3.5 font-semibold">Disponibilidad</th>
-                  <th className="px-5 py-3.5 font-semibold">Acciones</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Trabajador</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Documento</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Cargo</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Contacto</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Disponibilidad</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Acciones</th>
+                  <EncabezadoFicha />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {personal.map((t) => (
                   <tr key={t.id} className="transition hover:bg-slate-50/70">
-                    <td className="px-5 py-4 font-medium text-slate-800">
+                    <td className="px-3 py-3 font-medium text-slate-800 md:px-5 md:py-4">
                       {t.nombres} {t.apellidos}
                       {!t.activo && (
                         <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
@@ -722,11 +723,11 @@ export default function Personal() {
                         <p className="text-xs font-normal text-slate-400">{t.especialidad}</p>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">
+                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
                       {t.tipo_documento} {t.numero_documento}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">{t.cargo}</td>
-                    <td className="px-5 py-4 text-xs text-slate-500">
+                    <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">{t.cargo}</td>
+                    <td className="hidden px-5 py-4 text-xs text-slate-500 md:table-cell">
                       {t.email ?? '—'}
                       {t.telefono && <p className="tabular-nums">{telefonoLegible(t.telefono)}</p>}
                       {t.direccion && (
@@ -735,7 +736,7 @@ export default function Personal() {
                         </p>
                       )}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="hidden px-5 py-4 md:table-cell">
                       {esAdmin && t.activo ? (
                         <select
                           className="input py-1 text-xs"
@@ -759,10 +760,10 @@ export default function Personal() {
                         </span>
                       )}
                     </td>
-                    <td className="px-5 py-4 text-slate-600">
+                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
                       {Number(t.disponible) ? 'Disponible' : 'No disponible'}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="hidden px-5 py-4 md:table-cell">
                       {/* En escritorio las acciones se apilan en vertical: en
                           horizontal se montaban unas sobre otras. */}
                       <div className="flex flex-col items-stretch gap-1.5">
@@ -777,12 +778,69 @@ export default function Personal() {
                         )}
                       </div>
                     </td>
+                    <CeldaFicha onClick={() => setFicha(t)} etiqueta={`${t.nombres} ${t.apellidos}`} />
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {ficha && (
+        <Ficha
+          abierto
+          titulo={`${ficha.nombres} ${ficha.apellidos}`}
+          subtitulo={ficha.cargo}
+          onCerrar={() => setFicha(null)}
+          campos={[
+            ['Documento', `${ficha.tipo_documento} ${ficha.numero_documento}`],
+            ['Cargo', ficha.cargo],
+            ['Especialidad', ficha.especialidad],
+            ['Correo', ficha.email],
+            ['Teléfono', ficha.telefono ? telefonoLegible(ficha.telefono) : null],
+            ['Dirección', ficha.direccion],
+            ['Estado', ficha.activo ? ficha.estado : `${ficha.estado} · dado de baja`],
+            ['Disponibilidad', Number(ficha.disponible) ? 'Disponible' : 'No disponible'],
+          ]}
+        >
+          {esAdmin && ficha.activo && (
+            <div className="w-full">
+              <label htmlFor="ficha-estado" className="label">
+                Cambiar estado
+              </label>
+              <select
+                id="ficha-estado"
+                className="input"
+                value={ficha.estado}
+                onChange={(e) => {
+                  const t = ficha
+                  setFicha(null)
+                  cambiarEstado(t, e.target.value)
+                }}
+              >
+                {ESTADOS.map((e2) => (
+                  <option key={e2.value} value={e2.value}>
+                    {e2.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {esAdmin && (
+            <button
+              type="button"
+              className="btn-accion btn-accion-editar"
+              onClick={() => {
+                const t = ficha
+                setFicha(null)
+                abrirEditar(t)
+              }}
+            >
+              <PencilSquareIcon className="h-4 w-4" /> Editar
+            </button>
+          )}
+        </Ficha>
       )}
     </div>
   )

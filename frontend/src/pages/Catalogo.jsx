@@ -7,6 +7,8 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
+import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
 
@@ -84,19 +86,23 @@ export default function Catalogo() {
   const [errorForm, setErrorForm] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [porEliminar, setPorEliminar] = useState(null)
+  // Celular: la tabla conserva Nombre y Descripción; el resto va en la ficha.
+  const [ficha, setFicha] = useState(null)
 
   const tab = TABS.find((t) => t.id === tipo)
 
   const cargar = () => {
     setError('')
     setDatos(null)
-    api
+    return api
       .get(tab.ruta, { params: incluirInactivos ? { incluirInactivos: 1 } : {} })
       .then((res) => setDatos(res.data))
       .catch(() => setError(`No se pudo cargar el catálogo de ${tab.label.toLowerCase()}.`))
   }
 
-  useEffect(cargar, [tipo, incluirInactivos])
+  useEffect(() => {
+    cargar()
+  }, [tipo, incluirInactivos])
 
   const abrirCrear = () => {
     setForm(VACIO[tipo])
@@ -200,9 +206,7 @@ export default function Catalogo() {
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {/* Pestañas: un catálogo a la vez, misma mecánica para los tres. */}
@@ -253,29 +257,30 @@ export default function Catalogo() {
             <span>Los registros en uso conservan el dato aunque se den de baja</span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-left text-sm">
+            <table className="w-full text-left text-sm md:min-w-[760px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">{tipo === 'clientes' ? 'Cliente' : 'Nombre'}</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">{tipo === 'clientes' ? 'Cliente' : 'Nombre'}</th>
                   {tipo === 'clientes' ? (
                     <>
-                      <th className="px-5 py-3.5 font-semibold">Documento</th>
-                      <th className="px-5 py-3.5 font-semibold">Contacto</th>
+                      <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Documento</th>
+                      <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Contacto</th>
                     </>
                   ) : (
                     <>
-                      <th className="px-5 py-3.5 font-semibold">Descripción</th>
-                      <th className="px-5 py-3.5 font-semibold">En uso</th>
+                      <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Descripción</th>
+                      <th className="hidden px-5 py-3.5 font-semibold md:table-cell">En uso</th>
                     </>
                   )}
-                  <th className="px-5 py-3.5 font-semibold">Estado</th>
-                  <th className="px-5 py-3.5 text-right font-semibold">Acciones</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
+                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acciones</th>
+                  <EncabezadoFicha />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {datos.map((fila) => (
                   <tr key={fila.id} className={`transition hover:bg-slate-50/70 ${fila.activo ? '' : 'bg-slate-50/60'}`}>
-                    <td className="px-5 py-4">
+                    <td className="px-3 py-3 md:px-5 md:py-4">
                       <p className="font-semibold text-slate-800">{nombreDe(fila)}</p>
                       {tipo === 'cargos' && Number(fila.operativo) === 1 && (
                         <span className="badge mt-1 bg-accent-50 text-brand-700 ring-1 ring-accent-200">
@@ -285,25 +290,25 @@ export default function Catalogo() {
                     </td>
                     {tipo === 'clientes' ? (
                       <>
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">
                           {fila.tipo_documento} {fila.numero_documento}
                         </td>
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
                           {fila.nombre_contacto ?? '—'}
                           {fila.telefono && <p className="text-xs text-slate-400">{fila.telefono}</p>}
                         </td>
                       </>
                     ) : (
                       <>
-                        <td className="max-w-md px-5 py-4 text-slate-600">{fila.descripcion ?? '—'}</td>
-                        <td className="px-5 py-4 text-slate-600">
+                        <td className="max-w-md px-3 py-3 text-slate-600 md:px-5 md:py-4">{fila.descripcion ?? '—'}</td>
+                        <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
                           {Number(fila.en_uso) > 0
                             ? `${fila.en_uso} ${Number(fila.en_uso) === 1 ? 'trabajador' : 'trabajadores'}`
                             : '—'}
                         </td>
                       </>
                     )}
-                    <td className="px-5 py-4">
+                    <td className="hidden px-5 py-4 md:table-cell">
                       <span className={`badge ring-1 ${
                         fila.activo
                           ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
@@ -312,7 +317,7 @@ export default function Catalogo() {
                         {fila.activo ? 'Activo' : 'Dado de baja'}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="hidden px-5 py-4 md:table-cell">
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
@@ -340,12 +345,81 @@ export default function Catalogo() {
                         )}
                       </div>
                     </td>
+                    <CeldaFicha onClick={() => setFicha(fila)} etiqueta={nombreDe(fila)} />
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
+      )}
+
+      {ficha && (
+        <Ficha
+          abierto
+          titulo={nombreDe(ficha)}
+          subtitulo={tab.etiqueta}
+          onCerrar={() => setFicha(null)}
+          campos={
+            tipo === 'clientes'
+              ? [
+                  ['Documento', `${ficha.tipo_documento} ${ficha.numero_documento}`],
+                  ['Contacto', ficha.nombre_contacto],
+                  ['Teléfono', ficha.telefono],
+                  ['Correo', ficha.email],
+                  ['Dirección', ficha.direccion],
+                  ['Estado', ficha.activo ? 'Activo' : 'Dado de baja'],
+                ]
+              : [
+                  ['Descripción', ficha.descripcion],
+                  ...(tipo === 'cargos' ? [['Cargo de obra', Number(ficha.operativo) === 1 ? 'Sí' : 'No']] : []),
+                  [
+                    'En uso',
+                    Number(ficha.en_uso) > 0
+                      ? `${ficha.en_uso} ${Number(ficha.en_uso) === 1 ? 'trabajador' : 'trabajadores'}`
+                      : null,
+                  ],
+                  ['Estado', ficha.activo ? 'Activo' : 'Dado de baja'],
+                ]
+          }
+        >
+          <button
+            type="button"
+            className="btn-ghost text-xs"
+            onClick={() => {
+              const f = ficha
+              setFicha(null)
+              abrirEditar(f)
+            }}
+          >
+            <PencilSquareIcon className="h-4 w-4" /> Editar
+          </button>
+          {ficha.activo ? (
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => {
+                const f = ficha
+                setFicha(null)
+                setPorEliminar(f)
+              }}
+            >
+              <TrashIcon className="h-4 w-4" /> Eliminar
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-ghost text-xs"
+              onClick={() => {
+                const f = ficha
+                setFicha(null)
+                reactivar(f)
+              }}
+            >
+              <ArrowPathIcon className="h-4 w-4" /> Reactivar
+            </button>
+          )}
+        </Ficha>
       )}
 
       {/* Crear / editar un registro del catálogo */}

@@ -44,23 +44,23 @@ const NAV = [
   {
     group: 'Inventario',
     items: [
-      { to: '/materiales', label: 'Materiales', icon: CubeIcon, roles: [ADMIN, BODEGA, MAESTRO] },
-      { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, roles: [ADMIN, BODEGA] },
-      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA] },
+      { to: '/materiales', label: 'Materiales', icon: CubeIcon, roles: [ADMIN, BODEGA, MAESTRO], proximamente: true },
+      { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, roles: [ADMIN, BODEGA], proximamente: true },
+      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA], proximamente: true },
     ],
   },
   {
     group: 'Gestión',
     items: [
-      { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, roles: [ADMIN, GERENTE] },
-      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, roles: [ADMIN, GERENTE, MAESTRO] },
-      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE] },
+      { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, roles: [ADMIN, GERENTE], proximamente: true },
+      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, roles: [ADMIN, GERENTE, MAESTRO], proximamente: true },
+      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE], proximamente: true },
     ],
   },
   {
     group: 'Sistema',
     items: [
-      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE] },
+      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE], proximamente: true },
       // RF01 · RF06: valores de dominio (cargos, especialidades y clientes).
       { to: '/catalogo', label: 'Catálogo', icon: RectangleStackIcon, roles: [ADMIN] },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
@@ -80,7 +80,7 @@ export default function Sidebar({ open, onClose }) {
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 flex w-72 flex-col bg-brand-900 transition-transform duration-200 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col bg-brand-900 transition-transform duration-200 lg:translate-x-0 ${
         open ? 'translate-x-0' : '-translate-x-full'
       }`}
     >
@@ -113,7 +113,7 @@ export default function Sidebar({ open, onClose }) {
               {group.group}
             </p>
             <ul className="space-y-1">
-              {group.items.map(({ to, label, icon: Icon, end }) => (
+              {group.items.map(({ to, label, icon: Icon, end, proximamente }) => (
                 <li key={to}>
                   <NavLink
                     to={to}
@@ -123,9 +123,12 @@ export default function Sidebar({ open, onClose }) {
                       `group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
                         isActive
                           ? 'bg-accent-400 font-semibold text-brand-950 shadow-sm'
-                          : 'font-medium text-slate-300 hover:bg-brand-800 hover:text-white'
+                          : proximamente
+                            ? 'font-medium text-slate-500 hover:bg-brand-800/60 hover:text-slate-300'
+                            : 'font-medium text-slate-300 hover:bg-brand-800 hover:text-white'
                       }`
                     }
+                    title={proximamente ? 'Próximamente' : undefined}
                   >
                     <Icon className="h-5 w-5 shrink-0" />
                     {label}

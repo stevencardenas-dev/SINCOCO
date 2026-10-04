@@ -4,6 +4,7 @@ import { ArrowLeftIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outl
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { mensajeError } from '../lib/errores.js'
@@ -66,7 +67,7 @@ export default function PlanProyecto() {
 
   const cargar = () => {
     setError('')
-    Promise.all([
+    return Promise.all([
       api.get('/proyectos'),
       api.get('/etapas', { params: { proyecto_id: id } }),
       api.get('/actividades', { params: { proyecto_id: id } }),
@@ -83,7 +84,9 @@ export default function PlanProyecto() {
       .catch(() => setError('No se pudo cargar el plan de trabajo.'))
   }
 
-  useEffect(cargar, [id])
+  useEffect(() => {
+    cargar()
+  }, [id])
 
   const crearEtapa = async (e) => {
     e.preventDefault()
@@ -176,9 +179,7 @@ export default function PlanProyecto() {
             <PlusIcon className="h-5 w-5" /> Nueva etapa
           </button>
         )}
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}

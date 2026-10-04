@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import CampoPassword from '../components/CampoPassword.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais from '../components/TelefonoPais.jsx'
 import api from '../services/api'
@@ -55,13 +56,15 @@ export default function Perfil() {
 
   const cargar = () => {
     setError('')
-    api
+    return api
       .get('/perfil')
       .then((res) => aplicar(res.data))
       .catch(() => setError('No se pudo cargar su información personal.'))
   }
 
-  useEffect(cargar, [])
+  useEffect(() => {
+    cargar()
+  }, [])
 
   const guardarDatos = async (e) => {
     e.preventDefault()
@@ -115,9 +118,7 @@ export default function Perfil() {
         title="Mi información personal"
         subtitle="Sus datos de acceso y su ficha de trabajador"
       >
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className="h-4 w-4" /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} />
       </PageHeader>
 
       {error && (

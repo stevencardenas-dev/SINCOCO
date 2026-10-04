@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
-  ArrowPathIcon,
   DocumentMagnifyingGlassIcon,
-  FunnelIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
+import BotonActualizar from '../components/BotonActualizar.jsx'
+import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import api from '../services/api'
 import { fmtFechaHora } from '../lib/format.js'
 
@@ -65,11 +66,12 @@ export default function Auditoria() {
   const [cargando, setCargando] = useState(true)
   const [filtros, setFiltros] = useState(SIN_FILTROS)
   const [pagina, setPagina] = useState(1)
+  const [ficha, setFicha] = useState(null)
 
   const cargar = useCallback(() => {
     setCargando(true)
     setError('')
-    api
+    return api
       .get('/auditoria', { params: { ...filtros, pagina } })
       .then((res) => setDatos(res.data))
       .catch((err) =>
@@ -78,7 +80,9 @@ export default function Auditoria() {
       .finally(() => setCargando(false))
   }, [filtros, pagina])
 
-  useEffect(cargar, [cargar])
+  useEffect(() => {
+    cargar()
+  }, [cargar])
 
   // Cualquier cambio de filtro vuelve a la primera página: si no, una página
   // alta puede quedar vacía y parecer que no hay resultados.
@@ -98,9 +102,7 @@ export default function Auditoria() {
         title="Trazabilidad y auditoría"
         subtitle="Quién realizó cada operación crítica y cuándo"
       >
-        <button type="button" onClick={cargar} className="btn-ghost inline-flex items-center gap-2">
-          <ArrowPathIcon className={`h-4 w-4 ${cargando ? 'animate-spin' : ''}`} /> Actualizar
-        </button>
+        <BotonActualizar onClick={cargar} cargando={cargando} />
       </PageHeader>
 
       <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
@@ -119,11 +121,11 @@ export default function Auditoria() {
       )}
 
       {/* Filtros: criterio 4 (usuario, tabla afectada y rango de fechas). */}
-      <form className="card space-y-5 p-6" onSubmit={(e) => e.preventDefault()}>
-        <div className="flex items-center gap-2 text-slate-900">
-          <FunnelIcon className="h-5 w-5 text-brand-600" />
-          <h3 className="text-base font-semibold">Filtros</h3>
-        </div>
+      <FiltrosDesplegable
+        titulo="Buscar en la bitácora"
+        ariaLabel="Filtros de auditoría"
+        activos={Object.values(filtros).filter(Boolean).length}
+      >
 
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
           <div>
@@ -216,21 +218,22 @@ export default function Auditoria() {
               : 'Consultando…'}
           </p>
         </div>
-      </form>
+      </FiltrosDesplegable>
 
       {filas.length > 0 && (
         <div className="card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full text-left text-sm md:min-w-[900px]">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-5 py-3.5 font-semibold">Fecha y hora</th>
-                  <th className="px-5 py-3.5 font-semibold">Usuario</th>
-                  <th className="px-5 py-3.5 font-semibold">Acción</th>
-                  <th className="px-5 py-3.5 font-semibold">Tabla afectada</th>
-                  <th className="px-5 py-3.5 font-semibold">Registro</th>
-                  <th className="px-5 py-3.5 font-semibold">Detalles</th>
-                  <th className="px-5 py-3.5 font-semibold">IP</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Fecha y hora</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Usuario</th>
+                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Acción</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Tabla afectada</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Registro</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Detalles</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">IP</th>
+                  <EncabezadoFicha />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -238,10 +241,10 @@ export default function Auditoria() {
                   const detalle = textoDetalles(f.detalles)
                   return (
                     <tr key={f.id} data-accion={f.accion} className="transition hover:bg-slate-50/70">
-                      <td className="whitespace-nowrap px-5 py-4 text-slate-600">
+                      <td className="hidden whitespace-nowrap px-5 py-4 text-slate-600 md:table-cell">
                         {fmtFechaHora(f.fecha_registro)}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-3 md:px-5 md:py-4">
                         {f.username ? (
                           <>
                             <p className="font-medium text-slate-800">{f.username}</p>
@@ -253,7 +256,7 @@ export default function Auditoria() {
                           <span className="text-slate-400">Usuario eliminado</span>
                         )}
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="px-3 py-3 md:px-5 md:py-4">
                         <span
                           className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                             ACCION_BADGE[f.accion] ?? 'bg-slate-100 text-slate-600'
@@ -262,16 +265,16 @@ export default function Auditoria() {
                           {ACCION_LABEL[f.accion] ?? f.accion}
                         </span>
                       </td>
-                      <td className="px-5 py-4">
+                      <td className="hidden px-5 py-4 md:table-cell">
                         <p className="text-slate-600">{TITULO_TABLA[f.tabla_afectada] ?? f.tabla_afectada ?? '—'}</p>
                         {f.tabla_afectada && (
                           <p className="font-mono text-xs text-slate-400">{f.tabla_afectada}</p>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-slate-600">
+                      <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
                         {f.registro_id == null ? '—' : `#${f.registro_id}`}
                       </td>
-                      <td className="max-w-[260px] px-5 py-4">
+                      <td className="hidden max-w-[260px] px-5 py-4 md:table-cell">
                         <p
                           className="truncate font-mono text-xs text-slate-500"
                           title={detalle}
@@ -279,9 +282,10 @@ export default function Auditoria() {
                           {detalle}
                         </p>
                       </td>
-                      <td className="px-5 py-4 font-mono text-xs text-slate-400">
+                      <td className="hidden px-5 py-4 font-mono text-xs text-slate-400 md:table-cell">
                         {f.direccion_ip ?? '—'}
                       </td>
+                      <CeldaFicha onClick={() => setFicha(f)} etiqueta={f.username ?? 'usuario eliminado'} />
                     </tr>
                   )
                 })}
@@ -331,6 +335,24 @@ export default function Auditoria() {
               : 'Todavía no se ha registrado ninguna operación en la bitácora.'}
           </p>
         </div>
+      )}
+
+      {ficha && (
+        <Ficha
+          abierto
+          titulo={`${ACCION_LABEL[ficha.accion] ?? ficha.accion} · ${ficha.username ?? 'Usuario eliminado'}`}
+          subtitulo={fmtFechaHora(ficha.fecha_registro)}
+          onCerrar={() => setFicha(null)}
+          campos={[
+            ['Usuario', ficha.username ?? 'Usuario eliminado'],
+            ['Rol', ficha.rol ? (ROL_LABEL[ficha.rol] ?? ficha.rol) : null],
+            ['Acción', ACCION_LABEL[ficha.accion] ?? ficha.accion],
+            ['Tabla', TITULO_TABLA[ficha.tabla_afectada] ?? ficha.tabla_afectada],
+            ['Registro', ficha.registro_id == null ? null : `#${ficha.registro_id}`],
+            ['Detalles', <span key="d" className="font-mono text-xs">{textoDetalles(ficha.detalles)}</span>],
+            ['IP', ficha.direccion_ip],
+          ]}
+        />
       )}
     </div>
   )
