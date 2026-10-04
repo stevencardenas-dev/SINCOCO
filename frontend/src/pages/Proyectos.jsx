@@ -10,7 +10,7 @@ import {
   PlusIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
-import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
@@ -104,8 +104,6 @@ export default function Proyectos() {
   const [errorCliente, setErrorCliente] = useState('')
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
-  // Celular: la tabla conserva pocas columnas y el resto va en la ficha.
-  const [ficha, setFicha] = useState(null)
 
   const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
 
@@ -690,144 +688,112 @@ export default function Proyectos() {
 
       {proyectos !== null && proyectos.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm md:min-w-[720px]">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Proyecto</th>
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Responsable</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Ubicación</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Presupuesto</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Avance</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Plan</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Acciones</th>
-                  <EncabezadoFicha />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {proyectos.map((p) => {
+          <TablaFicha
+            filas={proyectos}
+            minWidth="md:min-w-[720px]"
+            filaClase={() => 'transition hover:bg-slate-50/70'}
+            ficha={{
+              titulo: (p) => p.nombre,
+              subtitulo: (p) => p.codigo,
+              extras: (p) => [
+                ['Cliente', p.cliente_nombre],
+                ['Inicio', fmtFecha(p.fecha_inicio_programada)],
+                ['Fin', fmtFecha(p.fecha_fin_programada)],
+              ],
+            }}
+            columnas={[
+              {
+                titulo: 'Proyecto',
+                movil: true,
+                celda: (p) => (
+                  <>
+                    <p className="font-semibold text-slate-900">{p.nombre}</p>
+                    <p className="text-xs text-slate-400">
+                      {p.codigo} · {p.cliente_nombre} · {fmtFecha(p.fecha_inicio_programada)}
+                    </p>
+                  </>
+                ),
+              },
+              { titulo: 'Responsable', movil: true, tdClase: 'text-slate-600', celda: (p) => p.responsable_nombre },
+              {
+                titulo: 'Ubicación',
+                tdClase: 'max-w-[14rem] text-slate-600',
+                celda: (p) => (
+                  <span className="block truncate" title={p.ubicacion}>
+                    {p.ubicacion}
+                  </span>
+                ),
+                valor: (p) => p.ubicacion,
+              },
+              {
+                titulo: 'Presupuesto',
+                tdClase: 'font-medium tabular-nums text-slate-700',
+                celda: (p) => fmtCOP(Number(p.presupuesto_inicial)),
+              },
+              {
+                titulo: 'Estado',
+                celda: (p) => {
                   const est = estadoProyecto[p.estado?.toLowerCase()] ?? estadoProyecto.planificacion
+                  return <span className={`badge ring-1 ${est.cls}`}>{est.label}</span>
+                },
+              },
+              {
+                titulo: 'Avance',
+                celda: (p) => {
                   const avance = Number(p.porcentaje_avance_total)
                   return (
-                    <tr key={p.id} className="transition hover:bg-slate-50/70">
-                      <td className="px-3 py-3 md:px-5 md:py-4">
-                        <p className="font-semibold text-slate-900">{p.nombre}</p>
-                        <p className="text-xs text-slate-400">
-                          {p.codigo} · {p.cliente_nombre} · {fmtFecha(p.fecha_inicio_programada)}
-                        </p>
-                      </td>
-                      <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">{p.responsable_nombre}</td>
-                      <td className="hidden max-w-[14rem] px-5 py-4 text-slate-600 md:table-cell">
-                        <span className="block truncate" title={p.ubicacion}>
-                          {p.ubicacion}
-                        </span>
-                      </td>
-                      <td className="hidden px-5 py-4 font-medium tabular-nums text-slate-700 md:table-cell">
-                        {fmtCOP(Number(p.presupuesto_inicial))}
-                      </td>
-                      <td className="hidden px-5 py-4 md:table-cell">
-                        <span className={`badge ring-1 ${est.cls}`}>{est.label}</span>
-                      </td>
-                      <td className="hidden px-5 py-4 md:table-cell">
-                        <div className="flex items-center gap-3">
-                          <div className="h-2 w-28 overflow-hidden rounded-full bg-brand-100">
-                            <div
-                              className="h-full rounded-full bg-accent-500 transition-all"
-                              style={{ width: `${avance}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-semibold tabular-nums text-slate-600">
-                            {avance}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="hidden px-5 py-4 md:table-cell">
-                        <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
-                          <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
-                        </Link>
-                      </td>
-                      <td className="hidden px-5 py-4 md:table-cell">
-                        {/* En escritorio las acciones se apilan en vertical: en
-                            horizontal se montaban unas sobre otras. */}
-                        <div className="flex flex-col items-stretch gap-1.5">
-                          {esAdmin && p.activo && (
-                            <button
-                              className="btn-accion btn-accion-editar"
-                              onClick={() => abrirEditar(p)}
-                              aria-label={`Actualizar ${p.nombre}`}
-                            >
-                              <PencilSquareIcon className="h-4 w-4" /> Editar
-                            </button>
-                          )}
-                          {esAdmin && (
-                            <button
-                              className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
-                              onClick={() => cambiarBaja(p)}
-                              aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
-                            >
-                              {p.activo ? 'Dar de baja' : 'Reactivar'}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <CeldaFicha onClick={() => setFicha(p)} etiqueta={p.nombre} />
-                    </tr>
+                    <div className="flex items-center gap-3">
+                      <div className="h-2 w-28 overflow-hidden rounded-full bg-brand-100">
+                        <div
+                          className="h-full rounded-full bg-accent-500 transition-all"
+                          style={{ width: `${avance}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-semibold tabular-nums text-slate-600">{avance}%</span>
+                    </div>
                   )
-                })}
-              </tbody>
-            </table>
-          </div>
+                },
+              },
+              {
+                titulo: 'Plan',
+                acciones: true,
+                celda: (p) => (
+                  <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
+                    <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
+                  </Link>
+                ),
+              },
+              {
+                titulo: 'Acciones',
+                acciones: true,
+                celda: (p, enFicha) => {
+                  if (!esAdmin) return null
+                  const botones = (
+                    <>
+                      {p.activo && (
+                        <button
+                          className="btn-accion btn-accion-editar"
+                          onClick={() => abrirEditar(p)}
+                          aria-label={`Actualizar ${p.nombre}`}
+                        >
+                          <PencilSquareIcon className="h-4 w-4" /> Editar
+                        </button>
+                      )}
+                      <button
+                        className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
+                        onClick={() => cambiarBaja(p)}
+                        aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
+                      >
+                        {p.activo ? 'Dar de baja' : 'Reactivar'}
+                      </button>
+                    </>
+                  )
+                  return enFicha ? botones : <div className="flex flex-col items-stretch gap-1.5">{botones}</div>
+                },
+              },
+            ]}
+          />
         </div>
-      )}
-
-      {ficha && (
-        <Ficha
-          abierto
-          titulo={ficha.nombre}
-          subtitulo={ficha.codigo}
-          onCerrar={() => setFicha(null)}
-          campos={[
-            ['Cliente', ficha.cliente_nombre],
-            ['Responsable', ficha.responsable_nombre],
-            ['Ubicación', ficha.ubicacion],
-            ['Presupuesto', fmtCOP(Number(ficha.presupuesto_inicial))],
-            ['Estado', (estadoProyecto[ficha.estado?.toLowerCase()] ?? estadoProyecto.planificacion).label],
-            ['Avance', `${Number(ficha.porcentaje_avance_total)}%`],
-            ['Inicio', fmtFecha(ficha.fecha_inicio_programada)],
-            ['Fin', fmtFecha(ficha.fecha_fin_programada)],
-          ]}
-        >
-          <Link to={`/proyectos/${ficha.id}`} className="btn-ghost text-xs">
-            <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
-          </Link>
-          {esAdmin && ficha.activo && (
-            <button
-              type="button"
-              className="btn-accion btn-accion-editar"
-              onClick={() => {
-                const p = ficha
-                setFicha(null)
-                abrirEditar(p)
-              }}
-            >
-              <PencilSquareIcon className="h-4 w-4" /> Editar
-            </button>
-          )}
-          {esAdmin && (
-            <button
-              type="button"
-              className={`btn-accion ${ficha.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
-              onClick={() => {
-                const p = ficha
-                setFicha(null)
-                cambiarBaja(p)
-              }}
-            >
-              {ficha.activo ? 'Dar de baja' : 'Reactivar'}
-            </button>
-          )}
-        </Ficha>
       )}
 
       <p className="text-xs text-slate-400">

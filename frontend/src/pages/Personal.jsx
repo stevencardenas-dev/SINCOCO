@@ -8,7 +8,7 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
-import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
@@ -89,8 +89,6 @@ export default function Personal() {
   // HU-18: por defecto no se muestran los registros dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   const [filtros, setFiltros] = useState(SIN_FILTROS)
-  // Celular: la tabla conserva pocas columnas y el resto va en la ficha.
-  const [ficha, setFicha] = useState(null)
 
   // Catálogos del cargo y la especialidad.
   const [cargos, setCargos] = useState([])
@@ -798,190 +796,128 @@ export default function Personal() {
 
       {personal !== null && personal.length > 0 && (
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm md:min-w-[860px]">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Trabajador</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Documento</th>
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Cargo</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Contacto</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Disponibilidad</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Acciones</th>
-                  <EncabezadoFicha />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {personal.map((t) => (
-                  <tr key={t.id} className="transition hover:bg-slate-50/70">
-                    <td className="px-3 py-3 font-medium text-slate-800 md:px-5 md:py-4">
-                      {t.nombres} {t.apellidos}
-                      {!t.activo && (
-                        <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-                          Dado de baja
-                        </span>
+          <TablaFicha
+            filas={personal}
+            minWidth="md:min-w-[860px]"
+            filaClase={() => 'transition hover:bg-slate-50/70'}
+            ficha={{
+              titulo: (t) => `${t.nombres} ${t.apellidos}`,
+              subtitulo: (t) => t.cargo,
+            }}
+            columnas={[
+              {
+                titulo: 'Trabajador',
+                movil: true,
+                tdClase: 'font-medium text-slate-800',
+                celda: (t) => (
+                  <>
+                    {t.nombres} {t.apellidos}
+                    {!t.activo && (
+                      <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                        Dado de baja
+                      </span>
+                    )}
+                    {t.especialidad && <p className="text-xs font-normal text-slate-400">{t.especialidad}</p>}
+                  </>
+                ),
+              },
+              {
+                titulo: 'Documento',
+                tdClase: 'text-slate-600',
+                celda: (t) => `${t.tipo_documento} ${t.numero_documento}`,
+              },
+              { titulo: 'Cargo', movil: true, tdClase: 'text-slate-600', celda: (t) => t.cargo },
+              {
+                titulo: 'Contacto',
+                tdClase: 'text-xs text-slate-500',
+                celda: (t) => (
+                  <>
+                    {t.email ?? '—'}
+                    {t.telefono && <p className="tabular-nums">{telefonoLegible(t.telefono)}</p>}
+                    {t.direccion && (
+                      <p className="max-w-[180px] truncate" title={t.direccion}>
+                        {t.direccion}
+                      </p>
+                    )}
+                  </>
+                ),
+                valor: (t) => (
+                  <>
+                    {t.email ?? '—'}
+                    {t.telefono && <p className="tabular-nums">{telefonoLegible(t.telefono)}</p>}
+                    {t.direccion && <p>{t.direccion}</p>}
+                  </>
+                ),
+              },
+              {
+                titulo: 'Estado',
+                celda: (t) =>
+                  !t.activo ? (
+                    <div>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_BADGE.INACTIVO}`}>
+                        Inactivo
+                      </span>
+                      {t.fecha_baja && (
+                        <p className="mt-1 text-xs text-slate-400">De baja desde {fmtFecha(t.fecha_baja)}</p>
                       )}
-                      {t.especialidad && (
-                        <p className="text-xs font-normal text-slate-400">{t.especialidad}</p>
-                      )}
-                    </td>
-                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
-                      {t.tipo_documento} {t.numero_documento}
-                    </td>
-                    <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">{t.cargo}</td>
-                    <td className="hidden px-5 py-4 text-xs text-slate-500 md:table-cell">
-                      {t.email ?? '—'}
-                      {t.telefono && <p className="tabular-nums">{telefonoLegible(t.telefono)}</p>}
-                      {t.direccion && (
-                        <p className="max-w-[180px] truncate" title={t.direccion}>
-                          {t.direccion}
-                        </p>
-                      )}
-                    </td>
-                    <td className="hidden px-5 py-4 md:table-cell">
-                      {!t.activo ? (
-                        <div>
-                          <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_BADGE.INACTIVO}`}>
-                            Inactivo
-                          </span>
-                          {t.fecha_baja && (
-                            <p className="mt-1 text-xs text-slate-400">De baja desde {fmtFecha(t.fecha_baja)}</p>
-                          )}
-                        </div>
-                      ) : esAdmin ? (
-                        <select
-                          className="input py-1 text-xs"
-                          aria-label={`Estado de ${t.nombres} ${t.apellidos}`}
-                          value={t.estado}
-                          onChange={(e) => cambiarEstado(t, e.target.value)}
-                        >
-                          {ESTADOS.map((e2) => (
-                            <option key={e2.value} value={e2.value}>
-                              {e2.label}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                            ESTADO_BADGE[t.estado] ?? 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {t.estado}
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">
-                      {Number(t.disponible) ? 'Disponible' : 'No disponible'}
-                    </td>
-                    <td className="hidden px-5 py-4 md:table-cell">
-                      {/* En escritorio las acciones se apilan en vertical: en
-                          horizontal se montaban unas sobre otras. */}
-                      <div className="flex flex-col items-stretch gap-1.5">
-                        {/* Un registro dado de baja es historial: no se edita,
-                            solo se reactiva. */}
-                        {esAdmin && Boolean(t.activo) && (
-                          <button
-                            className="btn-accion btn-accion-editar"
-                            onClick={() => abrirEditar(t)}
-                            aria-label={`Actualizar información de ${t.nombres}`}
-                          >
-                            <PencilSquareIcon className="h-4 w-4" /> Editar
-                          </button>
-                        )}
-                        {esAdmin && !t.activo && (
-                          <button
-                            className="btn-accion btn-accion-ok"
-                            onClick={() => reactivar(t)}
-                            aria-label={`Reactivar a ${t.nombres} ${t.apellidos}`}
-                          >
-                            <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                    <CeldaFicha onClick={() => setFicha(t)} etiqueta={`${t.nombres} ${t.apellidos}`} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  ) : esAdmin ? (
+                    <select
+                      className="input py-1 text-xs"
+                      aria-label={`Estado de ${t.nombres} ${t.apellidos}`}
+                      value={t.estado}
+                      onChange={(e) => cambiarEstado(t, e.target.value)}
+                    >
+                      {ESTADOS.map((e2) => (
+                        <option key={e2.value} value={e2.value}>
+                          {e2.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                        ESTADO_BADGE[t.estado] ?? 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {t.estado}
+                    </span>
+                  ),
+              },
+              {
+                titulo: 'Disponibilidad',
+                tdClase: 'text-slate-600',
+                celda: (t) => (Number(t.disponible) ? 'Disponible' : 'No disponible'),
+              },
+              {
+                titulo: 'Acciones',
+                acciones: true,
+                // Un registro dado de baja es historial: no se edita, solo se reactiva.
+                celda: (t, enFicha) => {
+                  if (!esAdmin) return null
+                  const botones = t.activo ? (
+                    <button
+                      className="btn-accion btn-accion-editar"
+                      onClick={() => abrirEditar(t)}
+                      aria-label={`Actualizar información de ${t.nombres}`}
+                    >
+                      <PencilSquareIcon className="h-4 w-4" /> Editar
+                    </button>
+                  ) : (
+                    <button
+                      className="btn-accion btn-accion-ok"
+                      onClick={() => reactivar(t)}
+                      aria-label={`Reactivar a ${t.nombres} ${t.apellidos}`}
+                    >
+                      <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
+                    </button>
+                  )
+                  return enFicha ? botones : <div className="flex flex-col items-stretch gap-1.5">{botones}</div>
+                },
+              },
+            ]}
+          />
         </div>
-      )}
-
-      {ficha && (
-        <Ficha
-          abierto
-          titulo={`${ficha.nombres} ${ficha.apellidos}`}
-          subtitulo={ficha.cargo}
-          onCerrar={() => setFicha(null)}
-          campos={[
-            ['Documento', `${ficha.tipo_documento} ${ficha.numero_documento}`],
-            ['Cargo', ficha.cargo],
-            ['Especialidad', ficha.especialidad],
-            ['Correo', ficha.email],
-            ['Teléfono', ficha.telefono ? telefonoLegible(ficha.telefono) : null],
-            ['Dirección', ficha.direccion],
-            [
-              'Estado',
-              ficha.activo
-                ? ficha.estado
-                : `Inactivo · de baja${ficha.fecha_baja ? ` desde ${fmtFecha(ficha.fecha_baja)}` : ''}`,
-            ],
-            ['Disponibilidad', Number(ficha.disponible) ? 'Disponible' : 'No disponible'],
-          ]}
-        >
-          {esAdmin && ficha.activo && (
-            <div className="w-full">
-              <label htmlFor="ficha-estado" className="label">
-                Cambiar estado
-              </label>
-              <select
-                id="ficha-estado"
-                className="input"
-                value={ficha.estado}
-                onChange={(e) => {
-                  const t = ficha
-                  setFicha(null)
-                  cambiarEstado(t, e.target.value)
-                }}
-              >
-                {ESTADOS.map((e2) => (
-                  <option key={e2.value} value={e2.value}>
-                    {e2.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {esAdmin && Boolean(ficha.activo) && (
-            <button
-              type="button"
-              className="btn-accion btn-accion-editar"
-              onClick={() => {
-                const t = ficha
-                setFicha(null)
-                abrirEditar(t)
-              }}
-            >
-              <PencilSquareIcon className="h-4 w-4" /> Editar
-            </button>
-          )}
-          {esAdmin && !ficha.activo && (
-            <button
-              type="button"
-              className="btn-accion btn-accion-ok"
-              onClick={() => {
-                const t = ficha
-                setFicha(null)
-                reactivar(t)
-              }}
-            >
-              <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
-            </button>
-          )}
-        </Ficha>
       )}
     </div>
   )

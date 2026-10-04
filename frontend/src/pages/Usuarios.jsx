@@ -13,7 +13,8 @@ import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
 import Modal from '../components/Modal.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
-import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
+import Ficha, { TablaFicha } from '../components/Ficha.jsx'
+import { telefonoLegible } from '../components/TelefonoPais.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -60,9 +61,10 @@ export default function Usuarios() {
   const [guardando, setGuardando] = useState(false)
   // CU-01 Alt 3: id del usuario cuyo rol se está editando en la tabla.
   const [editandoRol, setEditandoRol] = useState(null)
-  // Búsqueda en el listado (desplegable) y ficha del celular.
+  // Ficha del trabajador vinculado a la cuenta (clic en el nombre de usuario).
+  const [verTrabajador, setVerTrabajador] = useState(null)
+  // Búsqueda en el listado (desplegable).
   const [filtros, setFiltros] = useState({ buscar: '', rol_id: '', estado: '' })
-  const [fichaId, setFichaId] = useState(null)
   // Edición de usuario y correo (permiso usuarios.editar).
   const [editando, setEditando] = useState(null)
   const [formEditar, setFormEditar] = useState({ username: '', email: '' })
@@ -207,7 +209,6 @@ export default function Usuarios() {
       (!filtros.estado || u.estado === filtros.estado),
   )
   const hayFiltros = Boolean(filtros.buscar || filtros.rol_id || filtros.estado)
-  const ficha = usuarios.find((u) => u.id === fichaId) ?? null
 
   return (
     <div className="space-y-6">
@@ -469,125 +470,156 @@ export default function Usuarios() {
         <div className="card px-6 py-16 text-center text-sm text-slate-500">Cargando usuarios…</div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm md:min-w-[680px]">
-              <thead>
-                <tr className="border-b border-slate-200 text-slate-500">
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Usuario</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Correo empresarial</th>
-                  <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Rol</th>
-                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
-                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acciones</th>
-                  <EncabezadoFicha />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {visibles.length === 0 && (
-                  <FilaVacia columnas={6}>
-                    No hay usuarios que mostrar con estos filtros.
-                  </FilaVacia>
-                )}
-                {visibles.map((u) => (
-                  <tr key={u.id} className={u.activo ? '' : 'bg-slate-50/60'}>
-                    <td className="px-3 py-3 font-medium text-slate-800 md:px-5 md:py-4">
+          <TablaFicha
+            filas={visibles}
+            minWidth="md:min-w-[680px]"
+            theadClase="text-slate-500"
+            filaClase={(u) => (u.activo ? '' : 'bg-slate-50/60')}
+            vacia={<FilaVacia columnas={6}>No hay usuarios que mostrar con estos filtros.</FilaVacia>}
+            ficha={{
+              titulo: (u) => u.username,
+              subtitulo: (u) => etiquetaRol(u),
+            }}
+            columnas={[
+              {
+                titulo: 'Usuario',
+                movil: true,
+                tdClase: 'font-medium text-slate-800',
+                celda: (u) => (
+                  <>
+                    <button
+                      type="button"
+                      className="rounded px-1 text-left font-medium hover:bg-slate-100 hover:underline"
+                      title="Ver datos del trabajador"
+                      onClick={() => setVerTrabajador(u)}
+                    >
                       {u.username}
-                      {!u.activo && (
-                        <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-                          Dado de baja
-                        </span>
-                      )}
-                    </td>
-                    <td className="hidden px-5 py-4 text-slate-600 md:table-cell">{u.email}</td>
-                    <td className="px-3 py-3 text-slate-600 md:px-5 md:py-4">
-                      {/* A una cuenta dada de baja no se le cambia el rol: se muestra
-                          su rol tal cual (nunca un número de relleno). */}
-                      {editandoRol === u.id && u.activo ? (
-                        <select
-                          className="input py-1 text-sm"
-                          aria-label={`Rol de ${u.username}`}
-                          defaultValue={u.rol_id}
-                          autoFocus
-                          onBlur={() => setEditandoRol(null)}
-                          onChange={(e) => cambiarRol(u, e.target.value)}
-                        >
-                          {roles.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {ROL_LABEL[r.nombre] ?? r.nombre}
-                            </option>
-                          ))}
-                        </select>
-                      ) : u.activo ? (
-                        <button
-                          type="button"
-                          className="rounded px-1 text-left hover:bg-slate-100 hover:underline"
-                          title="Cambiar rol"
-                          onClick={() => setEditandoRol(u.id)}
-                        >
-                          {etiquetaRol(u)}
-                        </button>
-                      ) : (
-                        <span>{etiquetaRol(u)}</span>
-                      )}
-                    </td>
-                    <td className="hidden px-5 py-4 md:table-cell">
-                      <span
-                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
-                          ESTADO_BADGE[u.estado] ?? 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {u.estado}
+                    </button>
+                    {!u.activo && (
+                      <span className="badge ml-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                        Dado de baja
                       </span>
-                    </td>
-                    <td className="hidden px-5 py-4 text-right md:table-cell">
-                      <div className="flex flex-wrap items-center justify-end gap-2">
-                      {u.activo && (
-                        <button
-                          type="button"
-                          onClick={() => abrirEditar(u)}
-                          className="btn-ghost text-xs"
-                          aria-label={`Editar a ${u.username}`}
-                        >
-                          <PencilSquareIcon className="h-4 w-4" /> Editar
-                        </button>
-                      )}
-                      {u.activo ? (
-                        <button
-                          onClick={() => cambiarEstado(u)}
-                          className="btn-ghost text-xs"
-                          aria-label={
-                            u.estado === 'ACTIVO' ? `Bloquear a ${u.username}` : `Activar a ${u.username}`
-                          }
-                        >
-                          {u.estado === 'ACTIVO' ? (
-                            <>
-                              <LockClosedIcon className="h-4 w-4" />
-                              Bloquear
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircleIcon className="h-4 w-4" />
-                              Activar
-                            </>
-                          )}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => reactivar(u)}
-                          className="btn-ghost text-xs"
-                          aria-label={`Reactivar a ${u.username}`}
-                        >
-                          <ArrowPathIcon className="h-4 w-4" /> Reactivar
-                        </button>
-                      )}
-                      </div>
-                    </td>
-                    <CeldaFicha onClick={() => setFichaId(u.id)} etiqueta={u.username} />
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    )}
+                  </>
+                ),
+              },
+              { titulo: 'Correo empresarial', tdClase: 'text-slate-600', celda: (u) => u.email },
+              {
+                titulo: 'Rol',
+                movil: true,
+                tdClase: 'text-slate-600',
+                // A una cuenta dada de baja no se le cambia el rol: se muestra
+                // su rol tal cual (nunca un número de relleno).
+                celda: (u) =>
+                  editandoRol === u.id && u.activo ? (
+                    <select
+                      className="input py-1 text-sm"
+                      aria-label={`Rol de ${u.username}`}
+                      defaultValue={u.rol_id}
+                      autoFocus
+                      onBlur={() => setEditandoRol(null)}
+                      onChange={(e) => cambiarRol(u, e.target.value)}
+                    >
+                      {roles.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {ROL_LABEL[r.nombre] ?? r.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  ) : u.activo ? (
+                    <button
+                      type="button"
+                      className="rounded px-1 text-left hover:bg-slate-100 hover:underline"
+                      title="Cambiar rol"
+                      onClick={() => setEditandoRol(u.id)}
+                    >
+                      {etiquetaRol(u)}
+                    </button>
+                  ) : (
+                    <span>{etiquetaRol(u)}</span>
+                  ),
+              },
+              {
+                titulo: 'Estado',
+                celda: (u) => (
+                  <span
+                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      ESTADO_BADGE[u.estado] ?? 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {u.estado}
+                  </span>
+                ),
+              },
+              {
+                titulo: 'Acciones',
+                acciones: true,
+                derecha: true,
+                celda: (u, enFicha) => {
+                  const botones = u.activo ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => abrirEditar(u)}
+                        className="btn-ghost text-xs"
+                        aria-label={`Editar a ${u.username}`}
+                      >
+                        <PencilSquareIcon className="h-4 w-4" /> Editar
+                      </button>
+                      <button
+                        onClick={() => cambiarEstado(u)}
+                        className="btn-ghost text-xs"
+                        aria-label={u.estado === 'ACTIVO' ? `Bloquear a ${u.username}` : `Activar a ${u.username}`}
+                      >
+                        {u.estado === 'ACTIVO' ? (
+                          <>
+                            <LockClosedIcon className="h-4 w-4" />
+                            Bloquear
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircleIcon className="h-4 w-4" />
+                            Activar
+                          </>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <button onClick={() => reactivar(u)} className="btn-ghost text-xs" aria-label={`Reactivar a ${u.username}`}>
+                      <ArrowPathIcon className="h-4 w-4" /> Reactivar
+                    </button>
+                  )
+                  return enFicha ? (
+                    botones
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-end gap-2">{botones}</div>
+                  )
+                },
+              },
+            ]}
+          />
         </div>
+      )}
+
+      {verTrabajador && (
+        <Ficha
+          titulo={verTrabajador.trabajador || 'Sin trabajador'}
+          subtitulo={`Cuenta ${verTrabajador.username}`}
+          onCerrar={() => setVerTrabajador(null)}
+          campos={
+            verTrabajador.trabajador
+              ? [
+                  ['Documento', `${verTrabajador.trab_tipo_documento} ${verTrabajador.trab_numero_documento}`],
+                  ['Cargo', verTrabajador.trab_cargo],
+                  ['Especialidad', verTrabajador.trab_especialidad],
+                  ['Correo', verTrabajador.trab_email],
+                  ['Teléfono', verTrabajador.trab_telefono ? telefonoLegible(verTrabajador.trab_telefono) : null],
+                  ['Dirección', verTrabajador.trab_direccion],
+                  ['Estado', verTrabajador.trab_activo ? verTrabajador.trab_estado : 'Inactivo · de baja'],
+                ]
+              : [['Trabajador', 'Esta cuenta no está vinculada a un trabajador']]
+          }
+        />
       )}
 
       <Modal
@@ -635,68 +667,6 @@ export default function Usuarios() {
           </div>
         </form>
       </Modal>
-
-      {ficha && (
-        <Ficha
-          abierto
-          titulo={ficha.username}
-          subtitulo={etiquetaRol(ficha)}
-          onCerrar={() => setFichaId(null)}
-          campos={[
-            ['Correo', ficha.email],
-            ['Rol', etiquetaRol(ficha)],
-            ['Estado', ficha.activo ? ficha.estado : `${ficha.estado} · dado de baja`],
-          ]}
-        >
-          {ficha.activo ? (
-            <>
-              <div className="w-full">
-                <label htmlFor="ficha-rol" className="label">
-                  Cambiar rol
-                </label>
-                <select
-                  id="ficha-rol"
-                  className="input"
-                  value={ficha.rol_id ?? ''}
-                  onChange={(e) => cambiarRol(ficha, e.target.value)}
-                >
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {ROL_LABEL[r.nombre] ?? r.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                type="button"
-                className="btn-ghost text-xs"
-                onClick={() => {
-                  const u = ficha
-                  setFichaId(null)
-                  abrirEditar(u)
-                }}
-              >
-                <PencilSquareIcon className="h-4 w-4" /> Editar
-              </button>
-              <button type="button" className="btn-ghost text-xs" onClick={() => cambiarEstado(ficha)}>
-                {ficha.estado === 'ACTIVO' ? (
-                  <>
-                    <LockClosedIcon className="h-4 w-4" /> Bloquear
-                  </>
-                ) : (
-                  <>
-                    <CheckCircleIcon className="h-4 w-4" /> Activar
-                  </>
-                )}
-              </button>
-            </>
-          ) : (
-            <button type="button" className="btn-ghost text-xs" onClick={() => reactivar(ficha)}>
-              <ArrowPathIcon className="h-4 w-4" /> Reactivar
-            </button>
-          )}
-        </Ficha>
-      )}
     </div>
   )
 }
