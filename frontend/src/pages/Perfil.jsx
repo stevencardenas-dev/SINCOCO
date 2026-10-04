@@ -5,6 +5,7 @@ import {
   KeyIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline'
+import CampoPassword from '../components/CampoPassword.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
 import { fmtFechaHora } from '../lib/format.js'
@@ -256,19 +257,19 @@ export default function Perfil() {
               <div className="grid gap-5 sm:grid-cols-3">
                 <div>
                   <label htmlFor="mi-clave-actual" className="label">Contraseña actual</label>
-                  <input id="mi-clave-actual" type="password" autoComplete="current-password" className="input"
+                  <CampoPassword id="mi-clave-actual" autoComplete="current-password"
                     value={clave.password_actual}
                     onChange={(e) => setClave({ ...clave, password_actual: e.target.value })} required />
                 </div>
                 <div>
                   <label htmlFor="mi-clave-nueva" className="label">Nueva contraseña</label>
-                  <input id="mi-clave-nueva" type="password" autoComplete="new-password" className="input"
+                  <CampoPassword id="mi-clave-nueva" autoComplete="new-password"
                     minLength={8} value={clave.password}
                     onChange={(e) => setClave({ ...clave, password: e.target.value })} required />
                 </div>
                 <div>
                   <label htmlFor="mi-clave-repetir" className="label">Confirmar nueva contraseña</label>
-                  <input id="mi-clave-repetir" type="password" autoComplete="new-password" className="input"
+                  <CampoPassword id="mi-clave-repetir" autoComplete="new-password"
                     minLength={8} value={clave.repetir}
                     onChange={(e) => setClave({ ...clave, repetir: e.target.value })} required />
                 </div>

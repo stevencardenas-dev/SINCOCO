@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import CampoPassword from '../components/CampoPassword.jsx'
 import Logo from '../components/Logo.jsx'
 import Modal from '../components/Modal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -152,11 +153,10 @@ export default function Login() {
               <label htmlFor="password" className="label">
                 Contraseña
               </label>
-              <input
+              <CampoPassword
                 id="password"
-                type="password"
+                maxLength={72}
                 autoComplete="current-password"
-                className="input"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -261,13 +261,13 @@ export default function Login() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="r-password" className="label">Nueva contraseña</label>
-                <input id="r-password" type="password" autoComplete="new-password" className="input"
+                <CampoPassword id="r-password" autoComplete="new-password"
                   minLength={8} value={recuperar.password}
                   onChange={(e) => setRecuperar({ ...recuperar, password: e.target.value })} required />
               </div>
               <div>
                 <label htmlFor="r-repetir" className="label">Confirmar contraseña</label>
-                <input id="r-repetir" type="password" autoComplete="new-password" className="input"
+                <CampoPassword id="r-repetir" autoComplete="new-password"
                   minLength={8} value={recuperar.repetir}
                   onChange={(e) => setRecuperar({ ...recuperar, repetir: e.target.value })} required />
               </div>
