@@ -210,6 +210,7 @@ antes de tocar nada, como los seis que ya existen:
 | `migracion_password_reset.sql` | tabla `restablecimientos_password` (códigos de un solo uso) |
 | `migracion_rbac_acceso.sql` | permisos `proyectos.gestionar_acceso` y `proyectos.acceso_total`, y su asignación a ADMINISTRADOR y GERENTE |
 | `migracion_roles_gestionar.sql` | permiso `roles.gestionar` para ADMINISTRADOR (bases antiguas) |
+| `migracion_usuarios_editar.sql` | permiso `usuarios.editar` para ADMINISTRADOR |
 | `migracion_sesion_unica.sql` | columnas `usuarios.sesion_actual` y `sesion_iniciada_en` |
 | `migracion_personal_baja.sql` | trabajadores en estado `INACTIVO` pasan a dados de baja (y los dados de baja, a `INACTIVO`) |
 

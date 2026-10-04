@@ -3,11 +3,10 @@ import {
   ArrowPathIcon,
   CheckIcon,
   KeyIcon,
-  LockClosedIcon,
+  MagnifyingGlassIcon,
   PencilSquareIcon,
   PlusIcon,
   TrashIcon,
-  UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
@@ -60,6 +59,7 @@ export default function RolesPermisos() {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
   const [filtro, setFiltro] = useState('')
+  const [filtroAbierto, setFiltroAbierto] = useState(false)
   // Celular: en vez de la matriz, se elige un rol y se ven sus permisos.
   const [rolVerId, setRolVerId] = useState(null)
 
@@ -93,7 +93,7 @@ export default function RolesPermisos() {
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Roles y permisos" subtitle="Matriz rol → permiso" />
+        <PageHeader accion={<BotonActualizar onClick={cargar} />} title="Roles y permisos" subtitle="Matriz rol → permiso" />
         <AlertaFormulario mensaje={error} />
       </div>
     )
@@ -215,84 +215,77 @@ export default function RolesPermisos() {
         title="Roles y permisos"
         subtitle="Qué puede hacer cada rol en el sistema"
       >
+        <button
+          type="button"
+          className="btn-ghost px-3"
+          title="Filtrar permisos"
+          aria-label="Filtrar permisos"
+          aria-expanded={filtroAbierto}
+          onClick={() => setFiltroAbierto((v) => !v)}
+        >
+          <MagnifyingGlassIcon className="h-4 w-4" />
+          {filtro && <span className="h-2 w-2 rounded-full bg-accent-500" aria-hidden="true" />}
+        </button>
+        <button type="button" className="btn-primary" onClick={abrirCrear}>
+          <PlusIcon className="h-5 w-5" /> Nuevo rol
+        </button>
+      </PageHeader>
+
+      {filtroAbierto && (
         <input
           type="search"
-          className="input w-56"
+          className="input"
           placeholder="Filtrar permiso…"
           aria-label="Filtrar permisos"
           value={filtro}
           onChange={(e) => setFiltro(e.target.value)}
+          autoFocus
         />
-        <button type="button" className="btn-primary" onClick={abrirCrear}>
-          <PlusIcon className="h-5 w-5" /> Nuevo rol
-        </button>
-        <BotonActualizar onClick={cargar} />
-      </PageHeader>
-
-      <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-        <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        <span>
-          Los permisos del usuario salen de los de su rol: lo que marque aquí es el acceso
-          realmente vigente, porque el backend consulta esta matriz en cada petición
-          (<code className="rounded bg-white px-1 py-0.5 text-xs">requirePermiso</code>). Un rol con
-          usuarios asignados no se puede eliminar hasta reasignarlos.
-        </span>
-      </p>
+      )}
 
       <AlertaFormulario mensaje={errorPermiso} />
 
       {/* Resumen por rol, con sus acciones de administración */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
         {roles.map((r) => (
-          <div key={r.id} className="card p-5">
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <KeyIcon className="h-5 w-5 text-brand-600" />
-                <p className="text-sm font-semibold text-slate-900">
-                  {ROL_LABEL[r.nombre] ?? r.nombre}
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
+          <div key={r.id} className="card flex items-center justify-between gap-2 px-3 py-2">
+            <div className="min-w-0">
+              <p
+                className="flex items-center gap-1.5 truncate text-xs font-semibold text-slate-900"
+                title={r.es_sistema ? 'Rol base del sistema' : undefined}
+              >
+                <KeyIcon className="h-4 w-4 shrink-0 text-brand-600" />
+                <span className="truncate">{ROL_LABEL[r.nombre] ?? r.nombre}</span>
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                {r.permisos_activos}/{permisos.length} permisos · {r.usuarios}{' '}
+                {r.usuarios === 1 ? 'cuenta' : 'cuentas'}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center">
+              <button
+                type="button"
+                className="rounded-lg p-1 text-slate-500 hover:bg-slate-100"
+                title="Editar rol"
+                aria-label={`Editar rol ${r.nombre}`}
+                onClick={() => abrirEditar(r)}
+              >
+                <PencilSquareIcon className="h-4 w-4" />
+              </button>
+              {!r.es_sistema && (
                 <button
                   type="button"
-                  className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
-                  title="Editar rol"
-                  aria-label={`Editar rol ${r.nombre}`}
-                  onClick={() => abrirEditar(r)}
+                  className="rounded-lg p-1 text-red-600 hover:bg-red-50"
+                  title="Eliminar rol"
+                  aria-label={`Eliminar rol ${r.nombre}`}
+                  onClick={() => {
+                    setErrorEliminar('')
+                    setPorEliminar(r)
+                  }}
                 >
-                  <PencilSquareIcon className="h-4 w-4" />
+                  <TrashIcon className="h-4 w-4" />
                 </button>
-                {!r.es_sistema && (
-                  <button
-                    type="button"
-                    className="rounded-lg p-1.5 text-red-600 hover:bg-red-50"
-                    title="Eliminar rol"
-                    aria-label={`Eliminar rol ${r.nombre}`}
-                    onClick={() => {
-                      setErrorEliminar('')
-                      setPorEliminar(r)
-                    }}
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            {r.es_sistema && (
-              <span className="badge mt-2 bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-                Rol base del sistema
-              </span>
-            )}
-            <p className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
-              {r.permisos_activos}
-              <span className="text-sm font-medium text-slate-400"> / {permisos.length}</span>
-            </p>
-            <p className="text-xs text-slate-500">permisos concedidos</p>
-            <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
-              <UsersIcon className="h-4 w-4 text-slate-400" />
-              {r.usuarios} {r.usuarios === 1 ? 'cuenta' : 'cuentas'}
-              <span className="text-slate-300">·</span>
-              {r.usuarios_activos} activa{r.usuarios_activos === 1 ? '' : 's'}
+              )}
             </div>
           </div>
         ))}

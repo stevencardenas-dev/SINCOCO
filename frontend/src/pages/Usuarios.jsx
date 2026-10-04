@@ -4,19 +4,21 @@ import {
   CheckCircleIcon,
   KeyIcon,
   LockClosedIcon,
+  PencilSquareIcon,
   PlusIcon,
   UserPlusIcon,
 } from '@heroicons/react/24/outline'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
+import Modal from '../components/Modal.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import Ficha, { CeldaFicha, EncabezadoFicha } from '../components/Ficha.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
-import { mensajeError } from '../lib/errores.js'
+import { campoError, mensajeError } from '../lib/errores.js'
 import { fmtFechaHora } from '../lib/format.js'
 
 /**
@@ -61,6 +63,12 @@ export default function Usuarios() {
   // Búsqueda en el listado (desplegable) y ficha del celular.
   const [filtros, setFiltros] = useState({ buscar: '', rol_id: '', estado: '' })
   const [fichaId, setFichaId] = useState(null)
+  // Edición de usuario y correo (permiso usuarios.editar).
+  const [editando, setEditando] = useState(null)
+  const [formEditar, setFormEditar] = useState({ username: '', email: '' })
+  const [errorEditar, setErrorEditar] = useState('')
+  const [campoEditar, setCampoEditar] = useState(null)
+  const [guardandoEditar, setGuardandoEditar] = useState(false)
   // HU-18: filtro explícito para consultar las cuentas dadas de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   // HU-01: solicitudes de contraseña esperando que el administrador entregue el
@@ -162,6 +170,31 @@ export default function Usuarios() {
     }
   }
 
+  const abrirEditar = (u) => {
+    setFormEditar({ username: u.username, email: u.email ?? '' })
+    setErrorEditar('')
+    setCampoEditar(null)
+    setEditando(u)
+  }
+
+  const guardarEdicion = async (e) => {
+    e.preventDefault()
+    setErrorEditar('')
+    setCampoEditar(null)
+    setGuardandoEditar(true)
+    try {
+      await api.patch(`/usuarios/${editando.id}`, formEditar)
+      setAviso(`Usuario "${formEditar.username}" actualizado.`)
+      setEditando(null)
+      await cargar()
+    } catch (err) {
+      setErrorEditar(mensajeError(err, 'No se pudo actualizar el usuario.'))
+      setCampoEditar(campoError(err))
+    } finally {
+      setGuardandoEditar(false)
+    }
+  }
+
   const etiquetaRol = (u) => ROL_LABEL[u.rol] ?? u.rol ?? 'Sin rol'
 
   const texto = filtros.buscar.trim().toLowerCase()
@@ -178,7 +211,7 @@ export default function Usuarios() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={() => cargar().catch(() => { setError('No se pudo cargar la lista de usuarios.') }) } />}
         title="Gestión de usuarios"
         subtitle="Crear cuentas, asignar rol y controlar el acceso al sistema"
       >
@@ -193,13 +226,6 @@ export default function Usuarios() {
         >
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
-        <BotonActualizar
-          onClick={() =>
-            cargar().catch(() => {
-              setError('No se pudo cargar la lista de usuarios.')
-            })
-          }
-        />
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
@@ -451,7 +477,7 @@ export default function Usuarios() {
                   <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Correo empresarial</th>
                   <th className="px-3 py-3 font-semibold md:px-5 md:py-3.5">Rol</th>
                   <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Estado</th>
-                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acceso</th>
+                  <th className="hidden px-5 py-3.5 text-right font-semibold md:table-cell">Acciones</th>
                   <EncabezadoFicha />
                 </tr>
               </thead>
@@ -513,10 +539,21 @@ export default function Usuarios() {
                       </span>
                     </td>
                     <td className="hidden px-5 py-4 text-right md:table-cell">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                      {u.activo && (
+                        <button
+                          type="button"
+                          onClick={() => abrirEditar(u)}
+                          className="btn-ghost text-xs"
+                          aria-label={`Editar a ${u.username}`}
+                        >
+                          <PencilSquareIcon className="h-4 w-4" /> Editar
+                        </button>
+                      )}
                       {u.activo ? (
                         <button
                           onClick={() => cambiarEstado(u)}
-                          className="btn-ghost ml-auto text-xs"
+                          className="btn-ghost text-xs"
                           aria-label={
                             u.estado === 'ACTIVO' ? `Bloquear a ${u.username}` : `Activar a ${u.username}`
                           }
@@ -536,12 +573,13 @@ export default function Usuarios() {
                       ) : (
                         <button
                           onClick={() => reactivar(u)}
-                          className="btn-ghost ml-auto text-xs"
+                          className="btn-ghost text-xs"
                           aria-label={`Reactivar a ${u.username}`}
                         >
                           <ArrowPathIcon className="h-4 w-4" /> Reactivar
                         </button>
                       )}
+                      </div>
                     </td>
                     <CeldaFicha onClick={() => setFichaId(u.id)} etiqueta={u.username} />
                   </tr>
@@ -551,6 +589,52 @@ export default function Usuarios() {
           </div>
         </div>
       )}
+
+      <Modal
+        abierto={editando !== null}
+        titulo="Editar usuario"
+        subtitulo="El rol y el estado se cambian aparte; la contraseña la restablece el propio usuario"
+        onCerrar={() => setEditando(null)}
+      >
+        <form onSubmit={guardarEdicion} className="space-y-4">
+          <div>
+            <label htmlFor="ue-username" className="label">
+              Usuario
+            </label>
+            <input
+              id="ue-username"
+              maxLength={50}
+              className={campoEditar === 'username' ? 'input border-red-400' : 'input'}
+              value={formEditar.username}
+              onChange={(e) => setFormEditar({ ...formEditar, username: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label htmlFor="ue-email" className="label">
+              Correo empresarial
+            </label>
+            <input
+              id="ue-email"
+              type="email"
+              maxLength={150}
+              className={campoEditar === 'email' ? 'input border-red-400' : 'input'}
+              value={formEditar.email}
+              onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
+              required
+            />
+          </div>
+          <AlertaFormulario mensaje={errorEditar} campo={campoEditar} />
+          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
+            <button type="submit" disabled={guardandoEditar} className="btn-primary disabled:opacity-60">
+              {guardandoEditar ? 'Guardando…' : 'Guardar cambios'}
+            </button>
+            <button type="button" className="btn-ghost" onClick={() => setEditando(null)}>
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {ficha && (
         <Ficha
@@ -583,6 +667,17 @@ export default function Usuarios() {
                   ))}
                 </select>
               </div>
+              <button
+                type="button"
+                className="btn-ghost text-xs"
+                onClick={() => {
+                  const u = ficha
+                  setFichaId(null)
+                  abrirEditar(u)
+                }}
+              >
+                <PencilSquareIcon className="h-4 w-4" /> Editar
+              </button>
               <button type="button" className="btn-ghost text-xs" onClick={() => cambiarEstado(ficha)}>
                 {ficha.estado === 'ACTIVO' ? (
                   <>

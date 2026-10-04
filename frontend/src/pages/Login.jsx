@@ -129,13 +129,13 @@ export default function Login() {
       </div>
 
       {/* Form panel */}
-      <div className="relative flex w-full items-center justify-center overflow-hidden bg-gradient-to-b from-brand-900 via-brand-900 to-brand-950 px-5 py-10 lg:w-1/2 lg:bg-none lg:bg-white lg:px-6 lg:py-12">
+      <div className="relative flex min-h-[100dvh] w-full items-stretch justify-center overflow-hidden bg-gradient-to-b from-brand-900 via-brand-900 to-brand-950 px-5 py-8 lg:w-1/2 lg:items-center lg:bg-none lg:bg-white lg:px-6 lg:py-12">
         {/* Celular: mismo fondo grafito con resplandores amarillos del panel de marca */}
         <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent-400/25 blur-3xl lg:hidden" />
         <div className="pointer-events-none absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl lg:hidden" />
 
-        <div className="relative w-full max-w-sm">
-          <div className="mb-6 lg:hidden">
+        <div className="relative mx-auto flex w-full max-w-sm flex-col justify-between gap-6 lg:block">
+          <div className="lg:hidden">
             <div className="flex items-center gap-3">
               <Logo className="h-12 w-12" />
               <div>
@@ -217,7 +217,7 @@ export default function Login() {
           </p>
           </div>
 
-          <p className="mt-6 text-center text-[11px] text-slate-400 lg:hidden">
+          <p className="text-center text-[11px] text-slate-400 lg:hidden">
             Constructora XYZ · Cúcuta
           </p>
         </div>

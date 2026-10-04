@@ -98,11 +98,10 @@ export default function Auditoria() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
+      <PageHeader accion={<BotonActualizar onClick={cargar} cargando={cargando} />}
         title="Trazabilidad y auditoría"
         subtitle="Quién realizó cada operación crítica y cuándo"
       >
-        <BotonActualizar onClick={cargar} cargando={cargando} />
       </PageHeader>
 
       <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
