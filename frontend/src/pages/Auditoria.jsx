@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import {
-  DocumentMagnifyingGlassIcon,
-  LockClosedIcon,
-} from '@heroicons/react/24/outline'
+import { DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import DetalleBitacora, { ContenidoDetalle } from '../components/DetalleBitacora.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
@@ -53,13 +51,6 @@ const TITULO_TABLA = {
   clientes: 'Clientes',
 }
 
-/** El detalle llega como objeto (columna JSON) o como texto, según el driver. */
-const textoDetalles = (detalles) => {
-  if (!detalles) return '—'
-  const texto = typeof detalles === 'string' ? detalles : JSON.stringify(detalles)
-  return texto === '{}' ? '—' : texto
-}
-
 export default function Auditoria() {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
@@ -102,15 +93,6 @@ export default function Auditoria() {
         subtitle="Quién realizó cada operación crítica y cuándo"
       >
       </PageHeader>
-
-      <p className="flex items-start gap-2 rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
-        <LockClosedIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-        <span>
-          Consulta de solo lectura: la bitácora es inmutable. Las filas las escribe el propio
-          sistema (<code className="rounded bg-white px-1 py-0.5 text-xs">bitacora_trazabilidad</code>)
-          en cada operación crítica; aquí no se pueden modificar ni borrar.
-        </span>
-      </p>
 
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
@@ -272,22 +254,15 @@ export default function Auditoria() {
                 ),
               },
               {
-                titulo: 'Registro',
-                tdClase: 'text-slate-600',
-                celda: (f) => (f.registro_id == null ? '—' : `#${f.registro_id}`),
-              },
-              {
                 titulo: 'Detalles',
-                tdClase: 'max-w-[260px]',
-                celda: (f) => {
-                  const detalle = textoDetalles(f.detalles)
-                  return (
-                    <p className="truncate font-mono text-xs text-slate-500" title={detalle}>
-                      {detalle}
-                    </p>
-                  )
-                },
-                valor: (f) => <span className="font-mono text-xs">{textoDetalles(f.detalles)}</span>,
+                celda: (f) => (
+                  <DetalleBitacora
+                    fila={f}
+                    titulo={`${ACCION_LABEL[f.accion] ?? f.accion} · ${TITULO_TABLA[f.tabla_afectada] ?? f.tabla_afectada ?? 'Sistema'}`}
+                  />
+                ),
+                // En la ficha móvil se muestra el contenido formateado directamente.
+                valor: (f) => <ContenidoDetalle fila={f} />,
               },
               {
                 titulo: 'IP',
