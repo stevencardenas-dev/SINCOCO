@@ -739,6 +739,7 @@ export default function Proyectos() {
               subtitulo: (p) => p.codigo,
               extras: (p) => [
                 ['Cliente', p.cliente_nombre],
+                ['Responsable', p.responsable_nombre],
                 ['Inicio', fmtFecha(p.fecha_inicio_programada)],
                 ['Fin', fmtFecha(p.fecha_fin_programada)],
               ],

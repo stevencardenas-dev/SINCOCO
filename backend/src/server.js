@@ -25,6 +25,9 @@ process.on('unhandledRejection', (motivo) => {
 })
 
 const app = express()
+// Detrás de nginx (mismo servidor) la conexión llega desde 127.0.0.1: se confía
+// en ese salto para que req.ip sea el cliente real (X-Forwarded-For) y no el proxy.
+app.set('trust proxy', 'loopback')
 app.use(cors())
 app.use(express.json())
 

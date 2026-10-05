@@ -254,6 +254,20 @@ export default function Auditoria() {
                 ),
               },
               {
+                titulo: 'Registro afectado',
+                celda: (f) =>
+                  f.registro_id == null ? (
+                    <span className="text-slate-400">—</span>
+                  ) : (
+                    <>
+                      <p className="text-slate-700">{f.entidad ?? 'Registro no disponible'}</p>
+                      <p className="font-mono text-xs text-slate-400">#{f.registro_id}</p>
+                    </>
+                  ),
+                valor: (f) =>
+                  f.registro_id == null ? null : `${f.entidad ? `${f.entidad} ` : ''}(#${f.registro_id})`,
+              },
+              {
                 titulo: 'Detalles',
                 celda: (f) => (
                   <DetalleBitacora

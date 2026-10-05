@@ -17,6 +17,46 @@ const LIMITE_POR_DEFECTO = 50
 const LIMITE_MAXIMO = 200
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
+// Expresión SQL que da nombre legible al registro afectado, por tabla.
+const NOMBRE_ENTIDAD = {
+  usuarios: 'username',
+  trabajadores: "CONCAT(nombres, ' ', apellidos)",
+  proyectos: "CONCAT(codigo, ' · ', nombre)",
+  etapas_proyecto: 'nombre',
+  actividades: 'nombre',
+  clientes: 'razon_social_nombre',
+  roles: 'nombre',
+  cargos: 'nombre',
+  especialidades: 'nombre',
+}
+
+/**
+ * Añade `entidad` (nombre del registro afectado) a cada fila. Si el registro ya
+ * no existe queda en null y la pantalla muestra solo el identificador.
+ */
+async function resolverEntidades(filas) {
+  const idsPorTabla = new Map()
+  for (const f of filas) {
+    f.entidad = null
+    if (f.registro_id == null || !NOMBRE_ENTIDAD[f.tabla_afectada]) continue
+    if (!idsPorTabla.has(f.tabla_afectada)) idsPorTabla.set(f.tabla_afectada, new Set())
+    idsPorTabla.get(f.tabla_afectada).add(f.registro_id)
+  }
+  const nombres = new Map()
+  for (const [tabla, ids] of idsPorTabla) {
+    try {
+      const [rows] = await pool.query(
+        `SELECT id, ${NOMBRE_ENTIDAD[tabla]} AS nombre FROM ${tabla} WHERE id IN (?)`,
+        [[...ids]],
+      )
+      for (const r of rows) nombres.set(`${tabla}:${r.id}`, r.nombre)
+    } catch {
+      /* una tabla sin esas columnas no debe tumbar la consulta de la bitácora */
+    }
+  }
+  for (const f of filas) f.entidad = nombres.get(`${f.tabla_afectada}:${f.registro_id}`) ?? null
+}
+
 export async function consultar(req, res) {
   const { usuario, tabla, accion, desde, hasta } = req.query
 
@@ -87,6 +127,8 @@ export async function consultar(req, res) {
       LIMIT ? OFFSET ?`,
     [...parametros, limite, desplazamiento],
   )
+
+  await resolverEntidades(filas)
 
   // Facetas para los selectores: se calculan sobre la bitácora completa, no
   // sobre el resultado filtrado, para que el usuario no pierda opciones al filtrar.
