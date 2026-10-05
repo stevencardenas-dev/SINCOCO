@@ -142,7 +142,7 @@ assert estado == 403, f'sin asignación el maestro no define etapas, llego {esta
 
 estado, r = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
-    'fecha_inicio': '2026-10-01', 'rol_en_proyecto': 'Maestro de obra',
+    'fecha_inicio': '2026-10-01', 'observaciones': 'Maestro de obra',
 }, token=admin)
 assert estado == 201, f'asignar al maestro: {estado} {r}'
 
