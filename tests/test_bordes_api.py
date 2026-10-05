@@ -451,8 +451,10 @@ caso('etapa con fecha_fin anterior al inicio → 400',
          fecha_fin_programada='2026-10-01')[0], [400]))
 caso('etapa en un proyecto inexistente → 404',
      lambda: estado_esperado(etapa_bordes('ET-FANTASMA', proyecto_id=999999)[0], [404]))
-caso('etapa con orden 0 → 400',
-     lambda: estado_esperado(etapa_bordes('ET-ORDEN', orden=0)[0], [400]))
+caso('etapa sin fechas → 400',
+     lambda: estado_esperado(http('POST', '/api/etapas', {
+         'proyecto_id': PROYECTO, 'nombre': f'{PREFIJO_B}-ET-SINFECHAS'},
+         token=TOKEN['admin'])[0], [400]))
 caso('etapa con nombre de 200 caracteres (columna 100) → 400',
      lambda: estado_esperado(etapa_bordes('E' * 200)[0], [400]))
 

@@ -102,12 +102,14 @@ esperar('NO crea usuarios', estado, r, 403)
 
 # --- MAESTRO: asignado puede gestionar el plan y editar su proyecto ------------
 print('MAESTRO DE OBRA (asignado al proyecto)')
-estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa maestro'), token=maestro)
+estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa maestro',
+                                             fecha_inicio_programada='2027-01-05',
+                                             fecha_fin_programada='2027-03-05'), token=maestro)
 esperar('define una etapa', estado, r, 201)
 etapa_m = r['etapa']['id']
 estado, r = http('POST', '/api/actividades', {
     'etapa_id': etapa_m, 'nombre': 'TEST-Actividad maestro', 'responsable_id': responsable_id,
-    'fecha_inicio_programada': '2026-10-06', 'fecha_fin_programada': '2026-11-06'}, token=maestro)
+    'fecha_inicio_programada': '2027-01-06', 'fecha_fin_programada': '2027-02-06'}, token=maestro)
 esperar('define una actividad', estado, r, 201)
 act_m = r['actividad']['id']
 estado, r = http('PATCH', f'/api/proyectos/{proyecto}', {'observaciones': 'del maestro'}, token=maestro)
