@@ -34,7 +34,9 @@ export class RegistrarAsignacionDto {
         throw new AppError(`${campo} debe ser numérico`, 400, campo)
       }
     }
-    if (body.actividad_id !== undefined && body.actividad_id !== '' && Number.isNaN(Number(body.actividad_id))) {
+    // "Todo el proyecto" llega como null, '' o sin el campo: ninguno es una actividad.
+    const sinActividad = body.actividad_id === undefined || body.actividad_id === null || body.actividad_id === ''
+    if (!sinActividad && Number.isNaN(Number(body.actividad_id))) {
       throw new AppError('actividad_id debe ser numérico', 400, 'actividad_id')
     }
     for (const campo of ['fecha_inicio', 'fecha_fin_programada']) {
@@ -50,10 +52,7 @@ export class RegistrarAsignacionDto {
     return new RegistrarAsignacionDto({
       trabajador_id: Number(body.trabajador_id),
       proyecto_id: Number(body.proyecto_id),
-      actividad_id:
-        body.actividad_id === undefined || body.actividad_id === ''
-          ? null
-          : Number(body.actividad_id),
+      actividad_id: sinActividad ? null : Number(body.actividad_id),
       fecha_inicio: body.fecha_inicio,
       fecha_fin_programada: textoOpcional(body.fecha_fin_programada),
       rol_en_proyecto: textoOpcional(body.rol_en_proyecto),
