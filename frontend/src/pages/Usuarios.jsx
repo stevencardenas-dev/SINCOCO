@@ -17,8 +17,10 @@ import { telefonoLegible } from '../components/TelefonoPais.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import api from '../services/api'
-import { campoError, mensajeError } from '../lib/errores.js'
+import { usuariosApi } from '../services/usuarios'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { useFormulario } from '../hooks/useFormulario'
 import { fmtFechaHora } from '../lib/format.js'
 
 /**
@@ -47,153 +49,123 @@ const ROL_LABEL = {
 
 const VACIO = { username: '', email: '', password: '', rol_id: '', trabajador_id: '' }
 
+const SIN_FILTROS = { buscar: '', rol_id: '', estado: '' }
+
 export default function Usuarios() {
-  const [usuarios, setUsuarios] = useState([])
-  const [roles, setRoles] = useState([])
-  const [trabajadores, setTrabajadores] = useState([])
-  const [cargando, setCargando] = useState(true)
-  const [form, setForm] = useState(VACIO)
-  const [abierto, setAbierto] = useState(false)
-  const [error, setError] = useState('')
-  const [errorForm, setErrorForm] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [guardando, setGuardando] = useState(false)
   // Ficha del trabajador vinculado a la cuenta (clic en el nombre de usuario).
   const [verTrabajador, setVerTrabajador] = useState(null)
   // Búsqueda en el listado (desplegable).
-  const [filtros, setFiltros] = useState({ buscar: '', rol_id: '', estado: '' })
-  // Edición de usuario y correo (permiso usuarios.editar).
-  const [editando, setEditando] = useState(null)
-  const [formEditar, setFormEditar] = useState({ username: '', email: '' })
-  const [errorEditar, setErrorEditar] = useState('')
-  const [campoEditar, setCampoEditar] = useState(null)
-  const [guardandoEditar, setGuardandoEditar] = useState(false)
+  const {
+    filtros,
+    cambiar: cambiarFiltro,
+    limpiar: limpiarFiltros,
+    activos: filtrosActivos,
+    hayFiltros,
+  } = useFiltros(SIN_FILTROS)
   // HU-18: filtro explícito para consultar las cuentas dadas de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   // HU-01: solicitudes de contraseña esperando que el administrador entregue el
   // código (el sistema no envía correo en esta versión).
   const [solicitudes, setSolicitudes] = useState([])
 
-  const cargar = async () => {
-    const [u, r, t] = await Promise.all([
-      api.get('/usuarios', { params: incluirInactivos ? { incluirInactivos: 1 } : {} }),
-      api.get('/usuarios/roles'),
-      api.get('/usuarios/trabajadores-disponibles'),
-    ])
-    setUsuarios(u.data)
-    setRoles(r.data)
-    setTrabajadores(t.data)
-    setCargando(false)
-  }
+  const { datos, setDatos, error, errorCarga, aviso, setAviso, recargar, ejecutar } = useRecurso(
+    async () => {
+      const [usuarios, roles, trabajadores] = await Promise.all([
+        usuariosApi.listar({ incluirInactivos }),
+        usuariosApi.roles(),
+        usuariosApi.trabajadoresDisponibles(),
+      ])
+      return { usuarios, roles, trabajadores }
+    },
+    [incluirInactivos],
+    { mensaje: 'No se pudo cargar la lista de usuarios.' },
+  )
+  const usuarios = datos?.usuarios ?? []
+  const roles = datos?.roles ?? []
+  const trabajadores = datos?.trabajadores ?? []
+  // Solo la primera carga muestra «Cargando»; las recargas conservan la tabla.
+  const cargando = datos === null && !errorCarga
+
+  /** Cambia un usuario en la tabla sin volver a pedir la lista. */
+  const actualizarUsuario = (id, cambios) =>
+    setDatos((d) => ({ ...d, usuarios: d.usuarios.map((u) => (u.id === id ? { ...u, ...cambios } : u)) }))
 
   const cargarSolicitudes = () =>
-    api
-      .get('/usuarios/solicitudes-reset')
-      .then((res) => setSolicitudes(res.data))
+    usuariosApi
+      .solicitudesReset()
+      .then(setSolicitudes)
       .catch(() => {})
 
   useEffect(() => {
-    cargar().catch(() => {
-      setError('No se pudo cargar la lista de usuarios.')
-      setCargando(false)
-    })
     cargarSolicitudes()
   }, [incluirInactivos])
 
-  const crear = async (e) => {
-    e.preventDefault()
-    setErrorForm('')
-    setGuardando(true)
-    try {
-      await api.post('/usuarios', {
+  const nuevo = useFormulario(VACIO, {
+    enviar: (form) =>
+      usuariosApi.crear({
         ...form,
         rol_id: Number(form.rol_id),
         trabajador_id: Number(form.trabajador_id),
-      })
-      setForm(VACIO)
-      setAbierto(false)
-      setAviso(`Usuario "${form.username}" creado con cuenta activa.`)
-      await cargar()
-    } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo crear el usuario.'))
-    } finally {
-      setGuardando(false)
-    }
-  }
+      }),
+    alGuardar: (_, { valores }) => {
+      setAviso(`Usuario "${valores.username}" creado con cuenta activa.`)
+      return recargar()
+    },
+    error: 'No se pudo crear el usuario.',
+  })
 
-  const cerrarCrear = () => {
-    setAbierto(false)
-    setForm(VACIO)
-    setErrorForm('')
-  }
+  // Edición de usuario y correo (permiso usuarios.editar).
+  const edicion = useFormulario(
+    { username: '', email: '' },
+    {
+      enviar: (form, usuario) => usuariosApi.actualizar(usuario.id, form),
+      alGuardar: (_, { valores }) => {
+        setAviso(`Usuario "${valores.username}" actualizado.`)
+        return recargar()
+      },
+      error: 'No se pudo actualizar el usuario.',
+    },
+  )
 
   // CU-01 Alt 3: asignar un rol distinto a un usuario existente.
-  const cambiarRol = async (usuario, rol_id) => {
-    setError('')
-    setAviso('')
+  const cambiarRol = (usuario, rol_id) => {
     if (!rol_id || Number(rol_id) === usuario.rol_id) return
-    try {
-      const { data } = await api.patch(`/usuarios/${usuario.id}/rol`, { rol_id: Number(rol_id) })
-      setUsuarios((prev) =>
-        prev.map((u) => (u.id === usuario.id ? { ...u, rol_id: data.rol_id, rol: data.rol } : u)),
-      )
-      setAviso(`${usuario.username}: rol cambiado a ${ROL_LABEL[data.rol] ?? data.rol}.`)
-    } catch (err) {
-      setError(mensajeError(err, `No se pudo cambiar el rol de ${usuario.username}.`))
-    }
+    ejecutar(
+      async () => {
+        const data = await usuariosApi.cambiarRol(usuario.id, Number(rol_id))
+        actualizarUsuario(usuario.id, { rol_id: data.rol_id, rol: data.rol })
+        return data
+      },
+      {
+        exito: (data) => `${usuario.username}: rol cambiado a ${ROL_LABEL[data.rol] ?? data.rol}.`,
+        error: `No se pudo cambiar el rol de ${usuario.username}.`,
+        recargar: false,
+      },
+    )
   }
 
-  const cambiarEstado = async (usuario) => {
+  const cambiarEstado = (usuario) => {
     const estado = usuario.estado === 'ACTIVO' ? 'BLOQUEADO' : 'ACTIVO'
     const leyenda = estado === 'BLOQUEADO' ? 'bloqueada' : 'activada'
-    setError('')
-    setAviso('')
-    try {
-      await api.patch(`/usuarios/${usuario.id}/estado`, { estado })
-      setUsuarios((prev) => prev.map((u) => (u.id === usuario.id ? { ...u, estado } : u)))
-      setAviso(`${usuario.username}: cuenta ${leyenda}.`)
-    } catch (err) {
-      setError(mensajeError(err, `No se pudo cambiar el estado de ${usuario.username}.`))
-    }
+    ejecutar(
+      async () => {
+        await usuariosApi.cambiarEstado(usuario.id, estado)
+        actualizarUsuario(usuario.id, { estado })
+      },
+      {
+        exito: `${usuario.username}: cuenta ${leyenda}.`,
+        error: `No se pudo cambiar el estado de ${usuario.username}.`,
+        recargar: false,
+      },
+    )
   }
 
   /** HU-18: reactivar una cuenta dada de baja (no se borra nunca). */
-  const reactivar = async (usuario) => {
-    setError('')
-    setAviso('')
-    try {
-      await api.patch(`/usuarios/${usuario.id}/reactivar`)
-      setAviso(`${usuario.username}: cuenta reactivada.`)
-      await cargar()
-    } catch (err) {
-      setError(mensajeError(err, `No se pudo reactivar a ${usuario.username}.`))
-    }
-  }
-
-  const abrirEditar = (u) => {
-    setFormEditar({ username: u.username, email: u.email ?? '' })
-    setErrorEditar('')
-    setCampoEditar(null)
-    setEditando(u)
-  }
-
-  const guardarEdicion = async (e) => {
-    e.preventDefault()
-    setErrorEditar('')
-    setCampoEditar(null)
-    setGuardandoEditar(true)
-    try {
-      await api.patch(`/usuarios/${editando.id}`, formEditar)
-      setAviso(`Usuario "${formEditar.username}" actualizado.`)
-      setEditando(null)
-      await cargar()
-    } catch (err) {
-      setErrorEditar(mensajeError(err, 'No se pudo actualizar el usuario.'))
-      setCampoEditar(campoError(err))
-    } finally {
-      setGuardandoEditar(false)
-    }
-  }
+  const reactivar = (usuario) =>
+    ejecutar(() => usuariosApi.reactivar(usuario.id), {
+      exito: `${usuario.username}: cuenta reactivada.`,
+      error: `No se pudo reactivar a ${usuario.username}.`,
+    })
 
   const etiquetaRol = (u) => ROL_LABEL[u.rol] ?? u.rol ?? 'Sin rol'
 
@@ -206,15 +178,14 @@ export default function Usuarios() {
       (!filtros.rol_id || String(u.rol_id) === filtros.rol_id) &&
       (!filtros.estado || u.estado === filtros.estado),
   )
-  const hayFiltros = Boolean(filtros.buscar || filtros.rol_id || filtros.estado)
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={() => cargar().catch(() => { setError('No se pudo cargar la lista de usuarios.') }) } />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title="Gestión de usuarios"
         subtitle="Crear cuentas, asignar rol y controlar el acceso al sistema"
       >
-        <button className="btn-primary" onClick={() => setAbierto(true)}>
+        <button className="btn-primary" onClick={() => nuevo.abrir()}>
           <PlusIcon className="h-5 w-5" />
           Nuevo usuario
         </button>
@@ -276,14 +247,10 @@ export default function Usuarios() {
       )}
 
       <ModalFormulario
-        abierto={abierto}
+        {...nuevo.propsModal}
         titulo="Registrar usuario"
         subtitulo="Se crea con cuenta activa y el rol elegido"
-        onCerrar={cerrarCrear}
         ancho="max-w-3xl"
-        onGuardar={crear}
-        guardando={guardando}
-        error={errorForm}
         textoGuardar="Crear usuario"
         textoGuardando="Creando…"
       >
@@ -296,8 +263,8 @@ export default function Usuarios() {
               id="u-username"
               maxLength={50}
               className="input"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              value={nuevo.valores.username}
+              onChange={(e) => nuevo.cambiar('username', e.target.value)}
               required
             />
           </div>
@@ -311,8 +278,8 @@ export default function Usuarios() {
               type="email"
               placeholder="correo@sincoco.com"
               className="input"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              value={nuevo.valores.email}
+              onChange={(e) => nuevo.cambiar('email', e.target.value)}
               required
             />
           </div>
@@ -325,8 +292,8 @@ export default function Usuarios() {
               maxLength={72}
               autoComplete="new-password"
               minLength={8}
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              value={nuevo.valores.password}
+              onChange={(e) => nuevo.cambiar('password', e.target.value)}
               required
             />
             <p className="mt-1 text-xs text-slate-500">
@@ -340,8 +307,8 @@ export default function Usuarios() {
             <select
               id="u-rol"
               className="input"
-              value={form.rol_id}
-              onChange={(e) => setForm({ ...form, rol_id: e.target.value })}
+              value={nuevo.valores.rol_id}
+              onChange={(e) => nuevo.cambiar('rol_id', e.target.value)}
               required
             >
               <option value="">Seleccione un rol…</option>
@@ -359,8 +326,8 @@ export default function Usuarios() {
             {/* Combobox con búsqueda: la lista de trabajadores crece. */}
             <BuscadorSelect
               id="u-trabajador"
-              value={form.trabajador_id}
-              onChange={(v) => setForm({ ...form, trabajador_id: v })}
+              value={nuevo.valores.trabajador_id}
+              onChange={(v) => nuevo.cambiar('trabajador_id', v)}
               opciones={trabajadores.map((t) => ({
                 value: t.id,
                 label: `${t.nombres} ${t.apellidos}`,
@@ -381,7 +348,7 @@ export default function Usuarios() {
       <FiltrosDesplegable
         titulo="Buscar usuarios"
         ariaLabel="Filtros de usuarios"
-        activos={[filtros.buscar, filtros.rol_id, filtros.estado].filter(Boolean).length}
+        activos={filtrosActivos}
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="xl:col-span-2">
@@ -394,7 +361,7 @@ export default function Usuarios() {
               className="input"
               placeholder="Usuario o correo"
               value={filtros.buscar}
-              onChange={(e) => setFiltros((f) => ({ ...f, buscar: e.target.value }))}
+              onChange={(e) => cambiarFiltro('buscar', e.target.value)}
             />
           </div>
           <div>
@@ -405,7 +372,7 @@ export default function Usuarios() {
               id="usr-rol"
               className="input"
               value={filtros.rol_id}
-              onChange={(e) => setFiltros((f) => ({ ...f, rol_id: e.target.value }))}
+              onChange={(e) => cambiarFiltro('rol_id', e.target.value)}
             >
               <option value="">Todos</option>
               {roles.map((r) => (
@@ -423,7 +390,7 @@ export default function Usuarios() {
               id="usr-estado"
               className="input"
               value={filtros.estado}
-              onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
+              onChange={(e) => cambiarFiltro('estado', e.target.value)}
             >
               <option value="">Todos</option>
               {Object.keys(ESTADO_BADGE).map((e2) => (
@@ -439,7 +406,7 @@ export default function Usuarios() {
             type="button"
             className="btn-ghost"
             disabled={!hayFiltros}
-            onClick={() => setFiltros({ buscar: '', rol_id: '', estado: '' })}
+            onClick={limpiarFiltros}
           >
             Limpiar filtros
           </button>
@@ -534,7 +501,7 @@ export default function Usuarios() {
                     <>
                       <button
                         type="button"
-                        onClick={() => abrirEditar(u)}
+                        onClick={() => edicion.abrir({ username: u.username, email: u.email ?? '' }, u)}
                         className="btn-accion btn-accion-editar"
                         aria-label={`Editar a ${u.username}`}
                       >
@@ -597,14 +564,9 @@ export default function Usuarios() {
       )}
 
       <ModalFormulario
-        abierto={editando !== null}
+        {...edicion.propsModal}
         titulo="Editar usuario"
         subtitulo="El rol y el estado se cambian aparte; la contraseña la restablece el propio usuario"
-        onCerrar={() => setEditando(null)}
-        onGuardar={guardarEdicion}
-        guardando={guardandoEditar}
-        error={errorEditar}
-        campoError={campoEditar}
         textoGuardar="Guardar cambios"
         espaciado="space-y-4"
       >
@@ -615,9 +577,9 @@ export default function Usuarios() {
           <input
             id="ue-username"
             maxLength={50}
-            className={campoEditar === 'username' ? 'input border-red-400' : 'input'}
-            value={formEditar.username}
-            onChange={(e) => setFormEditar({ ...formEditar, username: e.target.value })}
+            className={edicion.claseCampo('username')}
+            value={edicion.valores.username}
+            onChange={(e) => edicion.cambiar('username', e.target.value)}
             required
           />
         </div>
@@ -629,9 +591,9 @@ export default function Usuarios() {
             id="ue-email"
             type="email"
             maxLength={150}
-            className={campoEditar === 'email' ? 'input border-red-400' : 'input'}
-            value={formEditar.email}
-            onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
+            className={edicion.claseCampo('email')}
+            value={edicion.valores.email}
+            onChange={(e) => edicion.cambiar('email', e.target.value)}
             required
           />
         </div>

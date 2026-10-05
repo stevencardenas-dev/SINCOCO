@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowPathIcon,
@@ -26,7 +25,8 @@ import {
 import StatCard from '../components/StatCard.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import api from '../services/api'
+import { dashboardApi } from '../services/dashboard'
+import { useRecurso } from '../hooks/useRecurso'
 import {
   estadoIncidente,
   estadoProyecto,
@@ -71,23 +71,9 @@ const saludoSegunHora = (hora) => {
 
 export default function Dashboard() {
   const { user } = useAuth()
-  const [datos, setDatos] = useState(null)
-  const [error, setError] = useState('')
-  const [cargando, setCargando] = useState(true)
-
-  const cargar = () => {
-    setCargando(true)
-    setError('')
-    return api
-      .get('/dashboard')
-      .then((res) => setDatos(res.data))
-      .catch(() => setError('No se pudieron cargar los indicadores del panel.'))
-      .finally(() => setCargando(false))
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [])
+  const { datos, error, cargando, recargar } = useRecurso(dashboardApi.obtener, [], {
+    mensaje: 'No se pudieron cargar los indicadores del panel.',
+  })
 
   const hoy = new Date().toLocaleDateString('es-CO', {
     weekday: 'long',
@@ -123,7 +109,7 @@ export default function Dashboard() {
             {saludo.texto}, {user?.username ?? 'Usuario'}
           </h2>
           <span className="ml-auto">
-            <BotonActualizar onClick={cargar} cargando={cargando} />
+            <BotonActualizar onClick={recargar} cargando={cargando} />
           </span>
         </div>
         <p className="mt-1 text-sm text-slate-500">

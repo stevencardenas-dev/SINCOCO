@@ -20,8 +20,12 @@ import PageHeader from '../components/PageHeader.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import api from '../services/api'
-import { campoError, mensajeError } from '../lib/errores.js'
+import { proyectosApi } from '../services/proyectos'
+import { clientesApi } from '../services/clientes'
+import { trabajadoresApi } from '../services/trabajadores'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { useFormulario } from '../hooks/useFormulario'
 
 /** Ubicación recortada en la tabla, con botón para copiarla completa. */
 function UbicacionCopiable({ texto }) {
@@ -120,137 +124,93 @@ export default function Proyectos() {
   // El buscador de la barra superior navega a /proyectos?buscar=…
   const [parametros] = useSearchParams()
 
-  const [proyectos, setProyectos] = useState(null)
   const [clientes, setClientes] = useState([])
   const [responsables, setResponsables] = useState([])
-  const [error, setError] = useState(null)
-  const [aviso, setAviso] = useState('')
-  const [filtros, setFiltros] = useState(() => ({
-    ...SIN_FILTROS,
-    buscar: parametros.get('buscar') ?? '',
-  }))
-  const [form, setForm] = useState(VACIO)
-  const [abierto, setAbierto] = useState(false)
+  const {
+    filtros,
+    cambiar: cambiarFiltro,
+    limpiar: limpiarFiltros,
+    activos: filtrosActivos,
+    hayFiltros,
+  } = useFiltros(SIN_FILTROS, { inicial: { ...SIN_FILTROS, buscar: parametros.get('buscar') ?? '' } })
   // Selector de ubicación en el mapa (Leaflet), abierto desde el formulario.
   const [mapaAbierto, setMapaAbierto] = useState(false)
-  // Proyecto en edición: null = el formulario está registrando uno nuevo.
-  const [editando, setEditando] = useState(null)
-  const [guardando, setGuardando] = useState(false)
-  const [clienteAbierto, setClienteAbierto] = useState(false)
-  const [clienteForm, setClienteForm] = useState(CLIENTE_VACIO)
-  // Errores propios del formulario: se muestran dentro del modal, no en la raíz.
-  const [errorForm, setErrorForm] = useState('')
-  const [campoForm, setCampoForm] = useState(null)
-  const [errorCliente, setErrorCliente] = useState('')
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
 
-  const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
-  // Criterio 3 de HU-02: el inicio debe ser estrictamente anterior al fin.
-  const fechasInvertidas = Boolean(
-    form.fecha_inicio_programada &&
-      form.fecha_fin_programada &&
-      form.fecha_inicio_programada >= form.fecha_fin_programada,
+  const { datos: proyectos, error, aviso, setAviso, recargar, ejecutar } = useRecurso(
+    () => proyectosApi.listar({ incluirInactivos, buscar: filtros.buscar, estado: filtros.estado }),
+    [incluirInactivos, filtros],
+    { mensaje: 'No se pudieron cargar los proyectos. Verifique que el backend esté disponible.' },
   )
 
-  const cargar = () => {
-    setError(null)
-    return api
-      .get('/proyectos', {
-        params: {
-          ...(incluirInactivos ? { incluirInactivos: 1 } : {}),
-          ...(filtros.buscar ? { buscar: filtros.buscar } : {}),
-          ...(filtros.estado ? { estado: filtros.estado } : {}),
-        },
-      })
-      .then((res) => setProyectos(res.data))
-      .catch(() =>
-        setError('No se pudieron cargar los proyectos. Verifique que el backend esté disponible.'),
-      )
-  }
+  // Criterio 3 de HU-02: el inicio debe ser estrictamente anterior al fin.
+  const fechasInvertidas = (f) =>
+    Boolean(f.fecha_inicio_programada && f.fecha_fin_programada && f.fecha_inicio_programada >= f.fecha_fin_programada)
 
-  const cargarCatalogos = () => {
-    if (!gestionaProyectos) return
-    // El responsable es un trabajador activo (HU-04), no un usuario del sistema.
-    if (puede('clientes.listar')) api.get('/clientes').then((res) => setClientes(res.data)).catch(() => {})
-    if (puede('trabajadores.listar')) api.get('/trabajadores').then((res) => setResponsables(res.data)).catch(() => {})
-  }
+  // CU-02: registrar un proyecto nuevo o actualizar el que se está editando
+  // (`registro` es el proyecto en edición; null = nuevo). Los errores se
+  // muestran dentro del modal, no en la raíz.
+  const formulario = useFormulario(VACIO, {
+    validar: (f) =>
+      fechasInvertidas(f) && { error: 'La fecha de fin debe ser posterior a la de inicio.', campo: 'fecha_fin_programada' },
+    enviar: (f, proyecto) => {
+      const cuerpo = {
+        ...f,
+        cliente_id: Number(f.cliente_id),
+        responsable_id: Number(f.responsable_id),
+        presupuesto_inicial: Number(soloDigitos(f.presupuesto_inicial) || 0),
+      }
+      return proyecto ? proyectosApi.actualizar(proyecto.id, cuerpo) : proyectosApi.crear(cuerpo)
+    },
+    alGuardar: (data, { valores, registro }) => {
+      const nombre = data.proyecto?.nombre ?? valores.nombre
+      setAviso(registro ? `Proyecto "${nombre}" actualizado.` : `Proyecto "${nombre}" registrado en planificación.`)
+      return recargar()
+    },
+    error: 'No se pudo guardar el proyecto.',
+  })
+  const form = formulario.valores
+  const editando = formulario.registro !== null
+  const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
+
+  // CU-02 Alt 2: el cliente no existe -> se registra aquí y queda seleccionado.
+  const nuevoCliente = useFormulario(CLIENTE_VACIO, {
+    enviar: (f) => clientesApi.crear(f),
+    alGuardar: ({ cliente }) => {
+      setClientes((prev) =>
+        [...prev, cliente].sort((a, b) => a.razon_social_nombre.localeCompare(b.razon_social_nombre)),
+      )
+      formulario.cambiar('cliente_id', String(cliente.id))
+      setAviso(`Cliente "${cliente.razon_social_nombre}" registrado y seleccionado.`)
+    },
+    error: 'No se pudo registrar el cliente.',
+  })
 
   useEffect(() => {
-    cargar()
-  }, [incluirInactivos, filtros])
-  useEffect(cargarCatalogos, [gestionaProyectos])
+    if (!gestionaProyectos) return
+    // El responsable es un trabajador activo (HU-04), no un usuario del sistema.
+    if (puede('clientes.listar')) clientesApi.listar().then(setClientes).catch(() => {})
+    if (puede('trabajadores.listar')) trabajadoresApi.listar().then(setResponsables).catch(() => {})
+  }, [gestionaProyectos])
 
   // La búsqueda de la barra superior puede cambiar estando ya en esta pantalla.
   useEffect(() => {
     const buscar = parametros.get('buscar')
-    if (buscar !== null) setFiltros((f) => ({ ...f, buscar }))
+    if (buscar !== null) cambiarFiltro('buscar', buscar)
   }, [parametros])
 
-  const cambiarFiltro = (campo, valor) => setFiltros((prev) => ({ ...prev, [campo]: valor }))
-
   // HU-18: baja lógica y reactivación de proyectos (nunca borrado físico).
-  const cambiarBaja = async (p) => {
-    setError(null)
-    setAviso('')
-    try {
-      await api.patch(`/proyectos/${p.id}/${p.activo ? 'baja' : 'reactivar'}`)
-      setAviso(`${p.nombre}: ${p.activo ? 'dado de baja' : 'reactivado'}.`)
-      cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del proyecto.'))
-    }
-  }
-
-  // CU-02: registrar un proyecto nuevo o actualizar el que se está editando.
-  const guardar = async (e) => {
-    e.preventDefault()
-    setErrorForm('')
-    setCampoForm(null)
-    // Criterio 3 de HU-02: no se envía con el fin igual o anterior al inicio.
-    if (fechasInvertidas) {
-      setErrorForm('La fecha de fin debe ser posterior a la de inicio.')
-      setCampoForm('fecha_fin_programada')
-      return
-    }
-    setGuardando(true)
-    try {
-      const cuerpo = {
-        ...form,
-        cliente_id: Number(form.cliente_id),
-        responsable_id: Number(form.responsable_id),
-        presupuesto_inicial: Number(soloDigitos(form.presupuesto_inicial) || 0),
-      }
-      const { data } = editando
-        ? await api.patch(`/proyectos/${editando}`, cuerpo)
-        : await api.post('/proyectos', cuerpo)
-      const nombre = data.proyecto?.nombre ?? form.nombre
-      setAviso(editando ? `Proyecto "${nombre}" actualizado.` : `Proyecto "${nombre}" registrado en planificación.`)
-      cerrarFormulario()
-      cargar()
-    } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo guardar el proyecto.'))
-      setCampoForm(campoError(err))
-    } finally {
-      setGuardando(false)
-    }
-  }
-
-  const cerrarFormulario = () => {
-    setAbierto(false)
-    setEditando(null)
-    setForm(VACIO)
-    setErrorForm('')
-    setCampoForm(null)
-  }
+  const cambiarBaja = (p) =>
+    ejecutar(() => (p.activo ? proyectosApi.baja(p.id) : proyectosApi.reactivar(p.id)), {
+      exito: `${p.nombre}: ${p.activo ? 'dado de baja' : 'reactivado'}.`,
+      error: 'No se pudo cambiar el estado del proyecto.',
+    })
 
   /** Pasa el proyecto a edición: el formulario se abre con sus datos actuales. */
   const abrirEditar = (p) => {
     setAviso('')
-    setErrorForm('')
-    setCampoForm(null)
-    setEditando(p.id)
-    setForm({
+    formulario.abrir({
       codigo: p.codigo ?? '',
       nombre: p.nombre ?? '',
       cliente_id: String(p.cliente_id ?? ''),
@@ -262,32 +222,10 @@ export default function Proyectos() {
       fecha_fin_programada: String(p.fecha_fin_programada ?? '').slice(0, 10),
       descripcion: p.descripcion ?? '',
       observaciones: p.observaciones ?? '',
-    })
-    setAbierto(true)
+    }, p)
   }
 
-  // CU-02 Alt 2: el cliente no existe -> se registra aquí y queda seleccionado.
-  const crearCliente = async (e) => {
-    e.preventDefault()
-    setErrorCliente('')
-    try {
-      const { data } = await api.post('/clientes', clienteForm)
-      setClientes((prev) =>
-        [...prev, data.cliente].sort((a, b) =>
-          a.razon_social_nombre.localeCompare(b.razon_social_nombre),
-        ),
-      )
-      setForm((f) => ({ ...f, cliente_id: String(data.cliente.id) }))
-      setClienteForm(CLIENTE_VACIO)
-      setClienteAbierto(false)
-      setAviso(`Cliente "${data.cliente.razon_social_nombre}" registrado y seleccionado.`)
-    } catch (err) {
-      setErrorCliente(mensajeError(err, 'No se pudo registrar el cliente.'))
-    }
-  }
-
-  const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
-  const hayFiltros = Boolean(filtros.buscar || filtros.estado)
+  const campo = formulario.claseCampo
   // El backend limita el listado al alcance del rol (RBAC): estos roles ven
   // todos los proyectos; los demás, solo los asignados.
   const veTodos = puede('proyectos.acceso_total')
@@ -306,7 +244,7 @@ export default function Proyectos() {
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={cargar} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title="Proyectos"
         subtitle="Registro, etapas, actividades y seguimiento de avance"
       >
@@ -314,13 +252,7 @@ export default function Proyectos() {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => {
-              setEditando(null)
-              setForm(VACIO)
-              setErrorForm('')
-              setCampoForm(null)
-              setAbierto(true)
-            }}
+            onClick={() => formulario.abrir()}
           >
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
@@ -337,7 +269,7 @@ export default function Proyectos() {
       <FiltrosDesplegable
         titulo="Buscar proyectos"
         ariaLabel="Filtros de proyectos"
-        activos={[filtros.buscar, filtros.estado].filter(Boolean).length}
+        activos={filtrosActivos}
         abiertoInicial={Boolean(filtros.buscar)}
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -377,7 +309,7 @@ export default function Proyectos() {
               type="button"
               className="btn-ghost"
               disabled={!hayFiltros}
-              onClick={() => setFiltros(SIN_FILTROS)}
+              onClick={limpiarFiltros}
             >
               Limpiar filtros
             </button>
@@ -395,19 +327,14 @@ export default function Proyectos() {
 
       {gestionaProyectos && (
         <ModalFormulario
-          abierto={abierto}
+          {...formulario.propsModal}
           titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto'}
           subtitulo={
             editando
               ? `Código ${form.codigo} · el cambio queda en la bitácora`
               : 'Queda en estado de planificación'
           }
-          onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
-          onGuardar={guardar}
-          guardando={guardando}
-          error={errorForm}
-          campoError={campoForm}
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar proyecto'}
         >
           <div className="grid gap-5 sm:grid-cols-2">
@@ -420,8 +347,8 @@ export default function Proyectos() {
                 maxLength={20}
                 className={campo('codigo')}
                 value={form.codigo}
-                onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                disabled={Boolean(editando)}
+                onChange={(e) => formulario.cambiar('codigo', e.target.value)}
+                disabled={editando}
                 required
               />
               {editando && (
@@ -439,7 +366,7 @@ export default function Proyectos() {
                 maxLength={150}
                 className={campo('nombre')}
                 value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                onChange={(e) => formulario.cambiar('nombre', e.target.value)}
                 required
               />
             </div>
@@ -452,17 +379,17 @@ export default function Proyectos() {
               <BuscadorSelect
                 id="p-cliente"
                 value={form.cliente_id}
-                onChange={(v) => setForm({ ...form, cliente_id: v })}
+                onChange={(v) => formulario.cambiar('cliente_id', v)}
                 opciones={opcionesClientes}
                 placeholder="Escriba el nombre del cliente…"
-                error={campoForm === 'cliente_id'}
+                error={formulario.campo === 'cliente_id'}
                 requerido
               />
               {puedeCrearCliente && (
                 <button
                   type="button"
                   className="mt-1 text-xs font-medium text-brand-700 hover:underline"
-                  onClick={() => setClienteAbierto((v) => !v)}
+                  onClick={() => (nuevoCliente.abierto ? nuevoCliente.cerrar() : nuevoCliente.abrir())}
                 >
                   <BuildingOffice2Icon className="mr-1 inline h-4 w-4" />
                   El cliente no está en la lista: registrarlo
@@ -476,10 +403,10 @@ export default function Proyectos() {
               <BuscadorSelect
                 id="p-responsable"
                 value={form.responsable_id}
-                onChange={(v) => setForm({ ...form, responsable_id: v })}
+                onChange={(v) => formulario.cambiar('responsable_id', v)}
                 opciones={opcionesResponsables}
                 placeholder="Escriba el nombre del responsable…"
-                error={campoForm === 'responsable_id'}
+                error={formulario.campo === 'responsable_id'}
                 requerido
               />
             </div>
@@ -493,7 +420,7 @@ export default function Proyectos() {
                 type="date"
                 className={campo('fecha_inicio_programada')}
                 value={form.fecha_inicio_programada}
-                onChange={(e) => setForm({ ...form, fecha_inicio_programada: e.target.value })}
+                onChange={(e) => formulario.cambiar('fecha_inicio_programada', e.target.value)}
                 required
               />
             </div>
@@ -507,11 +434,11 @@ export default function Proyectos() {
                 className={campo('fecha_fin_programada')}
                 value={form.fecha_fin_programada}
                 min={form.fecha_inicio_programada || undefined}
-                aria-invalid={fechasInvertidas}
-                onChange={(e) => setForm({ ...form, fecha_fin_programada: e.target.value })}
+                aria-invalid={fechasInvertidas(form)}
+                onChange={(e) => formulario.cambiar('fecha_fin_programada', e.target.value)}
                 required
               />
-              {fechasInvertidas && (
+              {fechasInvertidas(form) && (
                 <p className="mt-1 text-xs font-medium text-red-600">
                   La fecha de fin debe ser posterior a la de inicio.
                 </p>
@@ -529,7 +456,7 @@ export default function Proyectos() {
                   className={campo('ubicacion')}
                   placeholder="Escriba la dirección o selecciónela en el mapa"
                   value={form.ubicacion}
-                  onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+                  onChange={(e) => formulario.cambiar('ubicacion', e.target.value)}
                   required
                 />
                 <button
@@ -558,13 +485,10 @@ export default function Proyectos() {
                   className={`${campo('presupuesto_inicial')} pl-8 tabular-nums`}
                   value={fmtMiles(form.presupuesto_inicial)}
                   onChange={(e) =>
-                    setForm({
-                      ...form,
-                      presupuesto_inicial: soloDigitos(e.target.value).slice(
-                        0,
-                        MAX_DIGITOS_PRESUPUESTO,
-                      ),
-                    })
+                    formulario.cambiar(
+                      'presupuesto_inicial',
+                      soloDigitos(e.target.value).slice(0, MAX_DIGITOS_PRESUPUESTO),
+                    )
                   }
                   required
                 />
@@ -594,7 +518,7 @@ export default function Proyectos() {
                 className="input"
                 rows={2}
                 value={form.descripcion}
-                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                onChange={(e) => formulario.cambiar('descripcion', e.target.value)}
               />
             </div>
           </div>
@@ -607,7 +531,7 @@ export default function Proyectos() {
         valorInicial={form.ubicacion}
         onCerrar={() => setMapaAbierto(false)}
         onAceptar={(texto) => {
-          setForm((f) => ({ ...f, ubicacion: texto }))
+          formulario.cambiar('ubicacion', texto)
           setMapaAbierto(false)
         }}
       />
@@ -615,15 +539,9 @@ export default function Proyectos() {
       {/* CU-02 Alt 2: alta rápida del cliente dentro de su propia ventana. */}
       {puedeCrearCliente && (
         <ModalFormulario
-          abierto={clienteAbierto}
+          {...nuevoCliente.propsModal}
           titulo="Registrar cliente"
           subtitulo="Queda guardado en el catálogo y seleccionado en el proyecto"
-          onCerrar={() => {
-            setClienteAbierto(false)
-            setErrorCliente('')
-          }}
-          onGuardar={crearCliente}
-          error={errorCliente}
           textoGuardar="Registrar cliente"
           espaciado="space-y-4"
         >
@@ -635,8 +553,8 @@ export default function Proyectos() {
               <select
                 id="c-tipo"
                 className="input"
-                value={clienteForm.tipo_documento}
-                onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
+                value={nuevoCliente.valores.tipo_documento}
+                onChange={(e) => nuevoCliente.cambiar('tipo_documento', e.target.value)}
               >
                 <option value="NIT">NIT</option>
                 <option value="CC">CC</option>
@@ -652,8 +570,8 @@ export default function Proyectos() {
                 id="c-doc"
                 maxLength={20}
                 className="input"
-                value={clienteForm.numero_documento}
-                onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })}
+                value={nuevoCliente.valores.numero_documento}
+                onChange={(e) => nuevoCliente.cambiar('numero_documento', e.target.value)}
                 required
               />
             </div>
@@ -666,8 +584,8 @@ export default function Proyectos() {
               id="c-nombre"
               maxLength={150}
               className="input"
-              value={clienteForm.razon_social_nombre}
-              onChange={(e) => setClienteForm({ ...clienteForm, razon_social_nombre: e.target.value })}
+              value={nuevoCliente.valores.razon_social_nombre}
+              onChange={(e) => nuevoCliente.cambiar('razon_social_nombre', e.target.value)}
               required
             />
           </div>
@@ -680,8 +598,8 @@ export default function Proyectos() {
                 id="c-contacto"
                 maxLength={100}
                 className="input"
-                value={clienteForm.nombre_contacto}
-                onChange={(e) => setClienteForm({ ...clienteForm, nombre_contacto: e.target.value })}
+                value={nuevoCliente.valores.nombre_contacto}
+                onChange={(e) => nuevoCliente.cambiar('nombre_contacto', e.target.value)}
               />
             </div>
             <div>
@@ -692,8 +610,8 @@ export default function Proyectos() {
                 id="c-telefono"
                 maxLength={20}
                 className="input"
-                value={clienteForm.telefono}
-                onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
+                value={nuevoCliente.valores.telefono}
+                onChange={(e) => nuevoCliente.cambiar('telefono', e.target.value)}
               />
             </div>
           </div>
