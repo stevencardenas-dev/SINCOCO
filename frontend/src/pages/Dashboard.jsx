@@ -10,6 +10,7 @@ import {
   ExclamationTriangleIcon,
   FolderIcon,
   InboxIcon,
+  MoonIcon,
   SunIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
@@ -61,6 +62,13 @@ const resumenCargos = (porCargo) => {
     .join(' · ')
 }
 
+// Saludo según la hora local del dispositivo (5-11 mañana, 12-18 tarde, resto noche).
+const saludoSegunHora = (hora) => {
+  if (hora >= 5 && hora < 12) return { texto: 'Buenos días', noche: false }
+  if (hora >= 12 && hora < 19) return { texto: 'Buenas tardes', noche: false }
+  return { texto: 'Buenas noches', noche: true }
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const [datos, setDatos] = useState(null)
@@ -88,6 +96,7 @@ export default function Dashboard() {
     year: 'numeric',
   })
   const hoyCapitalizado = hoy.charAt(0).toUpperCase() + hoy.slice(1)
+  const saludo = saludoSegunHora(new Date().getHours())
 
   const proyectos = datos?.proyectos
   const inventario = datos?.inventario
@@ -101,11 +110,17 @@ export default function Dashboard() {
       <div>
         <p className="text-sm text-slate-500">{hoyCapitalizado}</p>
         <div className="mt-1 flex flex-wrap items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-300 to-accent-500 text-brand-950 shadow-sm ring-1 ring-inset ring-accent-500/30">
-            <SunIcon className="h-5 w-5" />
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ring-inset ${
+              saludo.noche
+                ? 'from-indigo-400 to-indigo-700 text-white ring-indigo-700/30'
+                : 'from-accent-300 to-accent-500 text-brand-950 ring-accent-500/30'
+            }`}
+          >
+            {saludo.noche ? <MoonIcon className="h-5 w-5" /> : <SunIcon className="h-5 w-5" />}
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-900">
-            Buen día, {user?.username ?? 'Usuario'}
+            {saludo.texto}, {user?.username ?? 'Usuario'}
           </h2>
           <span className="ml-auto">
             <BotonActualizar onClick={cargar} cargando={cargando} />

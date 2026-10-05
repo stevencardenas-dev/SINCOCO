@@ -79,7 +79,7 @@ with sync_playwright() as p:
 
     # 4. La sesión abierta sigue sirviendo después del cambio.
     ir_a(pg, '/')
-    pg.wait_for_selector('text=Buen día', timeout=10000)
+    pg.wait_for_selector('h2:has-text("Buen"):has-text("%s")' % USUARIO, timeout=10000)
 
     # 5. Cierra sesión y vuelve a entrar con la contraseña nueva.
     pg.click('button[title="Cerrar sesión"]')
