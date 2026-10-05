@@ -51,12 +51,15 @@ print('maestro intenta asignar personal ->', estado, '·', data.get('error'))
 assert estado == 403, 'solo quien tiene proyectos.gestionar_acceso puede asignar'
 
 # --- El administrador asigna al maestro ---------------------------------------
+# "Todo el proyecto": el formulario envía actividad_id = null (no lo omite). Antes
+# el DTO lo convertía en 0 y la llave foránea fallaba al insertar.
 estado, data = http('POST', '/api/asignaciones', {
-    'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
+    'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id, 'actividad_id': None,
     'fecha_inicio': '2026-10-05', 'fecha_fin_programada': '2027-06-30',
     'rol_en_proyecto': 'Residente de obra',
 }, token=admin)
-assert estado == 201, f'asignar: {estado} {data}'
+assert estado == 201, f'asignar a todo el proyecto (actividad_id null): {estado} {data}'
+assert data['asignacion']['actividad_id'] is None, 'sin actividad: queda asignado a todo el proyecto'
 asignacion_id = data['asignacion']['id']
 print('asignación creada ->', data['asignacion']['trabajador_nombre'], '·', data['asignacion']['rol_en_proyecto'])
 

@@ -57,7 +57,8 @@ limpieza = subprocess.run(mysql_args(['-e',
     "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
     "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
-    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%';"]), capture_output=True, text=True)
+    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'; "
+    "DELETE FROM clientes WHERE numero_documento='900000999-9';"]), capture_output=True, text=True)
 assert limpieza.returncode == 0, 'limpieza de proyectos fallo: ' + limpieza.stderr
 print('db limpio')
 
@@ -135,6 +136,22 @@ print('fechas inconsistentes ->', estado, r['error'])
 estado, r = http('POST', '/api/proyectos', dict(PROYECTO, codigo='PRJ-HU02-ALT2', cliente_id=99999), token=token)
 assert estado == 404, f'se esperaba 404 por cliente, llego {estado}: {r}'
 print('cliente inexistente ->', estado, r['error'])
+
+# criterio 1: cliente dado de baja (activo=0) -> 400, igual que el responsable
+inactivo = subprocess.run(mysql_args(['-e',
+    "INSERT INTO clientes (numero_documento, tipo_documento, razon_social_nombre, activo, fecha_baja) "
+    "VALUES ('900000999-9','NIT','Cliente de baja HU02',0,NOW()) "
+    "ON DUPLICATE KEY UPDATE activo=0, fecha_baja=NOW()"]), capture_output=True, text=True)
+if inactivo.returncode == 0:
+    q = subprocess.run(mysql_args(['-N', '-e',
+        "SELECT id FROM clientes WHERE numero_documento='900000999-9'"]),
+        capture_output=True, text=True)
+    estado, r = http('POST', '/api/proyectos',
+                     dict(PROYECTO, codigo='PRJ-HU02-ALT7', cliente_id=int(q.stdout.strip())), token=token)
+    assert estado == 400, f'se esperaba 400 por cliente de baja, llego {estado}: {r}'
+    print('cliente de baja ->', estado, r['error'])
+else:
+    print('cliente de baja -> OMITIDO (sin acceso mysql para sembrar el caso)')
 
 # criterio: presupuesto > 0 -> 400
 estado, r = http('POST', '/api/proyectos', dict(PROYECTO, codigo='PRJ-HU02-ALT3', presupuesto_inicial=0), token=token)
@@ -215,7 +232,8 @@ subprocess.run(mysql_args(['-e',
     "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
     "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
-    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%';"]), capture_output=True, text=True)
+    "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'; "
+    "DELETE FROM clientes WHERE numero_documento='900000999-9';"]), capture_output=True, text=True)
 print('limpieza -> proyectos de prueba eliminados')
 
 print('\nHU-02: TODAS LAS PRUEBAS PASARON')
