@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowPathIcon, FunnelIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import Retractil from '../components/Retractil.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -27,6 +28,11 @@ const ACCESO_VACIO = {
   fecha_fin_programada: '',
 }
 
+const FILTRO_ACCESO_VACIO = { buscar: '', estado: '', alcance: '', rol: '', actividad: '', vencen: false }
+
+// "Vencen pronto": asignaciones vigentes cuyo fin programado cae en este plazo.
+const DIAS_POR_VENCER = 30
+
 const ESTADO_ASIGNACION = {
   ACTIVO: 'bg-emerald-50 text-emerald-700',
   FINALIZADO: 'bg-slate-100 text-slate-600',
@@ -40,6 +46,10 @@ const ESTADO_BADGE = {
   ATRASADA: 'bg-red-50 text-red-700',
   SUSPENDIDA: 'bg-amber-50 text-amber-700',
 }
+
+/** Fecha 'YYYY-MM-DD' (o ISO) -> 'YYYY-MM-DD', sin desplazarla por la zona horaria. */
+const soloDia = (valor) => String(valor ?? '').slice(0, 10)
+
 
 export default function PlanProyecto() {
   const { id } = useParams()
@@ -67,6 +77,33 @@ export default function PlanProyecto() {
   const [accesoForm, setAccesoForm] = useState(ACCESO_VACIO)
   const [errorAcceso, setErrorAcceso] = useState('')
   const [guardandoAcceso, setGuardandoAcceso] = useState(false)
+  // Búsqueda y filtros del listado de acceso (se aplican en el cliente).
+  const [filtroAcceso, setFiltroAcceso] = useState(FILTRO_ACCESO_VACIO)
+
+  // Rango del proyecto: límite de las fechas de etapas y actividades (HU-03).
+  const proyDesde = soloDia(proyecto?.fecha_inicio_programada)
+  const proyHasta = soloDia(proyecto?.fecha_fin_programada)
+
+  // Listado de acceso filtrado: texto libre y filtros combinados con "y".
+  const rolesAcceso = [...new Set(asignaciones.map((a) => a.rol_en_proyecto).filter(Boolean))].sort()
+  const filtrosActivos = Object.entries(filtroAcceso).filter(([, v]) => v !== '' && v !== false).length
+  const asignacionesFiltradas = asignaciones.filter((a) => {
+    const f = filtroAcceso
+    const texto = [a.trabajador_nombre, a.rol_en_proyecto, a.actividad_nombre, a.cargo]
+      .filter(Boolean).join(' ').toLowerCase()
+    if (f.buscar && !texto.includes(f.buscar.trim().toLowerCase())) return false
+    if (f.estado && a.estado !== f.estado) return false
+    if (f.alcance === 'PROYECTO' && a.actividad_id) return false
+    if (f.alcance === 'ACTIVIDAD' && !a.actividad_id) return false
+    if (f.rol && a.rol_en_proyecto !== f.rol) return false
+    if (f.actividad && String(a.actividad_id) !== f.actividad) return false
+    if (f.vencen) {
+      if (a.estado !== 'ACTIVO' || !a.fecha_fin_programada) return false
+      const dias = (new Date(soloDia(a.fecha_fin_programada)) - new Date(new Date().toISOString().slice(0, 10))) / 86400000
+      if (dias < 0 || dias > DIAS_POR_VENCER) return false
+    }
+    return true
+  })
 
   const cargar = () => {
     setError('')
@@ -362,10 +399,8 @@ export default function PlanProyecto() {
             </span>
           </div>
 
-          <form
-            onSubmit={asignarPersonal}
-            className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2 xl:grid-cols-4"
-          >
+          <Retractil titulo="Asignar acceso" icono={UserPlusIcon}>
+          <form onSubmit={asignarPersonal} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="xl:col-span-2">
               <label htmlFor="ac-trabajador" className="label">Trabajador</label>
               <BuscadorSelect
@@ -416,6 +451,8 @@ export default function PlanProyecto() {
                 className="input"
                 required
                 value={accesoForm.fecha_inicio}
+                min={proyDesde || undefined}
+                max={accesoForm.fecha_fin_programada || proyHasta || undefined}
                 onChange={(e) => setAccesoForm({ ...accesoForm, fecha_inicio: e.target.value })}
               />
             </div>
@@ -426,6 +463,8 @@ export default function PlanProyecto() {
                 type="date"
                 className="input"
                 value={accesoForm.fecha_fin_programada}
+                min={accesoForm.fecha_inicio || proyDesde || undefined}
+                max={proyHasta || undefined}
                 onChange={(e) => setAccesoForm({ ...accesoForm, fecha_fin_programada: e.target.value })}
               />
             </div>
@@ -444,12 +483,80 @@ export default function PlanProyecto() {
               </div>
             )}
           </form>
+          </Retractil>
+
+          <Retractil
+            titulo="Buscar y filtrar"
+            icono={FunnelIcon}
+            insignia={filtrosActivos > 0 ? `${filtrosActivos} ${filtrosActivos === 1 ? 'filtro' : 'filtros'}` : null}
+          >
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="sm:col-span-2 xl:col-span-4">
+                <label htmlFor="fa-buscar" className="label">Buscar</label>
+                <input
+                  id="fa-buscar"
+                  className="input"
+                  placeholder="Nombre, cargo, rol o actividad…"
+                  value={filtroAcceso.buscar}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, buscar: e.target.value })}
+                />
+              </div>
+              <div>
+                <label htmlFor="fa-estado" className="label">Estado</label>
+                <select id="fa-estado" className="input" value={filtroAcceso.estado}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, estado: e.target.value })}>
+                  <option value="">Todos</option>
+                  <option value="ACTIVO">Vigente</option>
+                  <option value="FINALIZADO">Finalizado</option>
+                  <option value="REASIGNADO">Reasignado</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="fa-alcance" className="label">Alcance</label>
+                <select id="fa-alcance" className="input" value={filtroAcceso.alcance}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, alcance: e.target.value })}>
+                  <option value="">Todos</option>
+                  <option value="PROYECTO">Todo el proyecto</option>
+                  <option value="ACTIVIDAD">Por actividad</option>
+                </select>
+              </div>
+              <div>
+                <label htmlFor="fa-rol" className="label">Rol en el proyecto</label>
+                <select id="fa-rol" className="input" value={filtroAcceso.rol}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, rol: e.target.value })}>
+                  <option value="">Todos</option>
+                  {rolesAcceso.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="fa-actividad" className="label">Actividad</label>
+                <select id="fa-actividad" className="input" value={filtroAcceso.actividad}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, actividad: e.target.value })}>
+                  <option value="">Todas</option>
+                  {actividades.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
+                <input type="checkbox" checked={filtroAcceso.vencen}
+                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, vencen: e.target.checked })} />
+                Vencen en los próximos {DIAS_POR_VENCER} días
+              </label>
+              <div className="flex items-center justify-end sm:col-span-2">
+                <button type="button" className="btn-ghost" disabled={filtrosActivos === 0}
+                  onClick={() => setFiltroAcceso(FILTRO_ACCESO_VACIO)}>
+                  Limpiar filtros
+                </button>
+              </div>
+            </div>
+          </Retractil>
 
           {asignaciones.length === 0 ? (
             <p className="px-5 py-4 text-xs text-slate-400">
               Todavía no hay asignaciones. El responsable del proyecto y quien tenga alcance total
               siempre lo ven.
             </p>
+          ) : asignacionesFiltradas.length === 0 ? (
+            <p className="px-5 py-4 text-xs text-slate-400">Ningún acceso coincide con los filtros.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-sm">
@@ -464,7 +571,7 @@ export default function PlanProyecto() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {asignaciones.map((a) => (
+                  {asignacionesFiltradas.map((a) => (
                     <tr key={a.id}>
                       <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
                       <td className="px-5 py-3 text-slate-600">{a.rol_en_proyecto ?? '—'}</td>
