@@ -45,7 +45,7 @@ assert estado == 403, 'sin acceso al proyecto, sus etapas tampoco se consultan'
 # --- El maestro no administra asignaciones ------------------------------------
 estado, data = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
-    'fecha_inicio': '2026-10-05', 'rol_en_proyecto': 'Residente de obra',
+    'fecha_inicio': '2026-10-05', 'observaciones': 'Residente de obra',
 }, token=maestro)
 print('maestro intenta asignar personal ->', estado, '·', data.get('error'))
 assert estado == 403, 'solo quien tiene proyectos.gestionar_acceso puede asignar'
@@ -56,19 +56,28 @@ assert estado == 403, 'solo quien tiene proyectos.gestionar_acceso puede asignar
 estado, data = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id, 'actividad_id': None,
     'fecha_inicio': '2026-10-05', 'fecha_fin_programada': '2027-06-30',
-    'rol_en_proyecto': 'Residente de obra',
+    'observaciones': 'Residente de obra',
 }, token=admin)
 assert estado == 201, f'asignar a todo el proyecto (actividad_id null): {estado} {data}'
 assert data['asignacion']['actividad_id'] is None, 'sin actividad: queda asignado a todo el proyecto'
+assert data['asignacion']['observaciones'] == 'Residente de obra', 'la descripción se guarda en observaciones'
 asignacion_id = data['asignacion']['id']
-print('asignación creada ->', data['asignacion']['trabajador_nombre'], '·', data['asignacion']['rol_en_proyecto'])
+print('asignación creada ->', data['asignacion']['trabajador_nombre'], '·', data['asignacion']['observaciones'])
 
-# Fechas fuera del rango del proyecto: se rechaza.
+# El fin programado no puede ser anterior al inicio.
+estado, data = http('POST', '/api/asignaciones', {
+    'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
+    'fecha_inicio': '2026-12-01', 'fecha_fin_programada': '2026-11-01',
+}, token=admin)
+assert estado == 400 and data.get('campo') == 'fecha_fin_programada', f'fin anterior al inicio: {estado} {data}'
+
+# Las fechas del acceso ya no se limitan al rango del proyecto: unas fuera de
+# rango no se rechazan por fechas (aquí chocan con la asignación vigente, 409).
 estado, data = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto_id,
     'fecha_inicio': '2029-01-01',
 }, token=admin)
-assert estado == 400, f'fuera de rango debe rechazarse: {estado} {data}'
+assert estado != 400, f'fuera del rango del proyecto no debe rechazarse por fechas: {estado} {data}'
 
 # Actividad inexistente: se rechaza con el campo señalado.
 estado, data = http('POST', '/api/asignaciones', {

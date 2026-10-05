@@ -490,6 +490,20 @@ caso('asignación con fecha_fin anterior al inicio → 400',
          'trabajador_id': RESPONSABLE, 'proyecto_id': PROYECTO,
          'fecha_inicio': '2027-01-01', 'fecha_fin_programada': '2026-10-01'},
          token=TOKEN['admin'])[0], [400]))
+caso('asignación a todo el proyecto con actividad_id null (como el formulario) → no falla',
+     lambda: estado_esperado(http('POST', '/api/asignaciones', {
+         'trabajador_id': RESPONSABLE, 'proyecto_id': PROYECTO, 'actividad_id': None,
+         'fecha_inicio': '2026-10-01'}, token=TOKEN['admin'])[0], [201, 409]))
+caso('asignación con fechas fuera del rango del proyecto → no se rechaza por fechas',
+     lambda: estado_esperado(http('POST', '/api/asignaciones', {
+         'trabajador_id': RESPONSABLE, 'proyecto_id': PROYECTO,
+         'fecha_inicio': '2035-01-01', 'fecha_fin_programada': '2035-06-01'},
+         token=TOKEN['admin'])[0], [201, 409]))
+caso('asignación con descripción de 6000 caracteres (límite 5000) → 400',
+     lambda: estado_esperado(http('POST', '/api/asignaciones', {
+         'trabajador_id': RESPONSABLE, 'proyecto_id': PROYECTO,
+         'fecha_inicio': '2026-10-01', 'observaciones': 'D' * 6000},
+         token=TOKEN['admin'])[0], [400]))
 caso('asignación en un proyecto inexistente → 404',
      lambda: estado_esperado(http('POST', '/api/asignaciones', {
          'trabajador_id': RESPONSABLE, 'proyecto_id': 999999,
