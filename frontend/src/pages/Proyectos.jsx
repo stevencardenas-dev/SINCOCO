@@ -39,7 +39,7 @@ function UbicacionCopiable({ texto }) {
   }
 
   return (
-    <span className="absolute inset-x-5 inset-y-1 flex items-start gap-1 overflow-hidden">
+    <span className="absolute inset-x-5 inset-y-0 flex items-center gap-1 overflow-hidden">
       <span className="line-clamp-4 min-w-0 whitespace-normal break-words" title={texto}>
         {texto}
       </span>
