@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowPathIcon, CheckCircleIcon, ClipboardDocumentCheckIcon, PlayIcon, EyeIcon, FunnelIcon, PencilSquareIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowLeftIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  CheckIcon,
+  ClipboardDocumentCheckIcon,
+  ClipboardDocumentIcon,
+  EyeIcon,
+  FunnelIcon,
+  PencilSquareIcon,
+  PlayIcon,
+  PlusIcon,
+  UserPlusIcon,
+} from '@heroicons/react/24/outline'
 import Retractil from '../components/Retractil.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
@@ -25,12 +38,12 @@ const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programad
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
-  rol_en_proyecto: '',
+  observaciones: '',
   fecha_inicio: '',
   fecha_fin_programada: '',
 }
 
-const FILTRO_ACCESO_VACIO = { buscar: '', estado: '', alcance: '', rol: '', actividad: '', vencen: false }
+const FILTRO_ACCESO_VACIO = { buscar: '', estado: '', alcance: '', actividad: '', vencen: false }
 
 // "Vencen pronto": asignaciones vigentes cuyo fin programado cae en este plazo.
 const DIAS_POR_VENCER = 30
@@ -62,6 +75,62 @@ const estadoVisible = (a) => (a.atrasada ? 'ATRASADA' : a.estado)
 
 /** Fecha 'YYYY-MM-DD' (o ISO) -> 'YYYY-MM-DD', sin desplazarla por la zona horaria. */
 const soloDia = (valor) => String(valor ?? '').slice(0, 10)
+
+/**
+ * Fecha sugerida bajo un campo de fecha. No limita el calendario: al pulsarla
+ * se copia al campo. Desaparece cuando el campo ya tiene ese día.
+ */
+function SugerenciaFecha({ dia, origen, actual, onUsar }) {
+  if (!dia || dia === actual) return null
+  return (
+    <button
+      type="button"
+      onClick={() => onUsar(dia)}
+      className="mt-1 text-left text-xs text-brand-600 hover:text-brand-800 hover:underline"
+      title="Usar esta fecha"
+    >
+      Sugerida: {fmtFecha(dia)} · {origen}
+    </button>
+  )
+}
+
+/**
+ * Descripción de una asignación: se ajusta en varias líneas, se recorta a 4
+ * con puntos suspensivos (el texto completo sale al pasar el cursor) y tiene un
+ * botón para copiarla. Misma presentación que la ubicación en /proyectos; aquí
+ * la fila crece según el texto, porque ninguna otra columna fija su alto.
+ */
+function DescripcionCopiable({ texto }) {
+  const [copiado, setCopiado] = useState(false)
+  if (!texto) return <span className="text-slate-400">—</span>
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1500)
+    } catch {
+      /* sin permiso de portapapeles: no hay nada que hacer */
+    }
+  }
+
+  return (
+    <span className="flex items-center gap-1">
+      <span className="line-clamp-4 min-w-0 whitespace-normal break-words" title={texto}>
+        {texto}
+      </span>
+      <button
+        type="button"
+        onClick={copiar}
+        className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        title={copiado ? 'Copiado' : 'Copiar descripción'}
+        aria-label="Copiar descripción"
+      >
+        {copiado ? <CheckIcon className="h-4 w-4 text-emerald-600" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+      </button>
+    </span>
+  )
+}
 
 export default function PlanProyecto() {
   const { id } = useParams()
@@ -120,18 +189,27 @@ export default function PlanProyecto() {
   const proyDesde = soloDia(proyecto?.fecha_inicio_programada)
   const proyHasta = soloDia(proyecto?.fecha_fin_programada)
 
+  // Fechas sugeridas para una asignación: las de la actividad elegida o, si es
+  // para todo el proyecto, las del proyecto. Son una ayuda: no limitan el calendario.
+  const actividadAcceso = actividades.find((a) => String(a.id) === String(accesoForm.actividad_id))
+  const sugerenciaAcceso = actividadAcceso
+    ? {
+        inicio: soloDia(actividadAcceso.fecha_inicio_programada),
+        fin: soloDia(actividadAcceso.fecha_fin_programada),
+        origen: (cual) => `${cual} de la actividad «${actividadAcceso.nombre}»`,
+      }
+    : { inicio: proyDesde, fin: proyHasta, origen: (cual) => `${cual} del proyecto` }
+
   // Listado de acceso filtrado: texto libre y filtros combinados con "y".
-  const rolesAcceso = [...new Set(asignaciones.map((a) => a.rol_en_proyecto).filter(Boolean))].sort()
   const filtrosActivos = Object.entries(filtroAcceso).filter(([, v]) => v !== '' && v !== false).length
   const asignacionesFiltradas = asignaciones.filter((a) => {
     const f = filtroAcceso
-    const texto = [a.trabajador_nombre, a.rol_en_proyecto, a.actividad_nombre, a.cargo]
+    const texto = [a.trabajador_nombre, a.observaciones, a.actividad_nombre, a.cargo]
       .filter(Boolean).join(' ').toLowerCase()
     if (f.buscar && !texto.includes(f.buscar.trim().toLowerCase())) return false
     if (f.estado && a.estado !== f.estado) return false
     if (f.alcance === 'PROYECTO' && a.actividad_id) return false
     if (f.alcance === 'ACTIVIDAD' && !a.actividad_id) return false
-    if (f.rol && a.rol_en_proyecto !== f.rol) return false
     if (f.actividad && String(a.actividad_id) !== f.actividad) return false
     if (f.vencen) {
       if (a.estado !== 'ACTIVO' || !a.fecha_fin_programada) return false
@@ -198,7 +276,7 @@ export default function PlanProyecto() {
         proyecto_id: Number(id),
         trabajador_id: Number(accesoForm.trabajador_id),
         actividad_id: accesoForm.actividad_id ? Number(accesoForm.actividad_id) : null,
-        rol_en_proyecto: accesoForm.rol_en_proyecto,
+        observaciones: accesoForm.observaciones,
         fecha_inicio: accesoForm.fecha_inicio,
         fecha_fin_programada: accesoForm.fecha_fin_programada || null,
       })
@@ -573,15 +651,16 @@ export default function PlanProyecto() {
                 requerido
               />
             </div>
-            <div>
-              <label htmlFor="ac-rol" className="label">Rol en el proyecto</label>
-              <input
-                id="ac-rol"
-                maxLength={100}
+            <div className="sm:col-span-2 xl:col-span-2">
+              <label htmlFor="ac-descripcion" className="label">Descripción de la asignación</label>
+              <textarea
+                id="ac-descripcion"
+                maxLength={5000}
+                rows={2}
                 className="input"
-                placeholder="Residente, oficial…"
-                value={accesoForm.rol_en_proyecto}
-                onChange={(e) => setAccesoForm({ ...accesoForm, rol_en_proyecto: e.target.value })}
+                placeholder="Residente de obra, apoyo en cimentación…"
+                value={accesoForm.observaciones}
+                onChange={(e) => setAccesoForm({ ...accesoForm, observaciones: e.target.value })}
               />
             </div>
             <div>
@@ -614,9 +693,13 @@ export default function PlanProyecto() {
                 className="input"
                 required
                 value={accesoForm.fecha_inicio}
-                min={proyDesde || undefined}
-                max={accesoForm.fecha_fin_programada || proyHasta || undefined}
                 onChange={(e) => setAccesoForm({ ...accesoForm, fecha_inicio: e.target.value })}
+              />
+              <SugerenciaFecha
+                dia={sugerenciaAcceso.inicio}
+                origen={sugerenciaAcceso.origen('inicio')}
+                actual={accesoForm.fecha_inicio}
+                onUsar={(dia) => setAccesoForm({ ...accesoForm, fecha_inicio: dia })}
               />
             </div>
             <div>
@@ -626,9 +709,13 @@ export default function PlanProyecto() {
                 type="date"
                 className="input"
                 value={accesoForm.fecha_fin_programada}
-                min={accesoForm.fecha_inicio || proyDesde || undefined}
-                max={proyHasta || undefined}
                 onChange={(e) => setAccesoForm({ ...accesoForm, fecha_fin_programada: e.target.value })}
+              />
+              <SugerenciaFecha
+                dia={sugerenciaAcceso.fin}
+                origen={sugerenciaAcceso.origen('fin')}
+                actual={accesoForm.fecha_fin_programada}
+                onUsar={(dia) => setAccesoForm({ ...accesoForm, fecha_fin_programada: dia })}
               />
             </div>
             <div className="flex items-end xl:col-span-2">
@@ -659,7 +746,7 @@ export default function PlanProyecto() {
                 <input
                   id="fa-buscar"
                   className="input"
-                  placeholder="Nombre, cargo, rol o actividad…"
+                  placeholder="Nombre, cargo, descripción o actividad…"
                   value={filtroAcceso.buscar}
                   onChange={(e) => setFiltroAcceso({ ...filtroAcceso, buscar: e.target.value })}
                 />
@@ -681,14 +768,6 @@ export default function PlanProyecto() {
                   <option value="">Todos</option>
                   <option value="PROYECTO">Todo el proyecto</option>
                   <option value="ACTIVIDAD">Por actividad</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="fa-rol" className="label">Rol en el proyecto</label>
-                <select id="fa-rol" className="input" value={filtroAcceso.rol}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, rol: e.target.value })}>
-                  <option value="">Todos</option>
-                  {rolesAcceso.map((r) => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
               <div>
@@ -734,7 +813,7 @@ export default function PlanProyecto() {
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <th className="px-5 py-3 font-semibold">Trabajador</th>
-                    <th className="px-5 py-3 font-semibold">Rol en el proyecto</th>
+                    <th className="px-5 py-3 font-semibold">Descripción de la asignación</th>
                     <th className="px-5 py-3 font-semibold">Actividad</th>
                     <th className="px-5 py-3 font-semibold">Vigencia</th>
                     <th className="px-5 py-3 font-semibold">Estado</th>
@@ -745,7 +824,9 @@ export default function PlanProyecto() {
                   {asignacionesFiltradas.map((a) => (
                     <tr key={a.id}>
                       <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
-                      <td className="px-5 py-3 text-slate-600">{a.rol_en_proyecto ?? '—'}</td>
+                      <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">
+                        <DescripcionCopiable texto={a.observaciones} />
+                      </td>
                       <td className="px-5 py-3 text-slate-600">
                         {a.actividad_nombre ?? 'Todo el proyecto'}
                       </td>
