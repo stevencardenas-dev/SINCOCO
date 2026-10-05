@@ -309,6 +309,7 @@ export default function Usuarios() {
               id="u-email"
               maxLength={150}
               type="email"
+              placeholder="correo@sincoco.com"
               className="input"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}

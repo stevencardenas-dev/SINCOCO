@@ -25,9 +25,11 @@ process.on('unhandledRejection', (motivo) => {
 })
 
 const app = express()
-// Detrás de nginx (mismo servidor) la conexión llega desde 127.0.0.1: se confía
-// en ese salto para que req.ip sea el cliente real (X-Forwarded-For) y no el proxy.
-app.set('trust proxy', 'loopback')
+// Cadena: cliente → CloudFront → nginx (mismo servidor) → Node. Son dos saltos de
+// proxy: nginx (127.0.0.1) y el edge de CloudFront. Se confía en ambos para que
+// req.ip sea el cliente real (X-Forwarded-For) y no la IP del edge de CloudFront.
+// Es seguro porque nginx solo acepta peticiones que traen X-Origin-Verify.
+app.set('trust proxy', 2)
 app.use(cors())
 app.use(express.json())
 
