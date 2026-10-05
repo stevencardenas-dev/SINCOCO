@@ -39,8 +39,8 @@ function UbicacionCopiable({ texto }) {
   }
 
   return (
-    <span className="flex items-center gap-1">
-      <span className="truncate" title={texto}>
+    <span className="absolute inset-x-5 inset-y-1 flex items-start gap-1 overflow-hidden">
+      <span className="min-w-0 whitespace-normal break-words" title={texto}>
         {texto}
       </span>
       <button
@@ -761,8 +761,9 @@ export default function Proyectos() {
               { titulo: 'Responsable', movil: true, tdClase: 'text-slate-600', celda: (p) => p.responsable_nombre },
               {
                 titulo: 'Ubicación',
-                // Ancho máximo igual al de Proyecto; el texto largo se recorta con puntos suspensivos.
-                tdClase: 'md:max-w-[9.25rem] text-slate-600',
+                // Ancho igual al de Proyecto. El texto va en posición absoluta: llena el alto que
+                // marca la fila (definido por Proyecto) y no la hace crecer.
+                tdClase: 'relative md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem] text-slate-600',
                 celda: (p) => <UbicacionCopiable texto={p.ubicacion} />,
                 valor: (p) => p.ubicacion,
               },
