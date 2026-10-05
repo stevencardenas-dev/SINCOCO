@@ -202,7 +202,7 @@ esquema si ya existe y `FORZAR_ESQUEMA=1` **borra los datos**.
 
 Para cambios de esquema (columnas o tablas nuevas) se añade un
 `docs/migracion_<algo>.sql` **idempotente**: que compruebe `information_schema`
-antes de tocar nada, como los seis que ya existen:
+antes de tocar nada, como los que ya existen:
 
 | Archivo | Qué deja en la base |
 |---|---|
@@ -213,6 +213,7 @@ antes de tocar nada, como los seis que ya existen:
 | `migracion_usuarios_editar.sql` | permiso `usuarios.editar` para ADMINISTRADOR |
 | `migracion_sesion_unica.sql` | columnas `usuarios.sesion_actual` y `sesion_iniciada_en` |
 | `migracion_personal_baja.sql` | trabajadores en estado `INACTIVO` pasan a dados de baja (y los dados de baja, a `INACTIVO`) |
+| `migracion_categorias_personal.sql` | columna `categoria` en `cargos` y `especialidades`, especialidades nuevas y baja de los cargos retirados (solo la primera vez) |
 
 **No hay tabla de control**: se
 aplican todos en orden alfabético cada vez, y como se protegen solos, repetirlos

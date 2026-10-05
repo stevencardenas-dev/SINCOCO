@@ -16,7 +16,9 @@ import { resolverCargo, resolverEspecialidad } from './catalogoService.js'
 export function exigirEspecialidadSiOperativo(cargo, especialidad) {
   if (Number(cargo?.operativo) === 1 && !especialidad) {
     throw new AppError(
-      'La especialidad es obligatoria para cargos de personal operativo',
+      // HU-04 exige la especialidad; CU-04 · Alt 2 pide advertir la consecuencia.
+      'La especialidad es obligatoria para cargos de personal operativo: sin ella el ' +
+        'trabajador no podrá ser filtrado para tareas específicas',
       400,
       'especialidad',
     )

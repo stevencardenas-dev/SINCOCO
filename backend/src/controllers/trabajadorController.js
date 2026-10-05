@@ -12,7 +12,7 @@ import { RegistrarTrabajadorDto } from '../dtos/trabajador/RegistrarTrabajadorDt
 /**
  * GET /api/trabajadores -> catálogo de personal (HU-04).
  * `?incluirInactivos=1` incluye los dados de baja (HU-18).
- * `?buscar=` `?estado=` `?cargo_id=` `?disponible=` filtran el listado desde la
+ * `?buscar=` `?estado=` `?cargo_id=` `?especialidad_id=` `?disponible=` filtran el listado desde la
  * API, porque el volumen de personal no se puede resolver solo en el navegador.
  */
 export async function listar(req, res, next) {
@@ -24,6 +24,7 @@ export async function listar(req, res, next) {
         buscar: req.query.buscar ?? req.query.q ?? '',
         estado: req.query.estado ?? '',
         cargoId: req.query.cargo_id || null,
+        especialidadId: req.query.especialidad_id || null,
         disponible: req.query.disponible ?? null,
       }),
     )
