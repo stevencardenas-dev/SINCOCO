@@ -15,6 +15,7 @@ export class Cliente {
     direccion,
     estado,
     activo,
+    proyectos_activos,
   }) {
     this.id = id
     this.numero_documento = numero_documento
@@ -26,6 +27,7 @@ export class Cliente {
     this.direccion = direccion ?? null
     this.estado = estado
     this.activo = activo
+    if (proyectos_activos !== undefined) this.proyectos_activos = Number(proyectos_activos)
   }
 
   static fromRow(row) {

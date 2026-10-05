@@ -2,6 +2,7 @@ import * as clienteRepository from '../repositories/clienteRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { TIPOS_DOCUMENTO } from '../dtos/cliente/RegistrarClienteDto.js'
+import { LARGO, revisarCorreo, revisarLargo, revisarTelefono } from '../utils/campos.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -80,6 +81,13 @@ export async function actualizarCliente(id, cambios = {}, ctx = {}) {
   for (const campo of ['nombre_contacto', 'telefono', 'email', 'direccion']) {
     if (campos[campo] !== undefined) campos[campo] = textoOpcional(campos[campo])
   }
+
+  revisarLargo(campos.nombre_contacto, LARGO.nombre_contacto, 'nombre_contacto')
+  revisarLargo(campos.email, LARGO.email, 'email')
+  revisarLargo(campos.telefono, LARGO.telefono, 'telefono')
+  revisarLargo(campos.direccion, LARGO.direccion, 'direccion')
+  revisarCorreo(campos.email)
+  revisarTelefono(campos.telefono)
 
   if (Object.keys(campos).length === 0) {
     throw new AppError('No hay campos que actualizar', 400)
