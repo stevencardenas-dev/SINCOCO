@@ -1,6 +1,6 @@
 import {
   listarPorProyecto, listarPorEtapa, registrarActividad, actualizarActividad,
-  darDeBajaActividad, reactivarActividad,
+  darDeBajaActividad, reactivarActividad, iniciarActividad, finalizarActividad,
 } from '../services/actividadService.js'
 import { RegistrarActividadDto } from '../dtos/actividad/RegistrarActividadDto.js'
 import { ActualizarActividadDto } from '../dtos/actividad/ActualizarActividadDto.js'
@@ -65,6 +65,26 @@ export async function reactivarCtrl(req, res, next) {
   try {
     const resultado = await reactivarActividad(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Actividad reactivada', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/actividades/:id/iniciar -> «Empezar»: pasa a En curso. */
+export async function iniciar(req, res, next) {
+  try {
+    const actividad = await iniciarActividad(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Actividad en curso', actividad })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/actividades/:id/finalizar -> «Finalizar»: pasa a Finalizado. */
+export async function finalizar(req, res, next) {
+  try {
+    const actividad = await finalizarActividad(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Actividad finalizada', actividad })
   } catch (error) {
     return next(error)
   }

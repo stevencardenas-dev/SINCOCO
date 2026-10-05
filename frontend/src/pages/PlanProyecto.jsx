@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowPathIcon, FunnelIcon, PencilSquareIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowPathIcon, CheckCircleIcon, ClipboardDocumentCheckIcon, PlayIcon, EyeIcon, FunnelIcon, PencilSquareIcon, PlusIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import Retractil from '../components/Retractil.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import Ficha from '../components/Ficha.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
@@ -42,11 +43,22 @@ const ESTADO_ASIGNACION = {
 
 const ESTADO_BADGE = {
   PENDIENTE: 'bg-slate-100 text-slate-600',
-  EN_PROCESO: 'bg-sky-50 text-sky-700',
+  EN_PROCESO: 'bg-yellow-100 text-yellow-800',
   COMPLETADA: 'bg-emerald-50 text-emerald-700',
   ATRASADA: 'bg-red-50 text-red-700',
-  SUSPENDIDA: 'bg-amber-50 text-amber-700',
+  SUSPENDIDA: 'bg-orange-50 text-orange-700',
 }
+
+const ESTADO_ETIQUETA = {
+  PENDIENTE: 'Pendiente',
+  EN_PROCESO: 'En curso',
+  COMPLETADA: 'Finalizado',
+  ATRASADA: 'Atrasada',
+  SUSPENDIDA: 'Suspendida',
+}
+
+/** Estado que se muestra: «Atrasada» si ya pasó su fecha fin y no está finalizada (lo calcula el servidor). */
+const estadoVisible = (a) => (a.atrasada ? 'ATRASADA' : a.estado)
 
 /** Fecha 'YYYY-MM-DD' (o ISO) -> 'YYYY-MM-DD', sin desplazarla por la zona horaria. */
 const soloDia = (valor) => String(valor ?? '').slice(0, 10)
@@ -55,10 +67,25 @@ export default function PlanProyecto() {
   const { id } = useParams()
   const { puede } = useAuth()
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
-  const puedeEtapas = puede('etapas.crear')
-  const puedeActividades = puede('actividades.crear')
-  const puedeEditarEtapas = puede('etapas.editar')
-  const puedeEditarActividades = puede('actividades.editar')
+  // Además del permiso del rol, el plan solo lo modifica el líder del proyecto,
+  // el gerente y el administrador (`gestiona_plan`, que calcula el servidor).
+  // Quien solo está asignado consulta el plan y actúa en lo suyo.
+  const [miAcceso, setMiAcceso] = useState({ gestiona_plan: false, actividades_ids: [] })
+  const gestionaPlan = miAcceso.gestiona_plan
+  const puedeEtapas = gestionaPlan && puede('etapas.crear')
+  const puedeActividades = gestionaPlan && puede('actividades.crear')
+  const puedeEditarEtapas = gestionaPlan && puede('etapas.editar')
+  const puedeEditarActividades = gestionaPlan && puede('actividades.editar')
+  // «Registrar avance»: en cualquier actividad para quien gestiona el plan; si no, solo en las suyas.
+  const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
+  const [cambiandoEstado, setCambiandoEstado] = useState(null)
+  // «Registrar avance» aún no existe (HU-21): avisa con un mensaje flotante breve.
+  const [proximamente, setProximamente] = useState(false)
+  const avisarProximamente = () => {
+    setProximamente(true)
+    setTimeout(() => setProximamente(false), 1800)
+  }
+  const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
 
   const [proyecto, setProyecto] = useState(null)
@@ -122,8 +149,10 @@ export default function PlanProyecto() {
       api.get('/actividades', { params: { proyecto_id: id } }),
       api.get('/trabajadores').catch(() => ({ data: [] })),
       api.get('/asignaciones', { params: { proyecto_id: id } }).catch(() => ({ data: [] })),
+      api.get(`/proyectos/${id}/mi-acceso`).catch(() => ({ data: { gestiona_plan: false, actividades_ids: [] } })),
     ])
-      .then(([p, e, a, t, as]) => {
+      .then(([p, e, a, t, as, acc]) => {
+        setMiAcceso(acc.data)
         setProyecto(p.data.find((x) => String(x.id) === String(id)) ?? null)
         setEtapas(e.data)
         setActividades(a.data)
@@ -253,6 +282,23 @@ export default function PlanProyecto() {
     }
   }
 
+  /** «Empezar» (pendiente -> en curso) y «Finalizar» (en curso -> finalizado). */
+  const cambiarEstado = async (a) => {
+    const empezar = a.estado === 'PENDIENTE'
+    setError('')
+    setAviso('')
+    setCambiandoEstado(a.id)
+    try {
+      await api.patch(`/actividades/${a.id}/${empezar ? 'iniciar' : 'finalizar'}`)
+      setAviso(empezar ? `«${a.nombre}» está en curso.` : `«${a.nombre}» quedó finalizada.`)
+      await cargar()
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudo cambiar el estado de la actividad.'))
+    } finally {
+      setCambiandoEstado(null)
+    }
+  }
+
   const crearActividad = async (e) => {
     e.preventDefault()
     setErrorActividad('')
@@ -355,8 +401,11 @@ export default function PlanProyecto() {
               </div>
               <div className="flex items-center gap-3">
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
-                  {et.estado?.replace('_', ' ').toLowerCase()}
+                  {ESTADO_ETIQUETA[et.estado] ?? et.estado}
                 </span>
+                <button className="btn-ghost text-xs" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
+                  <EyeIcon className="h-4 w-4" /> Ver ficha
+                </button>
                 {puedeEditarEtapas && (
                   <button className="btn-ghost text-xs" onClick={() => abrirEdicionEtapa(et)}>
                     <PencilSquareIcon className="h-4 w-4" /> Editar
@@ -426,44 +475,66 @@ export default function PlanProyecto() {
             {acts.length === 0 ? (
               <p className="px-5 py-4 text-xs text-slate-400">Sin actividades en esta etapa.</p>
             ) : (
-              <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-5 py-2.5 font-semibold">Actividad</th>
-                    <th className="px-5 py-2.5 font-semibold">Responsable</th>
-                    <th className="px-5 py-2.5 font-semibold">Fechas</th>
-                    <th className="px-5 py-2.5 font-semibold">Estado</th>
-                    <th className="px-5 py-2.5 font-semibold">Avance</th>
-                    {puedeEditarActividades && <th className="px-5 py-2.5 font-semibold">Acciones</th>}
+                    <th className="px-3 py-2.5 font-semibold">Actividad</th>
+                    <th className="px-3 py-2.5 font-semibold">Responsable</th>
+                    <th className="px-3 py-2.5 font-semibold">Fechas</th>
+                    <th className="px-3 py-2.5 font-semibold">Estado</th>
+                    <th className="px-3 py-2.5 font-semibold">Avance</th>
+                    <th className="px-3 py-2.5 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {acts.map((a) => (
                     <tr key={a.id}>
-                      <td className="px-5 py-3 font-medium text-slate-700">{a.nombre}</td>
-                      <td className="px-5 py-3 text-slate-600">{a.responsable_nombre ?? '—'}</td>
-                      <td className="px-5 py-3 text-xs text-slate-500">
+                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">{a.nombre}</td>
+                      <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
+                      <td className="px-3 py-3 text-xs text-slate-500">
                         {fmtFecha(a.fecha_inicio_programada)} — {fmtFecha(a.fecha_fin_programada)}
                       </td>
-                      <td className="px-5 py-3">
-                        <span className={`badge ${ESTADO_BADGE[a.estado] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {a.estado?.replace('_', ' ').toLowerCase()}
+                      <td className="px-3 py-3">
+                        <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
+                          {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-xs font-semibold tabular-nums text-slate-600">
+                      <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600">
                         {Number(a.porcentaje_avance)}%
                       </td>
-                      {puedeEditarActividades && (
-                        <td className="px-5 py-3">
-                          <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
-                            Editar
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button type="button" className="btn-accion btn-accion-editar"
+                            onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
+                            <EyeIcon className="h-4 w-4" /> Ver ficha
                           </button>
-                        </td>
-                      )}
+                          {puedeEditarActividades && (
+                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
+                              Editar
+                            </button>
+                          )}
+                          {puedeAvance(a) && (a.estado === 'PENDIENTE' || a.estado === 'EN_PROCESO') && (
+                            <button type="button" className="btn-accion btn-accion-editar"
+                              disabled={cambiandoEstado === a.id}
+                              onClick={() => cambiarEstado(a)}>
+                              {a.estado === 'PENDIENTE'
+                                ? <><PlayIcon className="h-4 w-4" /> Empezar</>
+                                : <><CheckCircleIcon className="h-4 w-4" /> Finalizar</>}
+                            </button>
+                          )}
+                          {puedeAvance(a) && (
+                            <button type="button" className="btn-accion btn-accion-editar" onClick={avisarProximamente}>
+                              <ClipboardDocumentCheckIcon className="h-4 w-4" /> Registrar avance
+                            </button>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         )
@@ -522,11 +593,17 @@ export default function PlanProyecto() {
                 onChange={(e) => setAccesoForm({ ...accesoForm, actividad_id: e.target.value })}
               >
                 <option value="">Todo el proyecto</option>
-                {actividades.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.nombre}
-                  </option>
-                ))}
+                {etapas.map((et) => {
+                  const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
+                  if (delaEtapa.length === 0) return null
+                  return (
+                    <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
+                      {delaEtapa.map((a) => (
+                        <option key={a.id} value={a.id}>{a.nombre}</option>
+                      ))}
+                    </optgroup>
+                  )
+                })}
               </select>
             </div>
             <div>
@@ -619,7 +696,15 @@ export default function PlanProyecto() {
                 <select id="fa-actividad" className="input" value={filtroAcceso.actividad}
                   onChange={(e) => setFiltroAcceso({ ...filtroAcceso, actividad: e.target.value })}>
                   <option value="">Todas</option>
-                  {actividades.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
+                  {etapas.map((et) => {
+                    const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
+                    if (delaEtapa.length === 0) return null
+                    return (
+                      <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
+                        {delaEtapa.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
+                      </optgroup>
+                    )
+                  })}
                 </select>
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
@@ -699,6 +784,34 @@ export default function PlanProyecto() {
             </div>
           )}
         </div>
+      )}
+
+      {proximamente && (
+        <div
+          role="status"
+          className="pointer-events-none fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg"
+        >
+          <ClipboardDocumentCheckIcon className="h-5 w-5 text-accent-400" /> Próximamente
+        </div>
+      )}
+
+      {/* Ficha de solo lectura: todos los atributos de la etapa o actividad. */}
+      {fichaVer && (
+        <Ficha
+          titulo={fichaVer.dato.nombre}
+          subtitulo={fichaVer.tipo === 'etapa' ? `Etapa ${fichaVer.dato.orden}` : `Actividad · ${fichaVer.dato.etapa_nombre ?? ''}`}
+          onCerrar={() => setFichaVer(null)}
+          campos={[
+            ['Descripción', fichaVer.dato.descripcion],
+            ...(fichaVer.tipo === 'actividad' ? [['Responsable', fichaVer.dato.responsable_nombre]] : []),
+            ['Inicio programado', fichaVer.dato.fecha_inicio_programada ? fmtFecha(fichaVer.dato.fecha_inicio_programada) : null],
+            ['Fin programado', fichaVer.dato.fecha_fin_programada ? fmtFecha(fichaVer.dato.fecha_fin_programada) : null],
+            ['Inicio real', fichaVer.dato.fecha_inicio_real ? fmtFecha(fichaVer.dato.fecha_inicio_real) : null],
+            ['Fin real', fichaVer.dato.fecha_fin_real ? fmtFecha(fichaVer.dato.fecha_fin_real) : null],
+            ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
+            ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
+          ]}
+        />
       )}
 
       {/* Edición de etapa o actividad en una ventana; el error de negocio va dentro. */}

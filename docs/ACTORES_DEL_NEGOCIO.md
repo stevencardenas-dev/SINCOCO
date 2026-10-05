@@ -33,8 +33,9 @@ Su alcance se limita a **los proyectos donde está asignado**.
 **Funciones principales:**
 * **Gestión del Proyecto:** Editar la información de sus proyectos (no los crea, no los da de baja ni asigna personal a ellos).
 * **Planificación:** Definir y dar de baja (o reactivar) las etapas y actividades del plan de trabajo de sus proyectos.
+  Solo el **líder del proyecto** (su responsable), el gerente y el administrador modifican el plan: quien está asignado al proyecto o a una actividad lo consulta y ve la ficha de cada etapa y actividad, sin editarlas.
 * **Gestión Operativa:** Gestionar las actividades asignadas dentro del plan de trabajo.
-* **Seguimiento de Avance:** Registrar el porcentaje de avance periódico de las actividades y adjuntar evidencias (fotografías, documentos u observaciones).
+* **Seguimiento de Avance:** Registrar (el líder, en cualquier actividad de su proyecto; quien tenga acceso por actividad, solo en la suya; el botón «Registrar avance» está pendiente de HU-21) el porcentaje de avance periódico de las actividades y adjuntar evidencias (fotografías, documentos u observaciones).
 * **Control de Materiales:** Solicitar materiales necesarios para el proyecto y registrar su consumo real por actividad.
 * **Control de Eventos:** Registrar las incidencias de obra que ocurran (averías, accidentes, retrasos).
 

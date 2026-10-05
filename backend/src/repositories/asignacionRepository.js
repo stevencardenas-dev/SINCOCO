@@ -121,6 +121,25 @@ export async function tieneAcceso(proyectoId, trabajadorId) {
   return rows.length > 0
 }
 
+/** Actividades activas del proyecto en las que el trabajador interviene (asignación vigente o responsable). */
+export async function actividadesDeTrabajador(proyectoId, trabajadorId) {
+  const [rows] = await pool.query(
+    `SELECT DISTINCT ac.id
+       FROM actividades ac
+       JOIN etapas_proyecto ep ON ep.id = ac.etapa_id
+      WHERE ep.proyecto_id = ? AND ac.activo = 1
+        AND (
+          ac.responsable_id = ?
+          OR EXISTS (
+            SELECT 1 FROM asignaciones_personal ap
+             WHERE ap.actividad_id = ac.id AND ap.trabajador_id = ? AND ap.estado = 'ACTIVO'
+          )
+        )`,
+    [proyectoId, trabajadorId, trabajadorId],
+  )
+  return rows.map((r) => Number(r.id))
+}
+
 /** Proyectos con acceso vigente para el trabajador (para el alcance limitado). */
 export async function proyectosAccesibles(trabajadorId) {
   if (!trabajadorId) return []

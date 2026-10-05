@@ -20,6 +20,7 @@ export class Actividad {
     etapa_nombre,
     proyecto_id,
     responsable_nombre,
+    atrasada,
   }) {
     this.id = id
     this.etapa_id = etapa_id
@@ -36,6 +37,8 @@ export class Actividad {
     this.etapa_nombre = etapa_nombre ?? null
     this.proyecto_id = proyecto_id ?? null
     this.responsable_nombre = responsable_nombre ?? null
+    // Derivado: sigue sin finalizar y ya pasó su fecha fin programada.
+    this.atrasada = Boolean(atrasada)
   }
 
   static fromRow(row) {
