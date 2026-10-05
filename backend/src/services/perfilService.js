@@ -8,6 +8,7 @@ import {
   revisarLargo,
   revisarPassword,
   revisarTelefono,
+  textoOpcional,
 } from '../utils/campos.js'
 
 /**
@@ -59,9 +60,6 @@ export async function obtenerPerfil(usuarioId) {
       : null,
   }
 }
-
-const textoOpcional = (v) =>
-  v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim()
 
 /**
  * Actualiza la ficha de trabajador y/o la contraseña del usuario conectado.

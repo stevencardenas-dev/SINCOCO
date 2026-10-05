@@ -1,6 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
-import { LARGO, revisarLargo } from '../../utils/campos.js'
-import { textoOpcional } from '../trabajador/RegistrarTrabajadorDto.js'
+import { LARGO, revisarLargo, textoOpcional } from '../../utils/campos.js'
 
 /** DTO para definir una actividad del plan de trabajo (HU-03). */
 export class RegistrarActividadDto {

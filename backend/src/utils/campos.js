@@ -91,3 +91,20 @@ export function revisarPassword(valor, minimo, campo = 'password') {
     )
   }
 }
+
+const estaVacio = (v) => v === undefined || v === null || String(v).trim() === ''
+
+/** Texto recortado, o null si llegó vacío. */
+export function textoOpcional(v) {
+  return estaVacio(v) ? null : String(v).trim()
+}
+
+/** Los ids del catálogo llegan como número o como texto desde un <select>. */
+export function numeroOpcional(v) {
+  if (estaVacio(v)) return null
+  const n = Number(v)
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new AppError('El identificador del catálogo no es válido', 400)
+  }
+  return n
+}

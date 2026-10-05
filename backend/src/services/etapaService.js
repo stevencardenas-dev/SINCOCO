@@ -2,7 +2,7 @@ import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as actividadRepository from '../repositories/actividadRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { crearBajaReactivar } from './bajaReactivar.js'
 import { AppError } from '../utils/AppError.js'
 import { aFechaDia, rangosSeSolapan, validarFechasEnRango } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
@@ -123,39 +123,28 @@ export async function actualizarEtapa(id, dto, ctx = {}) {
   return etapaRepository.findById(id)
 }
 
-/** HU-18: dar de baja lógica una etapa. */
-export async function darDeBajaEtapa(id, ctx = {}) {
-  const etapa = await etapaRepository.findById(id)
-  if (!etapa) throw new AppError('Etapa no encontrada', 404)
-  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
+/**
+ * HU-18: baja y reactivación de etapas. Las etapas restantes se renumeran
+ * después de cada cambio; al reactivar, el rango no puede haberse ocupado
+ * mientras la etapa estuvo de baja.
+ */
+const bajaReactivar = crearBajaReactivar({
+  tabla: 'etapas_proyecto',
+  mensajes: {
+    noEncontrado: 'Etapa no encontrada',
+    yaDeBaja: 'La etapa ya estaba dada de baja',
+    noEstaDeBaja: 'La etapa no está dada de baja',
+  },
+  buscar: (id) => etapaRepository.findById(id),
+  verificar: (etapa, ctx) => verificarGestionPlan(ctx.usuario, etapa.proyecto_id),
+  detallesBaja: (etapa) => ({ nombre: etapa.nombre }),
+  antesDeReactivar: async (etapa, id) => {
+    const inicio = aFechaDia(etapa.fecha_inicio_programada)
+    const fin = aFechaDia(etapa.fecha_fin_programada)
+    if (inicio && fin) await validarSinSolape(etapa.proyecto_id, inicio, fin, { excluirId: id })
+  },
+  despues: (etapa) => etapaRepository.renumerar(etapa.proyecto_id),
+})
 
-  const afectadas = await darDeBaja({ tabla: 'etapas_proyecto', id, usuarioId: ctx.usuarioId })
-  if (!afectadas) throw new AppError('La etapa ya estaba dada de baja', 409)
-  await etapaRepository.renumerar(etapa.proyecto_id)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'etapas_proyecto',
-    registroId: Number(id), detalles: { nombre: etapa.nombre }, ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 0 }
-}
-
-/** HU-18: reactivar una etapa dada de baja. */
-export async function reactivarEtapa(id, ctx = {}) {
-  const etapa = await etapaRepository.findById(id)
-  if (!etapa) throw new AppError('Etapa no encontrada', 404)
-  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
-  // Mientras estuvo de baja pudo ocuparse su rango: no se reactiva si se solapa.
-  const inicio = aFechaDia(etapa.fecha_inicio_programada)
-  const fin = aFechaDia(etapa.fecha_fin_programada)
-  if (inicio && fin) await validarSinSolape(etapa.proyecto_id, inicio, fin, { excluirId: id })
-  const afectadas = await reactivar({ tabla: 'etapas_proyecto', id })
-  if (!afectadas) throw new AppError('La etapa no está dada de baja', 409)
-  await etapaRepository.renumerar(etapa.proyecto_id)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'etapas_proyecto',
-    registroId: Number(id), ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 1 }
-}
+export const darDeBajaEtapa = bajaReactivar.darDeBaja
+export const reactivarEtapa = bajaReactivar.reactivar

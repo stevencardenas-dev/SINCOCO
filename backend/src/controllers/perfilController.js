@@ -1,4 +1,5 @@
 import { obtenerPerfil, actualizarPerfil } from '../services/perfilService.js'
+import { asyncHandler, contexto } from '../utils/http.js'
 
 /**
  * Información personal de quien está conectado (`/api/perfil`).
@@ -9,23 +10,12 @@ import { obtenerPerfil, actualizarPerfil } from '../services/perfilService.js'
  */
 
 /** GET /api/perfil -> datos de la cuenta y de la ficha de trabajador. */
-export async function obtener(req, res, next) {
-  try {
-    return res.json(await obtenerPerfil(req.user.id))
-  } catch (error) {
-    return next(error)
-  }
-}
+export const obtener = asyncHandler(async (req, res) => {
+  return res.json(await obtenerPerfil(req.user.id))
+})
 
 /** PATCH /api/perfil -> actualizar teléfono, correo, dirección y contraseña. */
-export async function actualizar(req, res, next) {
-  try {
-    const perfil = await actualizarPerfil(req.user.id, req.body, {
-      usuarioId: req.user.id,
-      ip: req.ip,
-    })
-    return res.json({ message: 'Información actualizada', ...perfil })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const actualizar = asyncHandler(async (req, res) => {
+  const perfil = await actualizarPerfil(req.user.id, req.body, contexto(req))
+  return res.json({ message: 'Información actualizada', ...perfil })
+})

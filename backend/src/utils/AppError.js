@@ -7,12 +7,16 @@
  * `campo` es opcional: cuando el error señala un campo concreto del
  * formulario (CU-02 Alt 1: fechas inconsistentes), la API lo expone
  * igual que ya lo hace CU-01 Alt 1 con el campo en conflicto.
+ *
+ * `extra` añade campos propios al cuerpo de la respuesta (p. ej. `codigo`, que
+ * el frontend usa para distinguir una sesión activa de otro 409).
  */
 export class AppError extends Error {
-  constructor(message, statusCode, campo) {
+  constructor(message, statusCode, campo, extra) {
     super(message)
     this.name = 'AppError'
     this.statusCode = statusCode
     if (campo) this.campo = campo
+    if (extra) this.extra = extra
   }
 }

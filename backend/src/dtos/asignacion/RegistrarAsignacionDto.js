@@ -1,6 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
-import { LARGO, revisarLargo } from '../../utils/campos.js'
-import { textoOpcional } from '../trabajador/RegistrarTrabajadorDto.js'
+import { LARGO, revisarLargo, textoOpcional } from '../../utils/campos.js'
 
 /** DTO para asignar personal a un proyecto o a una de sus actividades. */
 export class RegistrarAsignacionDto {

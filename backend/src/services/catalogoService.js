@@ -1,6 +1,6 @@
 import * as catalogoRepository from '../repositories/catalogoRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { crearBajaReactivar } from './bajaReactivar.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -177,40 +177,30 @@ export async function actualizarCatalogo(tipo, id, body = {}, ctx = {}) {
  * formularios pero los trabajadores que ya lo tienen registrado no pierden el
  * dato (RN07 · HU-18).
  */
-export async function darDeBajaCatalogo(tipo, id, ctx = {}) {
-  const def = descriptor(tipo)
-  const actual = await def.findById(id)
-  if (!actual) throw new AppError(`El ${def.etiqueta} no existe`, 404)
+const bajaReactivarPorTipo = Object.fromEntries(
+  Object.entries(CATALOGOS).map(([tipo, def]) => [
+    tipo,
+    crearBajaReactivar({
+      tabla: def.tabla,
+      mensajes: {
+        noEncontrado: `El ${def.etiqueta} no existe`,
+        yaDeBaja: `El ${def.etiqueta} ya estaba dado de baja`,
+        noEstaDeBaja: `El ${def.etiqueta} no está dado de baja`,
+      },
+      buscar: def.findById,
+      detallesBaja: (actual) => ({ nombre: actual.nombre, en_uso: Number(actual.en_uso) }),
+    }),
+  ]),
+)
 
-  const afectadas = await darDeBaja({ tabla: def.tabla, id, usuarioId: ctx.usuarioId })
-  if (!afectadas) throw new AppError(`El ${def.etiqueta} ya estaba dado de baja`, 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId,
-    accion: 'DAR_DE_BAJA',
-    tabla: def.tabla,
-    registroId: Number(id),
-    detalles: { nombre: actual.nombre, en_uso: Number(actual.en_uso) },
-    ip: ctx.ip,
-  })
-
-  return { id: Number(id), activo: 0 }
+export function darDeBajaCatalogo(tipo, id, ctx = {}) {
+  descriptor(tipo)
+  return bajaReactivarPorTipo[tipo].darDeBaja(id, ctx)
 }
 
-export async function reactivarCatalogo(tipo, id, ctx = {}) {
-  const def = descriptor(tipo)
-  const afectadas = await reactivar({ tabla: def.tabla, id })
-  if (!afectadas) throw new AppError(`El ${def.etiqueta} no está dado de baja`, 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId,
-    accion: 'REACTIVAR',
-    tabla: def.tabla,
-    registroId: Number(id),
-    ip: ctx.ip,
-  })
-
-  return { id: Number(id), activo: 1 }
+export function reactivarCatalogo(tipo, id, ctx = {}) {
+  descriptor(tipo)
+  return bajaReactivarPorTipo[tipo].reactivar(id, ctx)
 }
 
 /**

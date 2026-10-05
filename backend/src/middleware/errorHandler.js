@@ -18,6 +18,7 @@ export function errorHandler(err, req, res, next) {
   if (err instanceof AppError) {
     const body = { error: err.message }
     if (err.campo) body.campo = err.campo
+    if (err.extra) Object.assign(body, err.extra)
     return res.status(err.statusCode).json(body)
   }
 

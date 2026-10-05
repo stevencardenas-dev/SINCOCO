@@ -1,8 +1,8 @@
 import * as clienteRepository from '../repositories/clienteRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { crearBajaReactivar } from './bajaReactivar.js'
 import { TIPOS_DOCUMENTO } from '../dtos/cliente/RegistrarClienteDto.js'
-import { LARGO, revisarCorreo, revisarLargo, revisarTelefono } from '../utils/campos.js'
+import { LARGO, revisarCorreo, revisarLargo, revisarTelefono, textoOpcional } from '../utils/campos.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -44,9 +44,6 @@ const CAMPOS_EDITABLES = [
   'tipo_documento', 'razon_social_nombre', 'nombre_contacto',
   'telefono', 'email', 'direccion',
 ]
-
-const textoOpcional = (v) =>
-  v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim()
 
 /** Edita la ficha del cliente (Gestión Administrativa). */
 export async function actualizarCliente(id, cambios = {}, ctx = {}) {
@@ -108,37 +105,16 @@ export async function actualizarCliente(id, cambios = {}, ctx = {}) {
 }
 
 /** HU-18 · RN07: el cliente se da de baja lógicamente, nunca se borra. */
-export async function darDeBajaCliente(id, ctx = {}) {
-  const cliente = await clienteRepository.findById(id)
-  if (!cliente) throw new AppError('Cliente no encontrado', 404)
+const bajaReactivar = crearBajaReactivar({
+  tabla: 'clientes',
+  mensajes: {
+    noEncontrado: 'Cliente no encontrado',
+    yaDeBaja: 'El cliente ya estaba dado de baja',
+    noEstaDeBaja: 'El cliente no está dado de baja',
+  },
+  buscar: (id) => clienteRepository.findById(id),
+  detallesBaja: (cliente) => ({ numero_documento: cliente.numero_documento }),
+})
 
-  const afectadas = await darDeBaja({ tabla: 'clientes', id, usuarioId: ctx.usuarioId })
-  if (!afectadas) throw new AppError('El cliente ya estaba dado de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId,
-    accion: 'DAR_DE_BAJA',
-    tabla: 'clientes',
-    registroId: Number(id),
-    detalles: { numero_documento: cliente.numero_documento },
-    ip: ctx.ip,
-  })
-
-  return { id: Number(id), activo: 0 }
-}
-
-/** Reactiva un cliente dado de baja. */
-export async function reactivarCliente(id, ctx = {}) {
-  const afectadas = await reactivar({ tabla: 'clientes', id })
-  if (!afectadas) throw new AppError('El cliente no está dado de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId,
-    accion: 'REACTIVAR',
-    tabla: 'clientes',
-    registroId: Number(id),
-    ip: ctx.ip,
-  })
-
-  return { id: Number(id), activo: 1 }
-}
+export const darDeBajaCliente = bajaReactivar.darDeBaja
+export const reactivarCliente = bajaReactivar.reactivar
