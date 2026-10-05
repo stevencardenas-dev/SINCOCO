@@ -207,7 +207,8 @@ export function interpretar(fila) {
 
 /** Contenido ya formateado: se usa en la ventana y en la ficha móvil. */
 export function ContenidoDetalle({ fila }) {
-  const { frase, filas } = interpretar(fila)
+  const { frase, filas: datos } = interpretar(fila)
+  const filas = fila.direccion_ip ? [...datos, { etiqueta: 'Dirección IP', valor: fila.direccion_ip }] : datos
   const estilo = ESTILO[fila.accion] ?? ESTILO_BASE
   return (
     <div className="space-y-4">
