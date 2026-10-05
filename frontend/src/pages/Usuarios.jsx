@@ -535,14 +535,14 @@ export default function Usuarios() {
                       <button
                         type="button"
                         onClick={() => abrirEditar(u)}
-                        className="btn-ghost text-xs"
+                        className="btn-accion btn-accion-editar"
                         aria-label={`Editar a ${u.username}`}
                       >
                         <PencilSquareIcon className="h-4 w-4" /> Editar
                       </button>
                       <button
                         onClick={() => cambiarEstado(u)}
-                        className="btn-ghost text-xs"
+                        className={`btn-accion ${u.estado === 'ACTIVO' ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
                         aria-label={u.estado === 'ACTIVO' ? `Bloquear a ${u.username}` : `Activar a ${u.username}`}
                       >
                         {u.estado === 'ACTIVO' ? (
