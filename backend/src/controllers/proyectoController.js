@@ -4,6 +4,7 @@ import {
 } from '../services/proyectoService.js'
 import { miAcceso } from '../services/accesoService.js'
 import { RegistrarProyectoDto } from '../dtos/proyecto/RegistrarProyectoDto.js'
+import { asyncHandler, contexto } from '../utils/http.js'
 
 /**
  * POST /api/proyectos (HU-02 · CU-02)
@@ -11,22 +12,15 @@ import { RegistrarProyectoDto } from '../dtos/proyecto/RegistrarProyectoDto.js'
  * la respuesta. No contiene lógica de negocio ni SQL. El usuario que
  * registra el proyecto sale del JWT (HU-01), no del body.
  */
-export async function registrar(req, res, next) {
-  try {
-    const dto = RegistrarProyectoDto.fromRequestBody(req.body)
-    const proyecto = await registrarProyecto(dto, {
-      usuario: req.user, usuarioId: req.user.id,
-      ip: req.ip,
-    })
+export const registrar = asyncHandler(async (req, res) => {
+  const dto = RegistrarProyectoDto.fromRequestBody(req.body)
+  const proyecto = await registrarProyecto(dto, contexto(req))
 
-    return res.status(201).json({
-      message: 'Proyecto registrado correctamente',
-      proyecto,
-    })
-  } catch (error) {
-    return next(error)
-  }
-}
+  return res.status(201).json({
+    message: 'Proyecto registrado correctamente',
+    proyecto,
+  })
+})
 
 /**
  * GET /api/proyectos
@@ -36,63 +30,40 @@ export async function registrar(req, res, next) {
  * desde la API, porque el volumen de proyectos no se resuelve solo en el
  * navegador.
  */
-export async function listar(req, res, next) {
-  try {
-    const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
-    const proyectos = await listarProyectos(
-      {
-        incluirInactivos,
-        buscar: req.query.buscar ?? req.query.q ?? '',
-        estado: req.query.estado ?? '',
-        clienteId: req.query.cliente_id || null,
-        responsableId: req.query.responsable_id || null,
-      },
-      req.user,
-    )
-    return res.json(proyectos)
-  } catch (error) {
-    return next(error)
-  }
-}
+export const listar = asyncHandler(async (req, res) => {
+  const incluirInactivos = ['1', 'true', 'on'].includes(String(req.query.incluirInactivos))
+  const proyectos = await listarProyectos(
+    {
+      incluirInactivos,
+      buscar: req.query.buscar ?? req.query.q ?? '',
+      estado: req.query.estado ?? '',
+      clienteId: req.query.cliente_id || null,
+      responsableId: req.query.responsable_id || null,
+    },
+    req.user,
+  )
+  return res.json(proyectos)
+})
 
 /** PATCH /api/proyectos/:id/baja -> HU-18: baja lógica. */
 /** PATCH /api/proyectos/:id -> editar la información del proyecto. */
-export async function actualizar(req, res, next) {
-  try {
-    const proyecto = await actualizarProyecto(req.params.id, req.body, {
-      usuario: req.user, usuarioId: req.user.id,
-      ip: req.ip,
-    })
-    return res.json({ message: 'Proyecto actualizado', proyecto })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const actualizar = asyncHandler(async (req, res) => {
+  const proyecto = await actualizarProyecto(req.params.id, req.body, contexto(req))
+  return res.json({ message: 'Proyecto actualizado', proyecto })
+})
 
-export async function baja(req, res, next) {
-  try {
-    const resultado = await darDeBajaProyecto(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
-    return res.json({ message: 'Proyecto dado de baja', ...resultado })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const baja = asyncHandler(async (req, res) => {
+  const resultado = await darDeBajaProyecto(req.params.id, contexto(req))
+  return res.json({ message: 'Proyecto dado de baja', ...resultado })
+})
 
 /** PATCH /api/proyectos/:id/reactivar -> HU-18. */
-export async function reactivarCtrl(req, res, next) {
-  try {
-    const resultado = await reactivarProyecto(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
-    return res.json({ message: 'Proyecto reactivado', ...resultado })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const reactivarCtrl = asyncHandler(async (req, res) => {
+  const resultado = await reactivarProyecto(req.params.id, contexto(req))
+  return res.json({ message: 'Proyecto reactivado', ...resultado })
+})
 
 /** GET /api/proyectos/:id/mi-acceso -> qué puede hacer el usuario en el proyecto. */
-export async function miAccesoCtrl(req, res, next) {
-  try {
-    return res.json(await miAcceso(req.user, req.params.id))
-  } catch (error) {
-    return next(error)
-  }
-}
+export const miAccesoCtrl = asyncHandler(async (req, res) => {
+  return res.json(await miAcceso(req.user, req.params.id))
+})

@@ -6,7 +6,7 @@ import { validarFechasEnRango } from './etapaService.js'
 import { aFechaDia, validarDentroDeEtapa } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan, verificarOperarActividad } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { crearBajaReactivar } from './bajaReactivar.js'
 import { AppError } from '../utils/AppError.js'
 
 // RBAC: las actividades de un proyecto solo se listan si el usuario tiene
@@ -156,33 +156,22 @@ export async function finalizarActividad(id, ctx = {}) {
   return actividadRepository.findById(id)
 }
 
-/** HU-18: dar de baja lógica una actividad. */
-export async function darDeBajaActividad(id, ctx = {}) {
-  const actividad = await actividadRepository.findById(id)
-  if (!actividad) throw new AppError('Actividad no encontrada', 404)
-  await verificarGestionPlan(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
+/** HU-18: baja y reactivación de actividades. */
+const bajaReactivar = crearBajaReactivar({
+  tabla: 'actividades',
+  mensajes: {
+    noEncontrado: 'Actividad no encontrada',
+    yaDeBaja: 'La actividad ya estaba dada de baja',
+    noEstaDeBaja: 'La actividad no está dada de baja',
+  },
+  buscar: (id) => actividadRepository.findById(id),
+  verificar: async (actividad, ctx) =>
+    verificarGestionPlan(
+      ctx.usuario,
+      actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id,
+    ),
+  detallesBaja: (actividad) => ({ nombre: actividad.nombre }),
+})
 
-  const afectadas = await darDeBaja({ tabla: 'actividades', id, usuarioId: ctx.usuarioId })
-  if (!afectadas) throw new AppError('La actividad ya estaba dada de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'actividades',
-    registroId: Number(id), detalles: { nombre: actividad.nombre }, ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 0 }
-}
-
-/** HU-18: reactivar una actividad dada de baja. */
-export async function reactivarActividad(id, ctx = {}) {
-  const actividad = await actividadRepository.findById(id)
-  if (!actividad) throw new AppError('Actividad no encontrada', 404)
-  await verificarGestionPlan(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
-  const afectadas = await reactivar({ tabla: 'actividades', id })
-  if (!afectadas) throw new AppError('La actividad no está dada de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'actividades',
-    registroId: Number(id), ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 1 }
-}
+export const darDeBajaActividad = bajaReactivar.darDeBaja
+export const reactivarActividad = bajaReactivar.reactivar

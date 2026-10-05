@@ -4,7 +4,7 @@ import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import { alcanceDeUsuario, verificarAccesoProyecto } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { darDeBaja, reactivar } from '../db/bajaLogica.js'
+import { crearBajaReactivar } from './bajaReactivar.js'
 import { AppError } from '../utils/AppError.js'
 
 // Valores iniciales definidos por HU-02 / CU-02 y por el DEFAULT del esquema.
@@ -251,33 +251,20 @@ export async function listarProyectos(filtros = {}, usuario = null) {
 }
 
 /**
- * HU-18: dar de baja lógica un proyecto. No se borra nada: se marca inactivo,
- * se registra la fecha y el usuario, y se conserva el historial.
+ * HU-18: baja lógica y reactivación de proyectos. No se borra nada: se marca
+ * inactivo, se registra la fecha y el usuario, y se conserva el historial.
  */
-export async function darDeBajaProyecto(id, ctx = {}) {
-  await verificarAccesoProyecto(ctx.usuario, id)
-  const proyecto = await proyectoRepository.findById(id)
-  if (!proyecto) throw new AppError('Proyecto no encontrado', 404)
+const bajaReactivar = crearBajaReactivar({
+  tabla: 'proyectos',
+  mensajes: {
+    noEncontrado: 'Proyecto no encontrado',
+    yaDeBaja: 'El proyecto ya estaba dado de baja',
+    noEstaDeBaja: 'El proyecto no está dado de baja',
+  },
+  verificarPrevio: (id, ctx) => verificarAccesoProyecto(ctx.usuario, id),
+  buscar: (id) => proyectoRepository.findById(id),
+  detallesBaja: (proyecto) => ({ codigo: proyecto.codigo }),
+})
 
-  const afectadas = await darDeBaja({ tabla: 'proyectos', id, usuarioId: ctx.usuarioId })
-  if (!afectadas) throw new AppError('El proyecto ya estaba dado de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'proyectos',
-    registroId: Number(id), detalles: { codigo: proyecto.codigo }, ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 0 }
-}
-
-/** HU-18: reactivar un proyecto dado de baja previamente. */
-export async function reactivarProyecto(id, ctx = {}) {
-  await verificarAccesoProyecto(ctx.usuario, id)
-  const afectadas = await reactivar({ tabla: 'proyectos', id })
-  if (!afectadas) throw new AppError('El proyecto no está dado de baja', 409)
-
-  await bitacora({
-    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'proyectos',
-    registroId: Number(id), ip: ctx.ip,
-  })
-  return { id: Number(id), activo: 1 }
-}
+export const darDeBajaProyecto = bajaReactivar.darDeBaja
+export const reactivarProyecto = bajaReactivar.reactivar

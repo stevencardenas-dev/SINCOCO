@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken'
 import { pool } from '../db/pool.js'
+import { ACTIVIDAD_SQL, MINUTOS_INACTIVIDAD } from '../db/sesion.js'
 
 /**
  * Sesión única por cuenta (RNF05 · seguridad).
@@ -17,12 +18,6 @@ import { pool } from '../db/pool.js'
  *   - vence el JWT, o
  *   - se restablece la contraseña.
  */
-export const MINUTOS_INACTIVIDAD = Number(process.env.SESION_INACTIVIDAD_MIN) || 15
-
-// Última señal de vida de la sesión. Las sesiones abiertas antes de existir
-// `sesion_actividad` usan la hora de inicio.
-export const ACTIVIDAD_SQL = 'COALESCE(sesion_actividad, sesion_iniciada_en)'
-
 // RF1 / RNF5: valida el JWT, la cuenta y la sesión, y adjunta { id, rol, sid } a req.user.
 export async function requireAuth(req, res, next) {
   const header = req.headers.authorization

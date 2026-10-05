@@ -3,26 +3,14 @@ import {
   LARGO,
   revisarCorreo,
   revisarLargo,
+  numeroOpcional,
   revisarTelefono,
+  textoOpcional,
 } from '../../utils/campos.js'
 
 const TIPOS_DOCUMENTO = ['CC', 'CE', 'NIT', 'PASAPORTE']
 
-export function textoOpcional(v) {
-  return v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim()
-}
-
 const vacio = (v) => v === undefined || v === null || String(v).trim() === ''
-
-/** Los ids del catálogo llegan como número o como texto desde un <select>. */
-export function numeroOpcional(v) {
-  if (vacio(v)) return null
-  const n = Number(v)
-  if (!Number.isInteger(n) || n <= 0) {
-    throw new AppError('El identificador del catálogo no es válido', 400)
-  }
-  return n
-}
 
 /**
  * DTO para el registro de personal (HU-04).

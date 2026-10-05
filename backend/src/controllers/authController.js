@@ -1,99 +1,16 @@
-import { randomUUID } from 'node:crypto'
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
-import { pool } from '../db/pool.js'
-import { registrar } from '../db/bitacora.js'
-import { ACTIVIDAD_SQL, MINUTOS_INACTIVIDAD } from '../middleware/auth.js'
+import * as authService from '../services/authService.js'
 import { solicitarRestablecimiento, restablecerPassword } from '../services/resetService.js'
+import { asyncHandler, contexto } from '../utils/http.js'
 
-// HU-01: login — valida credenciales y estado de cuenta, emite JWT
-export async function login(req, res) {
-  const { username, password } = req.body
-  if (!username || !password) {
-    return res.status(400).json({ error: 'username y password son requeridos' })
-  }
+/** POST /api/auth/login -> HU-01: valida credenciales y emite el JWT. */
+export const login = asyncHandler(async (req, res) => {
+  res.json(await authService.iniciarSesion(req.body ?? {}, { ip: req.ip }))
+})
 
-  const [rows] = await pool.query(
-    `SELECT u.id, u.username, u.password_hash, u.estado, r.nombre AS rol
-     FROM usuarios u JOIN roles r ON r.id = u.rol_id
-     WHERE u.username = ?`,
-    [username],
-  )
-  const user = rows[0]
-  if (!user) return res.status(401).json({ error: 'Credenciales inválidas' })
-  if (user.estado !== 'ACTIVO') {
-    const leyenda = user.estado === 'BLOQUEADO' ? 'bloqueada' : 'inactiva'
-    return res.status(403).json({ error: `Cuenta ${leyenda}. Contacte al administrador.` })
-  }
-
-  const valid = await bcrypt.compare(password, user.password_hash)
-  if (!valid) return res.status(401).json({ error: 'Credenciales inválidas' })
-
-  // Sesión única por cuenta: si la cuenta ya tiene una sesión activa, este
-  // segundo ingreso se rechaza y la sesión abierta sigue intacta (ver
-  // middleware/auth.js). La condición va dentro del UPDATE para que dos
-  // ingresos simultáneos no puedan pasar los dos.
-  const sesion = randomUUID()
-  const [resultado] = await pool.query(
-    `UPDATE usuarios
-        SET ultimo_acceso = NOW(), sesion_actual = ?, sesion_iniciada_en = NOW(), sesion_actividad = NOW()
-      WHERE id = ?
-        AND (sesion_actual IS NULL
-             OR ${ACTIVIDAD_SQL} IS NULL
-             OR ${ACTIVIDAD_SQL} < NOW() - INTERVAL ? MINUTE)`,
-    [sesion, user.id, MINUTOS_INACTIVIDAD],
-  )
-  if (resultado.affectedRows === 0) {
-    await registrar({
-      usuarioId: user.id, accion: 'SESION_RECHAZADA', tabla: 'usuarios',
-      registroId: user.id, ip: req.ip,
-      detalles: { motivo: 'La cuenta ya tiene una sesión activa' },
-    })
-    return res.status(409).json({
-      error:
-        'Esta cuenta ya tiene una sesión abierta en otro navegador o dispositivo. ' +
-        `Ciérrela allí o espere ${MINUTOS_INACTIVIDAD} minutos sin actividad para volver a ingresar.`,
-      codigo: 'SESION_ACTIVA',
-    })
-  }
-  await registrar({
-    usuarioId: user.id, accion: 'AUTENTICAR', tabla: 'usuarios',
-    registroId: user.id, ip: req.ip,
-  })
-
-  const token = jwt.sign(
-    { id: user.id, username: user.username, rol: user.rol, sid: sesion },
-    process.env.JWT_SECRET,
-    { expiresIn: '8h' },
-  )
-  res.json({ token, user: { id: user.id, username: user.username, rol: user.rol } })
-}
-
-/**
- * POST /api/auth/logout -> cerrar la sesión vigente.
- *
- * Deja la cuenta sin sesión activa: cualquier token emitido para ella pierde
- * validez en la siguiente petición. La bitácora registra el cierre, igual que
- * el ingreso.
- */
-export async function logout(req, res, next) {
-  try {
-    await pool.query('UPDATE usuarios SET sesion_actual = NULL WHERE id = ? AND sesion_actual = ?', [
-      req.user.id,
-      req.user.sid,
-    ])
-    await registrar({
-      usuarioId: req.user.id,
-      accion: 'CERRAR_SESION',
-      tabla: 'usuarios',
-      registroId: req.user.id,
-      ip: req.ip,
-    })
-    return res.json({ cerrada: true })
-  } catch (error) {
-    return next(error)
-  }
-}
+/** POST /api/auth/logout -> cerrar la sesión vigente. */
+export const logout = asyncHandler(async (req, res) => {
+  return res.json(await authService.cerrarSesion(req.user, contexto(req)))
+})
 
 /**
  * GET /api/auth/sesion -> latido del frontend mientras la aplicación está
@@ -105,22 +22,9 @@ export function latido(req, res) {
 }
 
 /** GET /api/auth/permisos -> nombres de los permisos del rol del usuario. */
-export async function misPermisos(req, res, next) {
-  try {
-    const [rows] = await pool.query(
-      `SELECT p.nombre
-         FROM permisos p
-         JOIN roles_permisos rp ON rp.permiso_id = p.id
-         JOIN roles r ON r.id = rp.rol_id
-        WHERE r.nombre = ?
-        ORDER BY p.nombre`,
-      [req.user.rol],
-    )
-    return res.json({ permisos: rows.map((r) => r.nombre) })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const misPermisos = asyncHandler(async (req, res) => {
+  return res.json(await authService.permisosDelUsuario(req.user))
+})
 
 /**
  * POST /api/auth/solicitar-reset -> «¿Olvidó su contraseña?» (HU-01).
@@ -128,32 +32,24 @@ export async function misPermisos(req, res, next) {
  * Público (no hay sesión todavía). Genera un código de un solo uso para la
  * cuenta y responde siempre igual, exista o no el usuario.
  */
-export async function solicitarReset(req, res, next) {
-  try {
-    const { usuario, email } = req.body ?? {}
-    const resultado = await solicitarRestablecimiento(usuario ?? email, { ip: req.ip })
-    return res.json({
-      message: 'Si la cuenta existe, la solicitud quedó registrada.',
-      ...resultado,
-    })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const solicitarReset = asyncHandler(async (req, res) => {
+  const { usuario, email } = req.body ?? {}
+  const resultado = await solicitarRestablecimiento(usuario ?? email, { ip: req.ip })
+  return res.json({
+    message: 'Si la cuenta existe, la solicitud quedó registrada.',
+    ...resultado,
+  })
+})
 
 /**
  * POST /api/auth/restablecer -> definir la contraseña nueva con el código.
  * Público: es la continuación del flujo anterior desde el login.
  */
-export async function restablecer(req, res, next) {
-  try {
-    const { usuario, email, codigo, password } = req.body ?? {}
-    const resultado = await restablecerPassword(
-      { usuario: usuario ?? email, codigo, password },
-      { ip: req.ip },
-    )
-    return res.json({ message: 'Contraseña restablecida. Ya puede iniciar sesión.', ...resultado })
-  } catch (error) {
-    return next(error)
-  }
-}
+export const restablecer = asyncHandler(async (req, res) => {
+  const { usuario, email, codigo, password } = req.body ?? {}
+  const resultado = await restablecerPassword(
+    { usuario: usuario ?? email, codigo, password },
+    { ip: req.ip },
+  )
+  return res.json({ message: 'Contraseña restablecida. Ya puede iniciar sesión.', ...resultado })
+})
