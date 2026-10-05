@@ -59,8 +59,9 @@ FROM `roles` r CROSS JOIN `permisos` p
 WHERE r.`nombre` = 'ADMINISTRADOR';
 
 -- GERENTE (dueño de la constructora): gestiona la operación del negocio —
--- proyectos, clientes, personal, plan de trabajo y asignación de personal—.
--- No recibe usuarios, roles, catálogos ni auditoría: son del administrador.
+-- proyectos, clientes, personal, plan de trabajo, asignación de personal y la
+-- Gestión Administrativa (catálogos)—. No recibe usuarios, roles ni auditoría:
+-- son del administrador.
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
@@ -71,7 +72,8 @@ WHERE r.`nombre` = 'GERENTE'
     'proyectos.acceso_total', 'proyectos.gestionar_acceso',
     'trabajadores.listar', 'trabajadores.crear', 'trabajadores.editar', 'trabajadores.dar_baja',
     'etapas.listar', 'etapas.crear', 'etapas.dar_baja',
-    'actividades.listar', 'actividades.crear', 'actividades.dar_baja'
+    'actividades.listar', 'actividades.crear', 'actividades.dar_baja',
+    'catalogos.listar', 'catalogos.gestionar'
   );
 
 -- MAESTRO_OBRA: gestiona el plan de trabajo (etapas y actividades) y edita sus
@@ -91,10 +93,10 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
 
 -- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
 --
--- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`
--- `usuarios.editar`, los de `usuarios` y los dos permisos de `catalogos` quedan solo en el
--- administrador: no aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN
--- de arriba ya se los da a ADMINISTRADOR. Total: 27 permisos.
+-- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`,
+-- `usuarios.editar` y los de `usuarios` quedan solo en el administrador: no
+-- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
+-- ya se los da a ADMINISTRADOR. Total: 27 permisos.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).

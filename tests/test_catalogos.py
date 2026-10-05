@@ -11,8 +11,8 @@
 #      código: al desmarcarla, el mismo cargo deja de exigir especialidad.
 #   3. Eliminar es baja lógica (HU-18 · RN07): el valor deja de ofrecerse pero
 #      los registros que lo usan conservan el dato, y se puede reactivar.
-#   4. La lectura la tiene quien ve el personal; la gestión, solo el
-#      administrador (permisos `catalogos.listar` / `catalogos.gestionar`).
+#   4. La lectura la tiene quien ve el personal; la gestión, el administrador
+#      y el gerente (permisos `catalogos.listar` / `catalogos.gestionar`).
 from api_helper import PREFIJO, http, login, limpiar, scalar, sql
 
 limpiar()
@@ -38,14 +38,12 @@ print('RBAC ->', 'admin/gerente/maestro 200 · bodega 403 · catálogo inexisten
 NOMBRE_CARGO = f'{PREFIJO}-Cargo de prueba'
 NOMBRE_ESPECIALIDAD = f'{PREFIJO}-Especialidad de prueba'
 
-estado, r = http('POST', CARGOS, {'nombre': NOMBRE_CARGO}, token=TOKEN['gerente'])
-assert estado == 403, f'gerente no gestiona catálogos: {estado} {r}'
-
-estado, r = http('POST', CARGOS, {'nombre': NOMBRE_CARGO, 'operativo': True}, token=TOKEN['admin'])
-assert estado == 201, f'no se pudo crear el cargo: {estado} {r}'
+# El gerente administra la Gestión Administrativa (docs/migracion_catalogo_gerente.sql).
+estado, r = http('POST', CARGOS, {'nombre': NOMBRE_CARGO, 'operativo': True}, token=TOKEN['gerente'])
+assert estado == 201, f'el gerente debe gestionar el catálogo: {estado} {r}'
 cargo_id = r['cargo']['id']
 assert int(r['cargo']['operativo']) == 1, 'el cargo debe quedar marcado como de obra'
-print('crear cargo ->', estado, r['cargo']['nombre'], 'operativo', r['cargo']['operativo'])
+print('crear cargo (gerente) ->', estado, r['cargo']['nombre'], 'operativo', r['cargo']['operativo'])
 
 # El nombre es único (la colación no distingue mayúsculas ni tildes).
 estado, r = http('POST', CARGOS, {'nombre': NOMBRE_CARGO.upper()}, token=TOKEN['admin'])
@@ -129,7 +127,7 @@ assert estado == 200, estado
 assert any(c['id'] == cargo_id for c in http('GET', CARGOS, token=TOKEN['admin'])[1]), 'no se reactivó'
 print('eliminar -> baja lógica reversible · 409 al repetir · el trabajador conserva el cargo')
 
-# --- 6. Clientes desde Catálogo (editar y eliminar) -------------------------
+# --- 6. Clientes desde Gestión Administrativa (editar y eliminar) ------------
 documento = f'{PREFIJO}-NIT-CAT'
 estado, r = http('POST', '/api/clientes',
                  {'numero_documento': documento, 'tipo_documento': 'NIT', 'razon_social_nombre': 'Cliente catálogo'},
@@ -138,11 +136,12 @@ assert estado == 201, f'no se pudo crear el cliente: {estado} {r}'
 cliente_id = r['cliente']['id']
 
 estado, r = http('PATCH', f'/api/clientes/{cliente_id}', {'telefono': '3001234567'}, token=TOKEN['gerente'])
-assert estado == 403, f'gerente no administra catálogos: {estado} {r}'
+assert estado == 200 and r['cliente']['telefono'] == '3001234567', f'el gerente debe editar clientes: {estado} {r}'
 
 estado, r = http('PATCH', f'/api/clientes/{cliente_id}',
-                 {'nombre_contacto': 'Ana', 'telefono': '3001234567', 'direccion': 'Cúcuta'}, token=TOKEN['admin'])
-assert estado == 200 and r['cliente']['telefono'] == '3001234567', f'editar cliente: {estado} {r}'
+                 {'nombre_contacto': 'Ana', 'direccion': 'Cúcuta'}, token=TOKEN['admin'])
+assert estado == 200 and r['cliente']['nombre_contacto'] == 'Ana' \
+    and r['cliente']['telefono'] == '3001234567', f'editar cliente: {estado} {r}'
 print('editar cliente ->', estado, r['cliente']['nombre_contacto'], r['cliente']['telefono'])
 
 estado, r = http('PATCH', f'/api/clientes/{cliente_id}', {'tipo_documento': 'XX'}, token=TOKEN['admin'])

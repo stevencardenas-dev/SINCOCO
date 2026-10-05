@@ -712,6 +712,8 @@ export default function Proyectos() {
               {
                 titulo: 'Proyecto',
                 movil: true,
+                // Mismo ancho máximo que Ubicación (solo escritorio): las dos columnas quedan a la par.
+                tdClase: 'md:max-w-[9.25rem]',
                 celda: (p) => (
                   <>
                     <p className="font-semibold text-slate-900">{p.nombre}</p>
@@ -724,7 +726,8 @@ export default function Proyectos() {
               { titulo: 'Responsable', movil: true, tdClase: 'text-slate-600', celda: (p) => p.responsable_nombre },
               {
                 titulo: 'Ubicación',
-                tdClase: 'max-w-[14rem] text-slate-600',
+                // Ancho máximo igual al de Proyecto; el texto largo se recorta con puntos suspensivos.
+                tdClase: 'md:max-w-[9.25rem] text-slate-600',
                 celda: (p) => (
                   <span className="block truncate" title={p.ubicacion}>
                     {p.ubicacion}
@@ -746,11 +749,12 @@ export default function Proyectos() {
               },
               {
                 titulo: 'Avance',
+                thClase: 'md:w-36',
                 celda: (p) => {
                   const avance = Number(p.porcentaje_avance_total)
                   return (
-                    <div className="flex items-center gap-3">
-                      <div className="h-2 w-28 overflow-hidden rounded-full bg-brand-100">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-16 overflow-hidden rounded-full bg-brand-100">
                         <div
                           className="h-full rounded-full bg-accent-500 transition-all"
                           style={{ width: `${avance}%` }}

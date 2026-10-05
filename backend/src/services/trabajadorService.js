@@ -7,7 +7,7 @@ import { resolverCargo, resolverEspecialidad } from './catalogoService.js'
  * HU-04 · criterio 2: la especialidad es obligatoria para el personal
  * operativo. La lista de cargos operativos ya no está escrita aquí: la marca
  * `cargos.operativo` en la tabla de dominio, así que el administrador puede
- * cambiar la regla desde la pantalla de Catálogo sin tocar el código.
+ * cambiar la regla desde Gestión Administrativa sin tocar el código.
  *
  * Se usa tanto al crear como al editar el trabajador; `cargo` es la fila del
  * catálogo (o, al editar sin cambiar el cargo, el resumen que devuelve el
@@ -52,14 +52,12 @@ function validarEstado(estado) {
 }
 
 /**
- * La disponibilidad no se escribe a mano: se deriva del estado y del trabajo
- * asignado. Un trabajador que no está ACTIVO no está disponible, y al volver a
- * ACTIVO solo queda disponible si no tiene actividades vigentes a su cargo.
+ * La disponibilidad no se escribe a mano: se deriva del estado. Un trabajador
+ * que no está ACTIVO no está disponible; uno ACTIVO sigue siendo asignable aunque
+ * ya tenga actividades vigentes (la interfaz lo muestra como «Asignado»).
  */
 async function calcularDisponible(id, estado) {
-  if (estado !== 'ACTIVO') return 0
-  const vigentes = await trabajadorRepository.contarActividadesVigentes(id)
-  return vigentes > 0 ? 0 : 1
+  return estado === 'ACTIVO' ? 1 : 0
 }
 
 /** Obtiene un trabajador por id. */

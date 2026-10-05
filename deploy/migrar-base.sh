@@ -75,8 +75,8 @@ $MYSQL "$DB_NAME" -e "
    WHERE table_schema = DATABASE() AND table_name = 'usuarios'
      AND column_name IN ('sesion_actual', 'sesion_iniciada_en', 'sesion_actividad');"
 
-# La matriz rol -> permisos: tras migrar debe salir ADMINISTRADOR 25,
-# GERENTE 6, MAESTRO_OBRA 3 y ENCARGADO_BODEGA 0. Si el administrador se queda
+# La matriz rol -> permisos: tras migrar debe salir ADMINISTRADOR 27,
+# GERENTE 20, MAESTRO_OBRA 10 y ENCARGADO_BODEGA 0. Si el administrador se queda
 # por debajo, la pantalla de asignaciones responderá 403 aunque el código esté
 # bien desplegado.
 echo "--- permisos por rol ---"

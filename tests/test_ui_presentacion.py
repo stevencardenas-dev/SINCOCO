@@ -51,7 +51,9 @@ with sync_playwright() as p:
     ir_a(pg, '/proyectos')
     pg.wait_for_selector('table tbody tr', timeout=10000)
     fila = pg.locator('table tbody tr', has_text=CODIGO).first
-    botones = fila.locator('td:last-child button')
+    # Las acciones viven en su columna; la última celda es la ficha móvil («Ver ficha»),
+    # así que se buscan por su etiqueta y no por la posición.
+    botones = fila.locator('button[aria-label^="Actualizar"], button[aria-label^="Dar de baja"]')
     assert botones.count() == 2, f'la fila debe tener dos acciones: {botones.count()}'
     caja1, caja2 = botones.nth(0).bounding_box(), botones.nth(1).bounding_box()
     print('acciones /proyectos ->', caja1['x'], caja1['y'], '|', caja2['x'], caja2['y'])
@@ -61,11 +63,14 @@ with sync_playwright() as p:
     # --- Acciones en /personal: dentro de su celda ----------------------------
     ir_a(pg, '/personal')
     pg.wait_for_selector('table tbody tr', timeout=10000)
-    celda = pg.locator('table tbody tr').first.locator('td:last-child')
-    caja_celda = celda.bounding_box()
-    boton = celda.locator('button').first
+    # La celda «Ver ficha» es la última y está oculta en escritorio: la acción
+    # se ubica por su etiqueta y su celda se obtiene desde el propio botón.
+    boton = pg.locator('table tbody tr').first.locator('button[aria-label^="Actualizar información"]').first
     assert boton.count() == 1, 'cada trabajador activo debe tener su acción de edición'
     caja_boton = boton.bounding_box()
+    caja_celda = boton.evaluate(
+        '(el) => { const r = el.closest("td").getBoundingClientRect();'
+        ' return { x: r.x, y: r.y, width: r.width, height: r.height } }')
     print('acción /personal ->', caja_boton, 'celda', caja_celda['width'])
     assert caja_boton['x'] >= caja_celda['x'] - 1, 'la acción no debe salirse de su celda'
     assert caja_boton['x'] + caja_boton['width'] <= caja_celda['x'] + caja_celda['width'] + 1, \

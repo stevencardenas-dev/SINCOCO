@@ -160,7 +160,11 @@ export default function Personal() {
       const actualizado = data.trabajador
       setAviso(
         `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
-          (Number(actualizado.disponible) ? ' · disponible' : ' · no disponible'),
+          (Number(actualizado.disponible)
+            ? Number(actualizado.actividades_vigentes) > 0
+              ? ' · asignado'
+              : ' · disponible'
+            : ' · no disponible'),
       )
       cargar()
     } catch (err) {
@@ -276,7 +280,7 @@ export default function Personal() {
 
   /**
    * Registra un cargo o una especialidad nueva sin salir del formulario: queda
-   * en el catálogo (el administrador lo puede editar después en Catálogo) y de
+   * en el catálogo (se puede editar después en Gestión Administrativa) y de
    * una vez seleccionada en el trabajador que se está registrando.
    */
   const crearCatalogo = async (e) => {
@@ -395,7 +399,8 @@ export default function Personal() {
               onChange={(e) => setFiltros((f) => ({ ...f, disponible: e.target.value }))}
             >
               <option value="">Todas</option>
-              <option value="1">Disponibles</option>
+              <option value="libre">Disponibles</option>
+              <option value="asignado">Asignados</option>
               <option value="0">No disponibles</option>
             </select>
           </div>
@@ -688,7 +693,7 @@ export default function Personal() {
       )}
 
       {/* Confirmación de «Dar de baja»: se abre encima del formulario de edición,
-          con el mismo estilo que las demás confirmaciones (Roles, Catálogo). */}
+          con el mismo estilo que las demás confirmaciones (Roles, Gestión Administrativa). */}
       <Modal
         abierto={porDarDeBaja !== null}
         titulo={porDarDeBaja ? `¿Dar de baja a ${porDarDeBaja.nombres} ${porDarDeBaja.apellidos}?` : ''}
@@ -955,8 +960,19 @@ export default function Personal() {
               },
               {
                 titulo: 'Disponibilidad',
-                tdClase: 'text-slate-600',
-                celda: (t) => (Number(t.disponible) ? 'Disponible' : 'No disponible'),
+                celda: (t) => {
+                  // No disponible: no ACTIVO. Asignado: ACTIVO con actividades vigentes (aún asignable).
+                  const [texto, clase] = !Number(t.disponible)
+                    ? ['No disponible', 'bg-red-50 text-red-700']
+                    : Number(t.actividades_vigentes) > 0
+                      ? ['Asignado', 'bg-amber-50 text-amber-700']
+                      : ['Disponible', 'bg-emerald-50 text-emerald-700']
+                  return (
+                    <span className={`-my-0.5 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${clase}`}>
+                      {texto}
+                    </span>
+                  )
+                },
               },
               {
                 titulo: 'Acciones',

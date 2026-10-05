@@ -25,6 +25,18 @@ function RutaPorRol({ roles, children }) {
   return roles.includes(user?.rol) ? children : <Navigate to="/" replace />
 }
 
+/**
+ * Igual que RutaPorRol, pero para módulos que la matriz de Roles y permisos
+ * decide: la ruta se abre con al menos uno de los permisos indicados.
+ */
+function RutaPorPermiso({ permisos, children }) {
+  const { puede, cargandoPermisos } = useAuth()
+  // Sin la respuesta de permisos todavía no se decide: si se redirige antes,
+  // recargar la página en /catalogo llevaría al dashboard sin motivo.
+  if (cargandoPermisos) return <Spinner />
+  return puede(...permisos) ? children : <Navigate to="/" replace />
+}
+
 const ADMIN = 'ADMINISTRADOR'
 const GERENTE = 'GERENTE'
 const MAESTRO = 'MAESTRO_OBRA'
@@ -89,8 +101,16 @@ export default function App() {
           <Route path="usuarios" element={<RutaPorRol roles={[ADMIN]}><Usuarios /></RutaPorRol>} />
           {/* RF1 · monitoreo de la matriz roles_permisos (solo el administrador) */}
           <Route path="roles" element={<RutaPorRol roles={[ADMIN]}><RolesPermisos /></RutaPorRol>} />
-          {/* RF01 · RF06: cargos, especialidades y clientes (solo el administrador) */}
-          <Route path="catalogo" element={<RutaPorRol roles={[ADMIN]}><Catalogo /></RutaPorRol>} />
+          {/* RF01 · RF06: cargos, especialidades y clientes. La matriz de Roles y
+              permisos decide quién ve el módulo (`catalogos.listar`), igual que el menú. */}
+          <Route
+            path="catalogo"
+            element={
+              <RutaPorPermiso permisos={['catalogos.listar', 'catalogos.gestionar']}>
+                <Catalogo />
+              </RutaPorPermiso>
+            }
+          />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />

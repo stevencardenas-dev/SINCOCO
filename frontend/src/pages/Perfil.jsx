@@ -24,7 +24,7 @@ import { fmtFechaHora } from '../lib/format.js'
  * Editable: teléfono, correo de contacto, dirección y la contraseña. El número
  * de documento no se modifica: es la identidad de la ficha. El correo empresarial
  * lo administra la empresa, y el rol, el cargo y la especialidad los cambia el
- * administrador en Usuarios y Catálogo.
+ * administrador en Usuarios y Gestión Administrativa.
  */
 
 const VACIO_DATOS = { telefono: '', email: '', direccion: '' }

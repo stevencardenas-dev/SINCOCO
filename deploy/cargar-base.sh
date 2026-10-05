@@ -52,6 +52,10 @@ $MYSQL "$DB_NAME" < docs/migracion_roles_gestionar.sql
 $MYSQL "$DB_NAME" < docs/migracion_rbac_acceso.sql
 $MYSQL "$DB_NAME" < docs/migracion_usuarios_editar.sql
 
+# Gestión Administrativa (catálogos): el gerente la ve y la opera igual que el
+# administrador. En una base nueva el seed de permisos ya la trae.
+$MYSQL "$DB_NAME" < docs/migracion_catalogo_gerente.sql
+
 # --- 2d. Personal: «Inactivo» = dado de baja (HU-04 · HU-18) ----------------
 # Alinea los trabajadores que quedaron en INACTIVO sin baja lógica (y al revés).
 $MYSQL "$DB_NAME" < docs/migracion_personal_baja.sql

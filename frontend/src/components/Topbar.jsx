@@ -17,7 +17,7 @@ const TITLES = {
   '/auditoria': 'Trazabilidad y auditoría',
   '/usuarios': 'Gestión de usuarios',
   '/roles': 'Roles y permisos',
-  '/catalogo': 'Catálogo',
+  '/catalogo': 'Gestión Administrativa',
   '/perfil': 'Mi información personal',
 }
 

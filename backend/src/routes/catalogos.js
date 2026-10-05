@@ -14,12 +14,13 @@ const router = Router()
 router.use(requireAuth)
 
 // Lectura (HU-04): la necesita el formulario de personal, así que se permite a
-// quien ya puede consultar el personal.
-router.get('/:tipo', requirePermiso('catalogos.listar', 'trabajadores.listar'), listar)
-router.get('/:tipo/:id', requirePermiso('catalogos.listar', 'trabajadores.listar'), obtener)
+// quien ya puede consultar el personal; y quien puede gestionar el catálogo
+// también puede verlo (la matriz de Roles y permisos decide ambos).
+router.get('/:tipo', requirePermiso('catalogos.listar', 'catalogos.gestionar', 'trabajadores.listar'), listar)
+router.get('/:tipo/:id', requirePermiso('catalogos.listar', 'catalogos.gestionar', 'trabajadores.listar'), obtener)
 
-// Escritura: solo el administrador (permiso `catalogos.gestionar`, solo ADMIN
-// en docs/seed_permisos_prueba.sql).
+// Escritura: la Gestión Administrativa la operan el administrador y el gerente
+// (permiso `catalogos.gestionar`, ver docs/seed_permisos_prueba.sql).
 router.post('/:tipo', requirePermiso('catalogos.gestionar'), crear)
 router.patch('/:tipo/:id', requirePermiso('catalogos.gestionar'), actualizar)
 

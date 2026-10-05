@@ -214,12 +214,14 @@ antes de tocar nada, como los que ya existen:
 | `migracion_sesion_unica.sql` | columnas `usuarios.sesion_actual` y `sesion_iniciada_en` |
 | `migracion_personal_baja.sql` | trabajadores en estado `INACTIVO` pasan a dados de baja (y los dados de baja, a `INACTIVO`) |
 | `migracion_categorias_personal.sql` | columna `categoria` en `cargos` y `especialidades`, especialidades nuevas y baja de los cargos retirados (solo la primera vez) |
+| `migracion_permisos_gerente_maestro.sql` | el GERENTE pasa a gestionar la operación (proyectos, personal, plan) y el MAESTRO_OBRA su plan, sin tocar usuarios, roles ni auditoría |
+| `migracion_catalogo_gerente.sql` | permisos `catalogos.listar` y `catalogos.gestionar` para GERENTE (Gestión Administrativa) |
 
 **No hay tabla de control**: se
 aplican todos en orden alfabético cada vez, y como se protegen solos, repetirlos
 no hace daño. Basta con dejar el archivo en `docs/`; no hay que registrarlo en
 ningún sitio. Al terminar, `deploy/migrar-base.sh` imprime en el log de SSM las
-columnas de sesión y la matriz **permisos por rol** (debe salir 25 / 6 / 3 / 0),
+columnas de sesión y la matriz **permisos por rol** (debe salir 27 / 20 / 10 / 0),
 que es la forma de comprobar desde el propio despliegue que la base quedó al día.
 
 El job `pruebas` aplica estas mismas migraciones sobre la base de CI: así la
@@ -272,8 +274,8 @@ log de SSM con el backend viejo todavía en servicio. Si el despliegue se hace
 luego como `todo`, se repite sin daño (son idempotentes).
 
 En el log de SSM tienen que aparecer las dos columnas de sesión y la tabla de
-permisos por rol con **ADMINISTRADOR 25, GERENTE 6, MAESTRO_OBRA 3,
-ENCARGADO_BODEGA 0**. Si el administrador sale por debajo de 25, la pantalla
+permisos por rol con **ADMINISTRADOR 27, GERENTE 20, MAESTRO_OBRA 10,
+ENCARGADO_BODEGA 0**. Si el administrador sale por debajo de 27, la pantalla
 *Acceso al proyecto* responderá 403 aunque el código esté bien: hay que revisar
 el log antes de seguir.
 
@@ -399,10 +401,10 @@ cd /opt/sincoco/backend && sudo -u ubuntu node scripts/seed.js
 ```
 
 > Sin `docs/seed_permisos_prueba.sql` el RBAC deja a todo el mundo sin permisos:
-> ese archivo es el que llena `roles_permisos` (ADMINISTRADOR 25, GERENTE 6,
-> MAESTRO_OBRA 3, ENCARGADO_BODEGA 0). Una base de un sprint anterior se queda
-> en 23/5/3/0 y llega a 25/6 con `migracion_rbac_acceso.sql`, que crea los dos
-> permisos nuevos y los inserta en la matriz; no hace falta recargar la base.
+> ese archivo es el que llena `roles_permisos` (ADMINISTRADOR 27, GERENTE 20,
+> MAESTRO_OBRA 10, ENCARGADO_BODEGA 0). Una base de un sprint anterior se migra
+> sola: `docs/migracion_*.sql` añade los permisos nuevos a la matriz; no hace
+> falta recargar la base.
 
 > `deploy/cargar-base.sh` y `deploy/instalar-backend.sh` no usan `set -x` a
 > propósito: el trace de bash escribiría los secretos en el historial de

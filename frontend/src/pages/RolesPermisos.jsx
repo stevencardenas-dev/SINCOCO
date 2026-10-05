@@ -42,7 +42,7 @@ const MODULO_LABEL = {
   planificacion: 'Planificación',
   clientes: 'Clientes',
   auditoria: 'Auditoría y trazabilidad',
-  catalogos: 'Catálogos',
+  catalogos: 'Gestión Administrativa',
 }
 
 // Orden de negocio de los módulos, no alfabético.

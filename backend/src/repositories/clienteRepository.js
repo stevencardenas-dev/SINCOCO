@@ -36,7 +36,7 @@ export async function listarActivos() {
 }
 
 /**
- * Catálogo de clientes. `incluirInactivos` lo usa la pantalla de Catálogo, que
+ * Catálogo de clientes. `incluirInactivos` lo usa Gestión Administrativa, que
  * administra también los clientes dados de baja (HU-18).
  */
 export async function listar(incluirInactivos = false) {

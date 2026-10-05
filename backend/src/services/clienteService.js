@@ -9,7 +9,7 @@ import { AppError } from '../utils/AppError.js'
  * registro de proyecto. Un cliente es actor del negocio, no usuario del
  * sistema, así que no pasa por el módulo de usuarios.
  */
-/** `incluirInactivos` lo usa la pantalla de Catálogo (HU-18). */
+/** `incluirInactivos` lo usa Gestión Administrativa (HU-18). */
 export async function listarClientes({ incluirInactivos = false } = {}) {
   return clienteRepository.listar(incluirInactivos)
 }
@@ -38,7 +38,7 @@ export async function registrarCliente(dto, ctx = {}) {
   return clienteRepository.findById(id)
 }
 
-/** Campos que el administrador puede editar desde la pantalla de Catálogo. */
+/** Campos que se editan desde la pantalla de Gestión Administrativa. */
 const CAMPOS_EDITABLES = [
   'tipo_documento', 'razon_social_nombre', 'nombre_contacto',
   'telefono', 'email', 'direccion',
@@ -47,7 +47,7 @@ const CAMPOS_EDITABLES = [
 const textoOpcional = (v) =>
   v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim()
 
-/** Edita la ficha del cliente (pantalla Catálogo). */
+/** Edita la ficha del cliente (Gestión Administrativa). */
 export async function actualizarCliente(id, cambios = {}, ctx = {}) {
   const actual = await clienteRepository.findById(id)
   if (!actual) throw new AppError('Cliente no encontrado', 404)

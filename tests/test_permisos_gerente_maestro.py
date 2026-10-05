@@ -1,8 +1,8 @@
 # Reacomodo de permisos: cada rol debe poder cumplir sus funciones, y solo ellas.
 #
 #   GERENTE      gestiona proyectos, clientes, personal, plan de trabajo y la
-#                asignación de personal; NO toca usuarios, roles, catálogos ni
-#                auditoría.
+#                asignación de personal, y administra los catálogos (Gestión
+#                Administrativa); NO toca usuarios, roles ni auditoría.
 #   MAESTRO_OBRA gestiona etapas y actividades y edita sus proyectos; NO crea ni
 #                da de baja proyectos, ni asigna personal. Solo actúa sobre los
 #                proyectos donde está asignado.
@@ -10,7 +10,7 @@
 #
 # Requiere el backend (3005) arriba y docs/migracion_permisos_gerente_maestro.sql
 # aplicada. Uso: python tests/test_permisos_gerente_maestro.py
-from api_helper import PREFIJO, http, limpiar, login, scalar
+from api_helper import PREFIJO, http, limpiar, login, scalar, sql
 
 limpiar()
 admin, gerente, maestro, bodega = login('admin'), login('gerente'), login('maestro'), login('bodega')
@@ -31,13 +31,15 @@ def permisos(token):
 
 pa, pg, pm, pb = permisos(admin), permisos(gerente), permisos(maestro), permisos(bodega)
 assert len(pa) == 27, f'admin conserva todo (27): {len(pa)}'
-assert len(pg) == 18 and len(pm) == 10 and len(pb) == 0, (len(pg), len(pm), len(pb))
-assert not any(p.startswith(('usuarios.', 'roles.', 'auditoria.', 'catalogos.')) for p in pg), \
-    'el gerente no administra usuarios, roles, catálogos ni auditoría'
+assert len(pg) == 20 and len(pm) == 10 and len(pb) == 0, (len(pg), len(pm), len(pb))
+assert not any(p.startswith(('usuarios.', 'roles.', 'auditoria.')) for p in pg), \
+    'el gerente no administra usuarios, roles ni auditoría'
+assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
+    'el gerente ve y gestiona la Gestión Administrativa (catálogos)'
 assert 'proyectos.gestionar_acceso' not in pm and 'proyectos.registrar' not in pm \
     and 'proyectos.dar_baja' not in pm, 'el maestro no crea, da de baja ni asigna'
 assert {'proyectos.editar', 'etapas.crear', 'actividades.crear'} <= pm
-print('permisos por rol -> admin 27 · gerente 18 · maestro 10 · bodega 0')
+print('permisos por rol -> admin 27 · gerente 20 · maestro 10 · bodega 0')
 
 # --- GERENTE: crea proyecto con cliente y responsable propios ------------------
 print('GERENTE')
@@ -91,7 +93,10 @@ for ruta, nombre in (('/api/usuarios', 'usuarios'), ('/api/auditoria', 'auditor�
     estado, r = http('GET', ruta, token=gerente)
     esperar(f'NO consulta {nombre}', estado, r, 403)
 estado, r = http('POST', '/api/catalogos/cargos', {'nombre': 'TEST-Cargo gerente'}, token=gerente)
-esperar('NO gestiona catálogos', estado, r, 403)
+esperar('gestiona catálogos (crea un cargo)', estado, r, 201)
+cargo_gerente = r['cargo']['id']
+estado, r = http('PATCH', f'/api/catalogos/cargos/{cargo_gerente}/baja', token=gerente)
+esperar('gestiona catálogos (da de baja el cargo)', estado, r, 200)
 estado, r = http('POST', '/api/usuarios', {'username': 'x'}, token=gerente)
 esperar('NO crea usuarios', estado, r, 403)
 
@@ -154,4 +159,6 @@ estado, r = http('PATCH', f'/api/proyectos/{ajeno}', {'observaciones': 'admin'},
 esperar('edita cualquier proyecto', estado, r, 200)
 
 limpiar()
+sql("DELETE FROM cargos WHERE nombre LIKE 'TEST-%'")
+sql("DELETE FROM bitacora_trazabilidad WHERE tabla_afectada IN ('cargos','especialidades')")
 print('\nPermisos de gerente y maestro: TODAS LAS PRUEBAS PASARON')

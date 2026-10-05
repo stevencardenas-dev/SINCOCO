@@ -64,7 +64,7 @@ Contraseña `Prueba123!` para los cuatro. Cada rol ve un menú distinto.
 | Usuario | Rol | Alcance |
 |---|---|---|
 | `admin` | ADMINISTRADOR | todo el sistema |
-| `gerente` | GERENTE | gestión de proyectos, clientes, personal y plan; seguimiento, costos, reportes |
+| `gerente` | GERENTE | gestión de proyectos, clientes, personal, catálogos (Gestión Administrativa) y plan; seguimiento, costos, reportes |
 | `maestro` | MAESTRO_OBRA | edita sus proyectos y gestiona su plan (etapas y actividades); materiales, incidencias |
 | `bodega` | ENCARGADO_BODEGA | materiales, herramientas, alertas |
 

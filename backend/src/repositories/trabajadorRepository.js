@@ -11,11 +11,17 @@ import { Trabajador } from '../entities/Trabajador.js'
  * (contrato que ya usan la interfaz y las pruebas) y se añaden los ids para que
  * el formulario los seleccione en un combo.
  */
+// Actividades vigentes a cargo del trabajador: distinguen «Asignado» de «Disponible».
+const VIGENTES = `SELECT COUNT(*) FROM actividades av
+                   WHERE av.responsable_id = t.id AND av.activo = 1
+                     AND av.estado IN ('PENDIENTE', 'EN_PROCESO')`
+
 const CAMPOS = `t.id, t.numero_documento, t.tipo_documento, t.nombres, t.apellidos,
                 t.email, t.telefono, t.direccion,
                 t.cargo_id, c.nombre AS cargo, c.operativo AS cargo_operativo,
                 t.especialidad_id, e.nombre AS especialidad,
-                t.disponible, t.estado, t.activo, t.fecha_baja`
+                t.disponible, t.estado, t.activo, t.fecha_baja,
+                (${VIGENTES}) AS actividades_vigentes`
 
 const DESDE = `FROM trabajadores t
                JOIN cargos c ON c.id = t.cargo_id
@@ -94,7 +100,11 @@ export async function listar({
     condiciones.push('t.especialidad_id = ?')
     params.push(especialidadId)
   }
-  if (disponible !== null && disponible !== undefined && disponible !== '') {
+  if (disponible === 'libre' || disponible === 'asignado') {
+    // Solo ACTIVOS: libre = sin actividades vigentes; asignado = con al menos una.
+    condiciones.push('t.disponible = 1')
+    condiciones.push(`(${VIGENTES}) ${disponible === 'libre' ? '= 0' : '> 0'}`)
+  } else if (disponible !== null && disponible !== undefined && disponible !== '') {
     condiciones.push('t.disponible = ?')
     params.push(Number(disponible) ? 1 : 0)
   }
@@ -106,21 +116,6 @@ export async function listar({
     params,
   )
   return rows.map(Trabajador.fromRow)
-}
-
-/**
- * Actividades vigentes asignadas al trabajador: sirven para decidir su
- * disponibilidad al volver a estado ACTIVO (regla de negocio del estado).
- */
-export async function contarActividadesVigentes(id) {
-  const [[fila]] = await pool.query(
-    `SELECT COUNT(*) AS total
-       FROM actividades
-      WHERE responsable_id = ? AND activo = 1
-        AND estado IN ('PENDIENTE', 'EN_PROCESO')`,
-    [id],
-  )
-  return Number(fila?.total ?? 0)
 }
 
 /**
