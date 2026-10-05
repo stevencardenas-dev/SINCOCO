@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeftIcon,
@@ -22,8 +22,15 @@ import BotonActualizar from '../components/BotonActualizar.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import api from '../services/api'
-import { campoError, mensajeError } from '../lib/errores.js'
+import { proyectosApi } from '../services/proyectos'
+import { etapasApi } from '../services/etapas'
+import { actividadesApi } from '../services/actividades'
+import { trabajadoresApi } from '../services/trabajadores'
+import { asignacionesApi } from '../services/asignaciones'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { useFormulario } from '../hooks/useFormulario'
+import { mensajeError } from '../lib/errores.js'
 import { fmtFecha } from '../lib/format.js'
 
 /**
@@ -47,6 +54,9 @@ const FILTRO_ACCESO_VACIO = { buscar: '', estado: '', alcance: '', actividad: ''
 
 // "Vencen pronto": asignaciones vigentes cuyo fin programado cae en este plazo.
 const DIAS_POR_VENCER = 30
+
+// Acceso mientras carga (o si el servidor no lo informa): solo consulta.
+const SIN_ACCESO = { gestiona_plan: false, actividades_ids: [] }
 
 const ESTADO_ASIGNACION = {
   ACTIVO: 'bg-emerald-50 text-emerald-700',
@@ -139,7 +149,31 @@ export default function PlanProyecto() {
   // Además del permiso del rol, el plan solo lo modifica el líder del proyecto,
   // el gerente y el administrador (`gestiona_plan`, que calcula el servidor).
   // Quien solo está asignado consulta el plan y actúa en lo suyo.
-  const [miAcceso, setMiAcceso] = useState({ gestiona_plan: false, actividades_ids: [] })
+  const { datos, error, aviso, setAviso, recargar, ejecutar } = useRecurso(
+    async () => {
+      // Personal, asignaciones y acceso dependen de permisos que el rol puede no
+      // tener: si fallan, el plan se muestra igual sin esa parte.
+      const [proyectos, etapas, actividades, responsables, asignaciones, miAcceso] = await Promise.all([
+        proyectosApi.listar(),
+        etapasApi.listar({ proyecto_id: id }),
+        actividadesApi.listar({ proyecto_id: id }),
+        trabajadoresApi.listar().catch(() => []),
+        asignacionesApi.listar({ proyecto_id: id }).catch(() => []),
+        proyectosApi.miAcceso(id).catch(() => SIN_ACCESO),
+      ])
+      const proyecto = proyectos.find((x) => String(x.id) === String(id)) ?? null
+      return { proyecto, etapas, actividades, responsables, asignaciones, miAcceso }
+    },
+    [id],
+    { mensaje: 'No se pudo cargar el plan de trabajo.' },
+  )
+  const proyecto = datos?.proyecto ?? null
+  const etapas = datos?.etapas ?? []
+  const actividades = datos?.actividades ?? []
+  const responsables = datos?.responsables ?? []
+  const asignaciones = datos?.asignaciones ?? []
+  const miAcceso = datos?.miAcceso ?? SIN_ACCESO
+
   const gestionaPlan = miAcceso.gestiona_plan
   const puedeEtapas = gestionaPlan && puede('etapas.crear')
   const puedeActividades = gestionaPlan && puede('actividades.crear')
@@ -157,33 +191,66 @@ export default function PlanProyecto() {
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
 
-  const [proyecto, setProyecto] = useState(null)
-  const [etapas, setEtapas] = useState([])
-  const [actividades, setActividades] = useState([])
-  const [responsables, setResponsables] = useState([])
-  const [error, setError] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [etapaForm, setEtapaForm] = useState(ETAPA_VACIA)
-  const [abrirEtapa, setAbrirEtapa] = useState(false)
-  const [actividadEn, setActividadEn] = useState(null)
-  const [actividadForm, setActividadForm] = useState(ACTIVIDAD_VACIA)
-  // Errores de negocio dentro de cada formulario, no sobre la tabla.
-  const [errorEtapa, setErrorEtapa] = useState('')
-  const [errorActividad, setErrorActividad] = useState('')
-  // Edición: la etapa o actividad abierta en la ventana y su formulario.
-  const [editandoEtapa, setEditandoEtapa] = useState(null)
-  const [editandoActividad, setEditandoActividad] = useState(null)
-  const [formEdicion, setFormEdicion] = useState(ETAPA_VACIA)
-  const [errorEdicion, setErrorEdicion] = useState('')
-  const [campoEdicion, setCampoEdicion] = useState(null)
-  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
-  // Gestión de acceso (RBAC): quién puede consultar este proyecto.
-  const [asignaciones, setAsignaciones] = useState([])
-  const [accesoForm, setAccesoForm] = useState(ACCESO_VACIO)
-  const [errorAcceso, setErrorAcceso] = useState('')
-  const [guardandoAcceso, setGuardandoAcceso] = useState(false)
+  // Formularios del plan. Los errores de negocio se muestran dentro de cada
+  // formulario, no sobre la tabla.
+  const nuevaEtapa = useFormulario(ETAPA_VACIA, {
+    enviar: (f) => etapasApi.crear({ ...f, proyecto_id: Number(id) }),
+    alGuardar: () => {
+      setAviso('Etapa registrada.')
+      return recargar()
+    },
+    error: 'No se pudo registrar la etapa.',
+  })
+
+  // `registro` es el id de la etapa donde se está agregando la actividad.
+  const nuevaActividad = useFormulario(ACTIVIDAD_VACIA, {
+    enviar: (f, etapaId) =>
+      actividadesApi.crear({ ...f, etapa_id: etapaId, responsable_id: f.responsable_id || null }),
+    alGuardar: () => {
+      setAviso('Actividad registrada.')
+      return recargar()
+    },
+    error: 'No se pudo registrar la actividad.',
+  })
+  const actividadEn = nuevaActividad.registro
+
+  // Edición en ventana: `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  const edicion = useFormulario(ETAPA_VACIA, {
+    enviar: (f, { tipo, dato }) =>
+      tipo === 'etapa'
+        ? etapasApi.actualizar(dato.id, f)
+        : actividadesApi.actualizar(dato.id, { ...f, responsable_id: f.responsable_id || null }),
+    alGuardar: (_, { registro }) => {
+      setAviso(registro.tipo === 'etapa' ? 'Etapa actualizada.' : 'Actividad actualizada.')
+      return recargar()
+    },
+    error: 'No se pudo guardar el cambio.',
+  })
+  const editandoEtapa = edicion.registro?.tipo === 'etapa' ? edicion.registro.dato : null
+  const editandoActividad = edicion.registro?.tipo === 'actividad' ? edicion.registro.dato : null
+
+  // Gestión de acceso (RBAC): quién puede consultar este proyecto. El
+  // formulario está siempre a la vista; al guardar solo se vacía.
+  const acceso = useFormulario(ACCESO_VACIO, {
+    enviar: (f) =>
+      asignacionesApi.crear({
+        proyecto_id: Number(id),
+        trabajador_id: Number(f.trabajador_id),
+        actividad_id: f.actividad_id ? Number(f.actividad_id) : null,
+        observaciones: f.observaciones,
+        fecha_inicio: f.fecha_inicio,
+        fecha_fin_programada: f.fecha_fin_programada || null,
+      }),
+    alGuardar: (data) => {
+      setAviso(`${data.asignacion.trabajador_nombre} tiene acceso al proyecto.`)
+      return recargar()
+    },
+    error: 'No se pudo asignar el personal.',
+  })
+  const accesoForm = acceso.valores
   // Búsqueda y filtros del listado de acceso (se aplican en el cliente).
-  const [filtroAcceso, setFiltroAcceso] = useState(FILTRO_ACCESO_VACIO)
+  const filtrosAcceso = useFiltros(FILTRO_ACCESO_VACIO)
+  const filtroAcceso = filtrosAcceso.filtros
 
   // Rango del proyecto: límite de las fechas de etapas y actividades (HU-03).
   const proyDesde = soloDia(proyecto?.fecha_inicio_programada)
@@ -201,7 +268,7 @@ export default function PlanProyecto() {
     : { inicio: proyDesde, fin: proyHasta, origen: (cual) => `${cual} del proyecto` }
 
   // Listado de acceso filtrado: texto libre y filtros combinados con "y".
-  const filtrosActivos = Object.entries(filtroAcceso).filter(([, v]) => v !== '' && v !== false).length
+  const filtrosActivos = filtrosAcceso.activos
   const asignacionesFiltradas = asignaciones.filter((a) => {
     const f = filtroAcceso
     const texto = [a.trabajador_nombre, a.observaciones, a.actividad_nombre, a.cargo]
@@ -219,182 +286,59 @@ export default function PlanProyecto() {
     return true
   })
 
-  const cargar = () => {
-    setError('')
-    return Promise.all([
-      api.get('/proyectos'),
-      api.get('/etapas', { params: { proyecto_id: id } }),
-      api.get('/actividades', { params: { proyecto_id: id } }),
-      api.get('/trabajadores').catch(() => ({ data: [] })),
-      api.get('/asignaciones', { params: { proyecto_id: id } }).catch(() => ({ data: [] })),
-      api.get(`/proyectos/${id}/mi-acceso`).catch(() => ({ data: { gestiona_plan: false, actividades_ids: [] } })),
-    ])
-      .then(([p, e, a, t, as, acc]) => {
-        setMiAcceso(acc.data)
-        setProyecto(p.data.find((x) => String(x.id) === String(id)) ?? null)
-        setEtapas(e.data)
-        setActividades(a.data)
-        setResponsables(t.data)
-        setAsignaciones(as.data)
-      })
-      .catch(() => setError('No se pudo cargar el plan de trabajo.'))
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [id])
-
   /** Rango permitido para las actividades de una etapa (por defecto, el del proyecto). */
   const limiteEtapa = (et) => ({
     min: soloDia(et.fecha_inicio_programada) || soloDia(proyecto?.fecha_inicio_programada),
     max: soloDia(et.fecha_fin_programada) || soloDia(proyecto?.fecha_fin_programada),
   })
 
-  const crearEtapa = async (e) => {
-    e.preventDefault()
-    setErrorEtapa('')
-    setAviso('')
-    try {
-      await api.post('/etapas', { ...etapaForm, proyecto_id: Number(id) })
-      setEtapaForm(ETAPA_VACIA)
-      setAbrirEtapa(false)
-      setAviso('Etapa registrada.')
-      cargar()
-    } catch (err) {
-      setErrorEtapa(mensajeError(err, 'No se pudo registrar la etapa.'))
-    }
-  }
-
-  /** RBAC: asigna a un trabajador al proyecto o a una de sus actividades. */
-  const asignarPersonal = async (e) => {
-    e.preventDefault()
-    setErrorAcceso('')
-    setAviso('')
-    setGuardandoAcceso(true)
-    try {
-      const { data } = await api.post('/asignaciones', {
-        proyecto_id: Number(id),
-        trabajador_id: Number(accesoForm.trabajador_id),
-        actividad_id: accesoForm.actividad_id ? Number(accesoForm.actividad_id) : null,
-        observaciones: accesoForm.observaciones,
-        fecha_inicio: accesoForm.fecha_inicio,
-        fecha_fin_programada: accesoForm.fecha_fin_programada || null,
-      })
-      setAccesoForm(ACCESO_VACIO)
-      setAviso(`${data.asignacion.trabajador_nombre} tiene acceso al proyecto.`)
-      cargar()
-    } catch (err) {
-      setErrorAcceso(mensajeError(err, 'No se pudo asignar el personal.'))
-    } finally {
-      setGuardandoAcceso(false)
-    }
-  }
-
   /** Retira el acceso vigente sin borrar la asignación (queda el historial). */
   const finalizarAsignacion = async (a) => {
-    setErrorAcceso('')
+    acceso.setError('')
     setAviso('')
     try {
-      await api.patch(`/asignaciones/${a.id}`, { estado: 'FINALIZADO' })
+      await asignacionesApi.actualizar(a.id, { estado: 'FINALIZADO' })
       setAviso(`${a.trabajador_nombre}: acceso finalizado.`)
-      cargar()
+      recargar()
     } catch (err) {
-      setErrorAcceso(mensajeError(err, 'No se pudo finalizar la asignación.'))
+      acceso.setError(mensajeError(err, 'No se pudo finalizar la asignación.'))
     }
   }
 
-  const cerrarEdicion = () => {
-    setEditandoEtapa(null)
-    setEditandoActividad(null)
-    setErrorEdicion('')
-    setCampoEdicion(null)
-  }
+  const abrirEdicionEtapa = (et) =>
+    edicion.abrir(
+      {
+        nombre: et.nombre,
+        descripcion: et.descripcion ?? '',
+        fecha_inicio_programada: soloDia(et.fecha_inicio_programada),
+        fecha_fin_programada: soloDia(et.fecha_fin_programada),
+      },
+      { tipo: 'etapa', dato: et },
+    )
 
-  const abrirEdicionEtapa = (et) => {
-    cerrarEdicion()
-    setFormEdicion({
-      nombre: et.nombre,
-      descripcion: et.descripcion ?? '',
-      fecha_inicio_programada: soloDia(et.fecha_inicio_programada),
-      fecha_fin_programada: soloDia(et.fecha_fin_programada),
-    })
-    setEditandoEtapa(et)
-  }
-
-  const abrirEdicionActividad = (a) => {
-    cerrarEdicion()
-    setFormEdicion({
-      nombre: a.nombre,
-      descripcion: a.descripcion ?? '',
-      responsable_id: a.responsable_id ?? '',
-      fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
-      fecha_fin_programada: soloDia(a.fecha_fin_programada),
-    })
-    setEditandoActividad(a)
-  }
-
-  const guardarEdicion = async (e) => {
-    e.preventDefault()
-    setErrorEdicion('')
-    setCampoEdicion(null)
-    setAviso('')
-    setGuardandoEdicion(true)
-    try {
-      if (editandoEtapa) {
-        await api.patch(`/etapas/${editandoEtapa.id}`, formEdicion)
-        setAviso('Etapa actualizada.')
-      } else {
-        await api.patch(`/actividades/${editandoActividad.id}`, {
-          ...formEdicion,
-          responsable_id: formEdicion.responsable_id || null,
-        })
-        setAviso('Actividad actualizada.')
-      }
-      cerrarEdicion()
-      cargar()
-    } catch (err) {
-      setErrorEdicion(mensajeError(err, 'No se pudo guardar el cambio.'))
-      setCampoEdicion(campoError(err))
-    } finally {
-      setGuardandoEdicion(false)
-    }
-  }
+  const abrirEdicionActividad = (a) =>
+    edicion.abrir(
+      {
+        nombre: a.nombre,
+        descripcion: a.descripcion ?? '',
+        responsable_id: a.responsable_id ?? '',
+        fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
+        fecha_fin_programada: soloDia(a.fecha_fin_programada),
+      },
+      { tipo: 'actividad', dato: a },
+    )
 
   /** «Empezar» (pendiente -> en curso) y «Finalizar» (en curso -> finalizado). */
   const cambiarEstado = async (a) => {
     const empezar = a.estado === 'PENDIENTE'
-    setError('')
-    setAviso('')
     setCambiandoEstado(a.id)
-    try {
-      await api.patch(`/actividades/${a.id}/${empezar ? 'iniciar' : 'finalizar'}`)
-      setAviso(empezar ? `«${a.nombre}» está en curso.` : `«${a.nombre}» quedó finalizada.`)
-      await cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado de la actividad.'))
-    } finally {
-      setCambiandoEstado(null)
-    }
+    await ejecutar(() => (empezar ? actividadesApi.iniciar(a.id) : actividadesApi.finalizar(a.id)), {
+      exito: empezar ? `«${a.nombre}» está en curso.` : `«${a.nombre}» quedó finalizada.`,
+      error: 'No se pudo cambiar el estado de la actividad.',
+    })
+    setCambiandoEstado(null)
   }
 
-  const crearActividad = async (e) => {
-    e.preventDefault()
-    setErrorActividad('')
-    setAviso('')
-    try {
-      await api.post('/actividades', {
-        ...actividadForm,
-        etapa_id: actividadEn,
-        responsable_id: actividadForm.responsable_id || null,
-      })
-      setActividadForm(ACTIVIDAD_VACIA)
-      setActividadEn(null)
-      setAviso('Actividad registrada.')
-      cargar()
-    } catch (err) {
-      setErrorActividad(mensajeError(err, 'No se pudo registrar la actividad.'))
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -402,7 +346,7 @@ export default function PlanProyecto() {
         <ArrowLeftIcon className="h-4 w-4" /> Volver a proyectos
       </Link>
 
-      <PageHeader accion={<BotonActualizar onClick={cargar} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
         subtitle={
           proyecto
@@ -411,7 +355,7 @@ export default function PlanProyecto() {
         }
       >
         {puedeEtapas && (
-          <button className="btn-primary" onClick={() => setAbrirEtapa((v) => !v)}>
+          <button className="btn-primary" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
             <PlusIcon className="h-5 w-5" /> Nueva etapa
           </button>
         )}
@@ -420,36 +364,36 @@ export default function PlanProyecto() {
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
-      {puedeEtapas && abrirEtapa && (
-        <form onSubmit={crearEtapa} className="card space-y-4 p-6">
+      {puedeEtapas && nuevaEtapa.abierto && (
+        <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
           <h3 className="text-base font-semibold text-slate-900">Definir etapa</h3>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="e-nombre" className="label">Nombre</label>
-              <input id="e-nombre" className="input" maxLength={100} value={etapaForm.nombre}
-                onChange={(e) => setEtapaForm({ ...etapaForm, nombre: e.target.value })} required />
+              <input id="e-nombre" className="input" maxLength={100} value={nuevaEtapa.valores.nombre}
+                onChange={(e) => nuevaEtapa.cambiar('nombre', e.target.value)} required />
             </div>
             <div>
               <label htmlFor="e-inicio" className="label">Inicio programado</label>
-              <input id="e-inicio" type="date" className="input" required value={etapaForm.fecha_inicio_programada}
-                min={proyDesde || undefined} max={etapaForm.fecha_fin_programada || proyHasta || undefined}
-                onChange={(e) => setEtapaForm({ ...etapaForm, fecha_inicio_programada: e.target.value })} />
+              <input id="e-inicio" type="date" className="input" required value={nuevaEtapa.valores.fecha_inicio_programada}
+                min={proyDesde || undefined} max={nuevaEtapa.valores.fecha_fin_programada || proyHasta || undefined}
+                onChange={(e) => nuevaEtapa.cambiar('fecha_inicio_programada', e.target.value)} />
             </div>
             <div>
               <label htmlFor="e-fin" className="label">Fin programado</label>
-              <input id="e-fin" type="date" className="input" required value={etapaForm.fecha_fin_programada}
-                min={etapaForm.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
-                onChange={(e) => setEtapaForm({ ...etapaForm, fecha_fin_programada: e.target.value })} />
+              <input id="e-fin" type="date" className="input" required value={nuevaEtapa.valores.fecha_fin_programada}
+                min={nuevaEtapa.valores.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
+                onChange={(e) => nuevaEtapa.cambiar('fecha_fin_programada', e.target.value)} />
             </div>
           </div>
           <p className="text-xs text-slate-500">
             El orden se asigna solo según la fecha de inicio, y las fechas no pueden solaparse con las de otra etapa.
           </p>
           <div className="flex items-center gap-3">
-            <AlertaFormulario mensaje={errorEtapa} />
-            <button type="submit" className="btn-primary">Registrar etapa</button>
+            <AlertaFormulario mensaje={nuevaEtapa.error} />
+            <button type="submit" className="btn-primary disabled:opacity-60" disabled={nuevaEtapa.guardando}>Registrar etapa</button>
             <button type="button" className="btn-ghost"
-              onClick={() => { setAbrirEtapa(false); setEtapaForm(ETAPA_VACIA); setErrorEtapa('') }}>Cancelar</button>
+              onClick={nuevaEtapa.cerrar}>Cancelar</button>
           </div>
         </form>
       )}
@@ -492,10 +436,7 @@ export default function PlanProyecto() {
                 {puedeActividades && (
                   <button
                     className="btn-ghost text-xs"
-                    onClick={() => {
-                      setActividadEn(actividadEn === et.id ? null : et.id)
-                      setActividadForm(ACTIVIDAD_VACIA)
-                    }}
+                    onClick={() => (actividadEn === et.id ? nuevaActividad.cerrar() : nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id))}
                   >
                     <PlusIcon className="h-4 w-4" /> Actividad
                   </button>
@@ -504,18 +445,18 @@ export default function PlanProyecto() {
             </div>
 
             {puedeActividades && actividadEn === et.id && (
-              <form onSubmit={crearActividad} className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2">
+              <form onSubmit={nuevaActividad.guardar} className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2">
                 <div>
                   <label htmlFor={`a-nombre-${et.id}`} className="label">Nombre de la actividad</label>
-                  <input id={`a-nombre-${et.id}`} className="input" value={actividadForm.nombre}
-                    onChange={(e) => setActividadForm({ ...actividadForm, nombre: e.target.value })} required />
+                  <input id={`a-nombre-${et.id}`} className="input" value={nuevaActividad.valores.nombre}
+                    onChange={(e) => nuevaActividad.cambiar('nombre', e.target.value)} required />
                 </div>
                 <div>
                   <label htmlFor={`a-resp-${et.id}`} className="label">Responsable</label>
                   <BuscadorSelect
                     id={`a-resp-${et.id}`}
-                    value={actividadForm.responsable_id}
-                    onChange={(v) => setActividadForm({ ...actividadForm, responsable_id: v })}
+                    value={nuevaActividad.valores.responsable_id}
+                    onChange={(v) => nuevaActividad.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
                       ...responsables.map((t) => ({
@@ -530,22 +471,22 @@ export default function PlanProyecto() {
                 </div>
                 <div>
                   <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
-                  <input id={`a-inicio-${et.id}`} type="date" className="input" value={actividadForm.fecha_inicio_programada}
-                    min={limiteEtapa(et).min || undefined} max={actividadForm.fecha_fin_programada || limiteEtapa(et).max || undefined}
-                    onChange={(e) => setActividadForm({ ...actividadForm, fecha_inicio_programada: e.target.value })} required />
+                  <input id={`a-inicio-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_inicio_programada}
+                    min={limiteEtapa(et).min || undefined} max={nuevaActividad.valores.fecha_fin_programada || limiteEtapa(et).max || undefined}
+                    onChange={(e) => nuevaActividad.cambiar('fecha_inicio_programada', e.target.value)} required />
                 </div>
                 <div>
                   <label htmlFor={`a-fin-${et.id}`} className="label">Fin programado</label>
-                  <input id={`a-fin-${et.id}`} type="date" className="input" value={actividadForm.fecha_fin_programada}
-                    min={actividadForm.fecha_inicio_programada || limiteEtapa(et).min || undefined} max={limiteEtapa(et).max || undefined}
-                    onChange={(e) => setActividadForm({ ...actividadForm, fecha_fin_programada: e.target.value })} required />
+                  <input id={`a-fin-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_fin_programada}
+                    min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(et).min || undefined} max={limiteEtapa(et).max || undefined}
+                    onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
                 </div>
                 <div className="sm:col-span-2">
-                  <AlertaFormulario mensaje={errorActividad} />
+                  <AlertaFormulario mensaje={nuevaActividad.error} />
                 </div>
                 <div className="sm:col-span-2 flex items-center gap-3">
                   <button type="submit" className="btn-primary">Registrar actividad</button>
-                  <button type="button" className="btn-ghost" onClick={() => { setActividadEn(null); setErrorActividad('') }}>Cancelar</button>
+                  <button type="button" className="btn-ghost" onClick={nuevaActividad.cerrar}>Cancelar</button>
                 </div>
               </form>
             )}
@@ -635,13 +576,13 @@ export default function PlanProyecto() {
           </div>
 
           <Retractil titulo="Asignar acceso" icono={UserPlusIcon}>
-          <form onSubmit={asignarPersonal} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <form onSubmit={acceso.guardar} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="xl:col-span-2">
               <label htmlFor="ac-trabajador" className="label">Trabajador</label>
               <BuscadorSelect
                 id="ac-trabajador"
                 value={accesoForm.trabajador_id}
-                onChange={(v) => setAccesoForm({ ...accesoForm, trabajador_id: v })}
+                onChange={(v) => acceso.cambiar('trabajador_id', v)}
                 opciones={responsables.map((t) => ({
                   value: t.id,
                   label: `${t.nombres} ${t.apellidos}`,
@@ -660,7 +601,7 @@ export default function PlanProyecto() {
                 className="input"
                 placeholder="Residente de obra, apoyo en cimentación…"
                 value={accesoForm.observaciones}
-                onChange={(e) => setAccesoForm({ ...accesoForm, observaciones: e.target.value })}
+                onChange={(e) => acceso.cambiar('observaciones', e.target.value)}
               />
             </div>
             <div>
@@ -669,7 +610,7 @@ export default function PlanProyecto() {
                 id="ac-actividad"
                 className="input"
                 value={accesoForm.actividad_id}
-                onChange={(e) => setAccesoForm({ ...accesoForm, actividad_id: e.target.value })}
+                onChange={(e) => acceso.cambiar('actividad_id', e.target.value)}
               >
                 <option value="">Todo el proyecto</option>
                 {etapas.map((et) => {
@@ -693,13 +634,13 @@ export default function PlanProyecto() {
                 className="input"
                 required
                 value={accesoForm.fecha_inicio}
-                onChange={(e) => setAccesoForm({ ...accesoForm, fecha_inicio: e.target.value })}
+                onChange={(e) => acceso.cambiar('fecha_inicio', e.target.value)}
               />
               <SugerenciaFecha
                 dia={sugerenciaAcceso.inicio}
                 origen={sugerenciaAcceso.origen('inicio')}
                 actual={accesoForm.fecha_inicio}
-                onUsar={(dia) => setAccesoForm({ ...accesoForm, fecha_inicio: dia })}
+                onUsar={(dia) => acceso.cambiar('fecha_inicio', dia)}
               />
             </div>
             <div>
@@ -709,27 +650,27 @@ export default function PlanProyecto() {
                 type="date"
                 className="input"
                 value={accesoForm.fecha_fin_programada}
-                onChange={(e) => setAccesoForm({ ...accesoForm, fecha_fin_programada: e.target.value })}
+                onChange={(e) => acceso.cambiar('fecha_fin_programada', e.target.value)}
               />
               <SugerenciaFecha
                 dia={sugerenciaAcceso.fin}
                 origen={sugerenciaAcceso.origen('fin')}
                 actual={accesoForm.fecha_fin_programada}
-                onUsar={(dia) => setAccesoForm({ ...accesoForm, fecha_fin_programada: dia })}
+                onUsar={(dia) => acceso.cambiar('fecha_fin_programada', dia)}
               />
             </div>
             <div className="flex items-end xl:col-span-2">
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={guardandoAcceso || !accesoForm.trabajador_id}
+                disabled={acceso.guardando || !accesoForm.trabajador_id}
               >
-                {guardandoAcceso ? 'Asignando…' : 'Dar acceso'}
+                {acceso.guardando ? 'Asignando…' : 'Dar acceso'}
               </button>
             </div>
-            {errorAcceso && (
+            {acceso.error && (
               <div className="sm:col-span-2 xl:col-span-4">
-                <AlertaFormulario mensaje={errorAcceso} />
+                <AlertaFormulario mensaje={acceso.error} />
               </div>
             )}
           </form>
@@ -748,13 +689,13 @@ export default function PlanProyecto() {
                   className="input"
                   placeholder="Nombre, cargo, descripción o actividad…"
                   value={filtroAcceso.buscar}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, buscar: e.target.value })}
+                  onChange={(e) => filtrosAcceso.cambiar('buscar', e.target.value)}
                 />
               </div>
               <div>
                 <label htmlFor="fa-estado" className="label">Estado</label>
                 <select id="fa-estado" className="input" value={filtroAcceso.estado}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, estado: e.target.value })}>
+                  onChange={(e) => filtrosAcceso.cambiar('estado', e.target.value)}>
                   <option value="">Todos</option>
                   <option value="ACTIVO">Vigente</option>
                   <option value="FINALIZADO">Finalizado</option>
@@ -764,7 +705,7 @@ export default function PlanProyecto() {
               <div>
                 <label htmlFor="fa-alcance" className="label">Alcance</label>
                 <select id="fa-alcance" className="input" value={filtroAcceso.alcance}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, alcance: e.target.value })}>
+                  onChange={(e) => filtrosAcceso.cambiar('alcance', e.target.value)}>
                   <option value="">Todos</option>
                   <option value="PROYECTO">Todo el proyecto</option>
                   <option value="ACTIVIDAD">Por actividad</option>
@@ -773,7 +714,7 @@ export default function PlanProyecto() {
               <div>
                 <label htmlFor="fa-actividad" className="label">Actividad</label>
                 <select id="fa-actividad" className="input" value={filtroAcceso.actividad}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, actividad: e.target.value })}>
+                  onChange={(e) => filtrosAcceso.cambiar('actividad', e.target.value)}>
                   <option value="">Todas</option>
                   {etapas.map((et) => {
                     const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
@@ -788,12 +729,12 @@ export default function PlanProyecto() {
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
                 <input type="checkbox" checked={filtroAcceso.vencen}
-                  onChange={(e) => setFiltroAcceso({ ...filtroAcceso, vencen: e.target.checked })} />
+                  onChange={(e) => filtrosAcceso.cambiar('vencen', e.target.checked)} />
                 Vencen en los próximos {DIAS_POR_VENCER} días
               </label>
               <div className="flex items-center justify-end sm:col-span-2">
                 <button type="button" className="btn-ghost" disabled={filtrosActivos === 0}
-                  onClick={() => setFiltroAcceso(FILTRO_ACCESO_VACIO)}>
+                  onClick={filtrosAcceso.limpiar}>
                   Limpiar filtros
                 </button>
               </div>
@@ -897,41 +838,36 @@ export default function PlanProyecto() {
 
       {/* Edición de etapa o actividad en una ventana; el error de negocio va dentro. */}
       <ModalFormulario
-        abierto={Boolean(editandoEtapa || editandoActividad)}
+        {...edicion.propsModal}
         titulo={editandoEtapa ? 'Editar etapa' : 'Editar actividad'}
         subtitulo={editandoEtapa?.nombre ?? editandoActividad?.nombre}
-        onGuardar={guardarEdicion}
-        onCerrar={cerrarEdicion}
-        guardando={guardandoEdicion}
-        error={errorEdicion}
-        campoError={campoEdicion}
       >
         {(editandoEtapa || editandoActividad) && (() => {
           const lim = editandoEtapa
             ? { min: soloDia(proyecto?.fecha_inicio_programada), max: soloDia(proyecto?.fecha_fin_programada) }
             : limiteEtapa(etapas.find((x) => x.id === editandoActividad.etapa_id) ?? {})
-          const marca = (campo) => (campoEdicion === campo ? ' border-red-400' : '')
+          const marca = (campo) => (edicion.campo === campo ? ' border-red-400' : '')
           return (
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label htmlFor="ed-nombre" className="label">Nombre</label>
                 <input id="ed-nombre" className={`input${marca('nombre')}`} maxLength={editandoEtapa ? 100 : 150}
-                  value={formEdicion.nombre} required
-                  onChange={(e) => setFormEdicion({ ...formEdicion, nombre: e.target.value })} />
+                  value={edicion.valores.nombre} required
+                  onChange={(e) => edicion.cambiar('nombre', e.target.value)} />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="ed-descripcion" className="label">Descripción</label>
                 <textarea id="ed-descripcion" rows={2} className={`input${marca('descripcion')}`}
-                  value={formEdicion.descripcion}
-                  onChange={(e) => setFormEdicion({ ...formEdicion, descripcion: e.target.value })} />
+                  value={edicion.valores.descripcion}
+                  onChange={(e) => edicion.cambiar('descripcion', e.target.value)} />
               </div>
               {editandoActividad && (
                 <div className="sm:col-span-2">
                   <label htmlFor="ed-resp" className="label">Responsable</label>
                   <BuscadorSelect
                     id="ed-resp"
-                    value={formEdicion.responsable_id}
-                    onChange={(v) => setFormEdicion({ ...formEdicion, responsable_id: v })}
+                    value={edicion.valores.responsable_id}
+                    onChange={(v) => edicion.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
                       ...responsables.map((t) => ({
@@ -948,15 +884,15 @@ export default function PlanProyecto() {
               <div>
                 <label htmlFor="ed-inicio" className="label">Inicio programado</label>
                 <input id="ed-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
-                  value={formEdicion.fecha_inicio_programada} min={lim.min} max={lim.max}
-                  onChange={(e) => setFormEdicion({ ...formEdicion, fecha_inicio_programada: e.target.value })} />
+                  value={edicion.valores.fecha_inicio_programada} min={lim.min} max={lim.max}
+                  onChange={(e) => edicion.cambiar('fecha_inicio_programada', e.target.value)} />
               </div>
               <div>
                 <label htmlFor="ed-fin" className="label">Fin programado</label>
                 <input id="ed-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
-                  value={formEdicion.fecha_fin_programada}
-                  min={formEdicion.fecha_inicio_programada || lim.min} max={lim.max}
-                  onChange={(e) => setFormEdicion({ ...formEdicion, fecha_fin_programada: e.target.value })} />
+                  value={edicion.valores.fecha_fin_programada}
+                  min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
+                  onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
               <p className="text-xs text-slate-500 sm:col-span-2">
                 {editandoEtapa

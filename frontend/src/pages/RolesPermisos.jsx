@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useState } from 'react'
 import {
   ArrowPathIcon,
   CheckIcon,
@@ -13,8 +13,10 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
-import api from '../services/api'
-import { campoError, mensajeError } from '../lib/errores.js'
+import { rolesApi } from '../services/roles'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFormulario } from '../hooks/useFormulario'
+import { mensajeError } from '../lib/errores.js'
 
 /**
  * HU-01 · criterio 4 (RF01 · RNF05): administración de la matriz rol → permiso.
@@ -57,44 +59,34 @@ const ordenModulo = (modulo) => {
 const ROL_VACIO = { nombre: '', descripcion: '' }
 
 export default function RolesPermisos() {
-  const [datos, setDatos] = useState(null)
-  const [error, setError] = useState('')
+  const { datos, setDatos, error, recargar } = useRecurso(rolesApi.matriz, [], {
+    mensaje: 'No se pudo cargar la matriz de roles y permisos.',
+  })
   const [filtro, setFiltro] = useState('')
   const [filtroAbierto, setFiltroAbierto] = useState(false)
   // Celular: en vez de la matriz, se elige un rol y se ven sus permisos.
   const [rolVerId, setRolVerId] = useState(null)
 
-  // Alta/edición de roles.
-  const [modalRol, setModalRol] = useState(null) // 'crear' | 'editar'
-  const [editandoId, setEditandoId] = useState(null)
-  const [rolForm, setRolForm] = useState(ROL_VACIO)
-  const [errorRol, setErrorRol] = useState('')
-  const [campoRol, setCampoRol] = useState(null)
-  const [guardandoRol, setGuardandoRol] = useState(false)
+  // Alta/edición de roles: `registro` es el rol que se edita (null = nuevo).
+  const formRol = useFormulario(ROL_VACIO, {
+    enviar: (form, rol) => (rol ? rolesApi.actualizar(rol.id, form) : rolesApi.crear(form)),
+    alGuardar: () => recargar(),
+    error: 'No se pudo guardar el rol.',
+  })
 
-  // Eliminación.
-  const [porEliminar, setPorEliminar] = useState(null)
-  const [errorEliminar, setErrorEliminar] = useState('')
-  const [eliminando, setEliminando] = useState(false)
+  // Eliminación: `registro` es el rol por eliminar.
+  const eliminacion = useFormulario(null, {
+    enviar: (_, rol) => rolesApi.eliminar(rol.id),
+    alGuardar: () => recargar(),
+    error: 'No se pudo eliminar el rol.',
+  })
 
   const [errorPermiso, setErrorPermiso] = useState('')
-
-  const cargar = () => {
-    setError('')
-    return api
-      .get('/roles/permisos')
-      .then((res) => setDatos(res.data))
-      .catch((err) => setError(mensajeError(err, 'No se pudo cargar la matriz de roles y permisos.')))
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [])
 
   if (error) {
     return (
       <div className="space-y-6">
-        <PageHeader accion={<BotonActualizar onClick={cargar} />} title="Roles y permisos" subtitle="Matriz rol → permiso" />
+        <PageHeader accion={<BotonActualizar onClick={recargar} />} title="Roles y permisos" subtitle="Matriz rol → permiso" />
         <AlertaFormulario mensaje={error} />
       </div>
     )
@@ -131,56 +123,9 @@ export default function RolesPermisos() {
   const totalConcedidos = asignaciones.length
   const rolVer = roles.find((r) => r.id === rolVerId) ?? null
 
-  const abrirCrear = () => {
-    setRolForm(ROL_VACIO)
-    setErrorRol('')
-    setCampoRol(null)
-    setModalRol('crear')
-  }
-
-  const abrirEditar = (rol) => {
-    setRolForm({ nombre: rol.nombre, descripcion: rol.descripcion ?? '' })
-    setErrorRol('')
-    setCampoRol(null)
-    setModalRol('editar')
-    setEditandoId(rol.id)
-  }
-
-  const guardarRol = async (e) => {
-    e.preventDefault()
-    setErrorRol('')
-    setCampoRol(null)
-    setGuardandoRol(true)
-    try {
-      if (modalRol === 'editar') {
-        await api.patch(`/roles/${editandoId}`, rolForm)
-      } else {
-        await api.post('/roles', rolForm)
-      }
-      setModalRol(null)
-      setEditandoId(null)
-      cargar()
-    } catch (err) {
-      setErrorRol(mensajeError(err, 'No se pudo guardar el rol.'))
-      setCampoRol(campoError(err))
-    } finally {
-      setGuardandoRol(false)
-    }
-  }
-
-  const eliminarRol = async () => {
-    setErrorEliminar('')
-    setEliminando(true)
-    try {
-      await api.delete(`/roles/${porEliminar.id}`)
-      setPorEliminar(null)
-      cargar()
-    } catch (err) {
-      setErrorEliminar(mensajeError(err, 'No se pudo eliminar el rol.'))
-    } finally {
-      setEliminando(false)
-    }
-  }
+  const abrirEditar = (rol) => formRol.abrir({ nombre: rol.nombre, descripcion: rol.descripcion ?? '' }, rol)
+  const editandoRol = formRol.registro
+  const porEliminar = eliminacion.registro
 
   /** Marca o desmarca un permiso: se guarda de inmediato el conjunto del rol. */
   const alternarPermiso = async (rol, permiso) => {
@@ -203,10 +148,10 @@ export default function RolesPermisos() {
     }))
 
     try {
-      await api.put(`/roles/${rol.id}/permisos`, { permiso_ids: nuevos })
+      await rolesApi.asignarPermisos(rol.id, nuevos)
     } catch (err) {
       setErrorPermiso(mensajeError(err, 'No se pudo actualizar el permiso.'))
-      cargar()
+      recargar()
     }
   }
 
@@ -227,7 +172,7 @@ export default function RolesPermisos() {
           <MagnifyingGlassIcon className="h-4 w-4" />
           {filtro && <span className="h-2 w-2 rounded-full bg-accent-500" aria-hidden="true" />}
         </button>
-        <button type="button" className="btn-primary" onClick={abrirCrear}>
+        <button type="button" className="btn-primary" onClick={() => formRol.abrir()}>
           <PlusIcon className="h-5 w-5" /> Nuevo rol
         </button>
       </PageHeader>
@@ -279,10 +224,7 @@ export default function RolesPermisos() {
                   className="rounded-lg p-1 text-red-600 hover:bg-red-50"
                   title="Eliminar rol"
                   aria-label={`Eliminar rol ${r.nombre}`}
-                  onClick={() => {
-                    setErrorEliminar('')
-                    setPorEliminar(r)
-                  }}
+                  onClick={() => eliminacion.abrir(null, r)}
                 >
                   <TrashIcon className="h-4 w-4" />
                 </button>
@@ -461,18 +403,10 @@ export default function RolesPermisos() {
 
       {/* Crear / editar rol */}
       <ModalFormulario
-        abierto={modalRol !== null}
-        titulo={modalRol === 'editar' ? 'Editar rol' : 'Nuevo rol'}
+        {...formRol.propsModal}
+        titulo={editandoRol ? 'Editar rol' : 'Nuevo rol'}
         subtitulo="El rol nuevo nace sin permisos: se los asigna en la matriz"
-        onCerrar={() => {
-          setModalRol(null)
-          setEditandoId(null)
-        }}
-        onGuardar={guardarRol}
-        guardando={guardandoRol}
-        error={errorRol}
-        campoError={campoRol}
-        textoGuardar={modalRol === 'editar' ? 'Guardar cambios' : 'Crear rol'}
+        textoGuardar={editandoRol ? 'Guardar cambios' : 'Crear rol'}
         espaciado="space-y-4"
       >
         <div>
@@ -481,10 +415,10 @@ export default function RolesPermisos() {
           </label>
           <input
             id="rol-nombre"
-            className={`${campoRol === 'nombre' ? 'input border-red-400' : 'input'} uppercase`}
-            value={rolForm.nombre}
-            disabled={modalRol === 'editar' && editandoId != null && roles.find((r) => r.id === editandoId)?.es_sistema}
-            onChange={(e) => setRolForm({ ...rolForm, nombre: e.target.value })}
+            className={`${formRol.claseCampo('nombre')} uppercase`}
+            value={formRol.valores.nombre}
+            disabled={Boolean(editandoRol?.es_sistema)}
+            onChange={(e) => formRol.cambiar('nombre', e.target.value)}
             required
             minLength={3}
             maxLength={50}
@@ -501,17 +435,17 @@ export default function RolesPermisos() {
             id="rol-descripcion"
             maxLength={255}
             className="input"
-            value={rolForm.descripcion}
-            onChange={(e) => setRolForm({ ...rolForm, descripcion: e.target.value })}
+            value={formRol.valores.descripcion}
+            onChange={(e) => formRol.cambiar('descripcion', e.target.value)}
           />
         </div>
       </ModalFormulario>
 
       {/* Confirmación de eliminación */}
       <Modal
-        abierto={porEliminar !== null}
+        abierto={eliminacion.abierto}
         titulo={`¿Eliminar el rol ${porEliminar?.nombre ?? ''}?`}
-        onCerrar={() => setPorEliminar(null)}
+        onCerrar={eliminacion.cerrar}
         ancho="max-w-md"
       >
         <p className="text-sm text-slate-600">
@@ -524,17 +458,17 @@ export default function RolesPermisos() {
             asignada(s): reasígnelas antes de eliminarlo.
           </p>
         )}
-        <AlertaFormulario mensaje={errorEliminar} />
+        <AlertaFormulario mensaje={eliminacion.error} />
         <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
           <button
             type="button"
             className="btn-primary disabled:opacity-60"
-            disabled={eliminando}
-            onClick={eliminarRol}
+            disabled={eliminacion.guardando}
+            onClick={eliminacion.guardar}
           >
-            {eliminando ? 'Eliminando…' : 'Eliminar'}
+            {eliminacion.guardando ? 'Eliminando…' : 'Eliminar'}
           </button>
-          <button type="button" className="btn-ghost" onClick={() => setPorEliminar(null)}>
+          <button type="button" className="btn-ghost" onClick={eliminacion.cerrar}>
             Cancelar
           </button>
         </div>
