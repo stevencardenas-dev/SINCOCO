@@ -20,8 +20,18 @@ export const fmtCOPCompacto = (n) => {
   return fmtCOP(valor)
 }
 
+/**
+ * Una fecha sin hora ('2026-03-01') se interpreta como día local: con
+ * `new Date('2026-03-01')` JavaScript la toma como medianoche UTC y en
+ * Colombia (UTC-5) se vería el día anterior.
+ */
+const aFecha = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ''))
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso)
+}
+
 export const fmtFecha = (iso) => {
-  const d = new Date(iso)
+  const d = aFecha(iso)
   if (Number.isNaN(d.getTime())) return iso
   const dia = d.toLocaleDateString('es-CO', { day: 'numeric' })
   const mes = d.toLocaleDateString('es-CO', { month: 'short' })

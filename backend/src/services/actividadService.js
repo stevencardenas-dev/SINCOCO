@@ -3,6 +3,7 @@ import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { validarFechasEnRango } from './etapaService.js'
+import { aFechaDia, validarDentroDeEtapa } from '../utils/fechas.js'
 import { verificarAccesoProyecto } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
@@ -22,11 +23,21 @@ export async function listarPorEtapa(etapaId, { incluirInactivos = false } = {},
   return actividadRepository.listarPorEtapa(etapaId, incluirInactivos)
 }
 
+async function validarResponsable(responsableId) {
+  if (!responsableId) return
+  const responsable = await trabajadorRepository.findById(responsableId)
+  if (!responsable) throw new AppError('El responsable indicado no existe', 404, 'responsable_id')
+  if (!responsable.activo) {
+    throw new AppError('El responsable está dado de baja', 400, 'responsable_id')
+  }
+}
+
 /**
  * HU-03: define una actividad.
  *  - Criterio 1: la actividad pertenece a una etapa existente y la etapa a un
  *    proyecto existente.
- *  - Criterio 3: sus fechas se mantienen dentro del rango del proyecto.
+ *  - Criterio 3: sus fechas se mantienen dentro del rango del proyecto y de
+ *    su etapa.
  *  - Criterio 4: admite responsable y descripción.
  *  - Criterio 5: el estado inicial es PENDIENTE.
  */
@@ -40,14 +51,8 @@ export async function registrarActividad(dto, ctx = {}) {
   await verificarAccesoProyecto(ctx.usuario, proyecto.id)
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto)
-
-  if (dto.responsable_id) {
-    const responsable = await trabajadorRepository.findById(dto.responsable_id)
-    if (!responsable) throw new AppError('El responsable indicado no existe', 404, 'responsable_id')
-    if (!responsable.activo) {
-      throw new AppError('El responsable está dado de baja', 400, 'responsable_id')
-    }
-  }
+  validarDentroDeEtapa(dto.fecha_inicio_programada, dto.fecha_fin_programada, etapa)
+  await validarResponsable(dto.responsable_id)
 
   const id = await actividadRepository.create({
     etapa_id: dto.etapa_id,
@@ -69,6 +74,39 @@ export async function registrarActividad(dto, ctx = {}) {
     ip: ctx.ip,
   })
 
+  return actividadRepository.findById(id)
+}
+
+/**
+ * Edita las propiedades de una actividad (nombre, descripción, responsable y
+ * fechas). Las fechas siguen limitadas por las de su etapa y las del proyecto.
+ */
+export async function actualizarActividad(id, dto, ctx = {}) {
+  const actividad = await actividadRepository.findById(id)
+  if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id)
+  if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+
+  const campos = { ...dto.campos }
+  const inicio = aFechaDia(campos.fecha_inicio_programada ?? actividad.fecha_inicio_programada)
+  const fin = aFechaDia(campos.fecha_fin_programada ?? actividad.fecha_fin_programada)
+
+  if (campos.fecha_inicio_programada || campos.fecha_fin_programada) {
+    const etapa = await etapaRepository.findById(actividad.etapa_id)
+    const proyecto = await proyectoRepository.findById(actividad.proyecto_id)
+    validarFechasEnRango(inicio, fin, proyecto)
+    validarDentroDeEtapa(inicio, fin, etapa)
+  }
+  if (campos.responsable_id !== undefined && campos.responsable_id !== actividad.responsable_id) {
+    await validarResponsable(campos.responsable_id)
+  }
+
+  await actividadRepository.update(id, campos)
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',
+    registroId: Number(id), detalles: { nombre: actividad.nombre, cambios: campos }, ip: ctx.ip,
+  })
   return actividadRepository.findById(id)
 }
 

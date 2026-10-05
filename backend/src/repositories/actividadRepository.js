@@ -55,3 +55,12 @@ export async function create(actividad) {
   )
   return result.insertId
 }
+
+/** Actualización parcial: solo se escriben los campos recibidos. */
+export async function update(id, campos) {
+  const asignaciones = Object.keys(campos).map((c) => `${c} = ?`)
+  await pool.query(
+    `UPDATE actividades SET ${asignaciones.join(', ')} WHERE id = ?`,
+    [...Object.values(campos), id],
+  )
+}

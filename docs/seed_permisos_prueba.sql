@@ -35,9 +35,11 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('trabajadores.dar_baja',    'Dar de baja lógica a un trabajador',       'personal'),
   ('etapas.listar',            'Consultar las etapas del plan de trabajo', 'planificacion'),
   ('etapas.crear',             'Definir etapas del plan de trabajo',       'planificacion'),
+  ('etapas.editar',           'Editar las propiedades de una etapa',      'planificacion'),
   ('etapas.dar_baja',          'Dar de baja lógica una etapa',             'planificacion'),
   ('actividades.listar',       'Consultar las actividades del plan',       'planificacion'),
   ('actividades.crear',        'Definir actividades del plan de trabajo',  'planificacion'),
+  ('actividades.editar',      'Editar las propiedades de una actividad',  'planificacion'),
   ('actividades.dar_baja',     'Dar de baja lógica una actividad',         'planificacion'),
   -- HU-17: la bitácora se consulta con un permiso propio, no con el de usuarios.
   ('auditoria.listar',         'Consultar la bitácora de trazabilidad',    'auditoria'),
@@ -71,8 +73,8 @@ WHERE r.`nombre` = 'GERENTE'
     'proyectos.listar', 'proyectos.registrar', 'proyectos.editar', 'proyectos.dar_baja',
     'proyectos.acceso_total', 'proyectos.gestionar_acceso',
     'trabajadores.listar', 'trabajadores.crear', 'trabajadores.editar', 'trabajadores.dar_baja',
-    'etapas.listar', 'etapas.crear', 'etapas.dar_baja',
-    'actividades.listar', 'actividades.crear', 'actividades.dar_baja',
+    'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
+    'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
     'catalogos.listar', 'catalogos.gestionar'
   );
 
@@ -86,8 +88,8 @@ FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'MAESTRO_OBRA'
   AND p.`nombre` IN (
     'proyectos.listar', 'proyectos.editar',
-    'etapas.listar', 'etapas.crear', 'etapas.dar_baja',
-    'actividades.listar', 'actividades.crear', 'actividades.dar_baja',
+    'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
+    'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
     'clientes.listar', 'trabajadores.listar'
   );
 

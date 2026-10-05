@@ -1,5 +1,6 @@
-import { listarEtapas, registrarEtapa, darDeBajaEtapa, reactivarEtapa } from '../services/etapaService.js'
+import { listarEtapas, registrarEtapa, actualizarEtapa, darDeBajaEtapa, reactivarEtapa } from '../services/etapaService.js'
 import { RegistrarEtapaDto } from '../dtos/etapa/RegistrarEtapaDto.js'
+import { ActualizarEtapaDto } from '../dtos/etapa/ActualizarEtapaDto.js'
 import { AppError } from '../utils/AppError.js'
 
 const incluir = (q) => ['1', 'true', 'on'].includes(String(q.incluirInactivos))
@@ -23,6 +24,17 @@ export async function registrar(req, res, next) {
     const dto = RegistrarEtapaDto.fromRequestBody(req.body)
     const etapa = await registrarEtapa(dto, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.status(201).json({ message: 'Etapa registrada correctamente', etapa })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/etapas/:id -> editar las propiedades de una etapa. */
+export async function actualizar(req, res, next) {
+  try {
+    const dto = ActualizarEtapaDto.fromRequestBody(req.body)
+    const etapa = await actualizarEtapa(req.params.id, dto, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Etapa actualizada correctamente', etapa })
   } catch (error) {
     return next(error)
   }

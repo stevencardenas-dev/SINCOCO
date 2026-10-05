@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeftIcon, ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowPathIcon, PencilSquareIcon, PlusIcon } from '@heroicons/react/24/outline'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
-import { mensajeError } from '../lib/errores.js'
+import { campoError, mensajeError } from '../lib/errores.js'
 import { fmtFecha } from '../lib/format.js'
 
 /**
@@ -17,8 +18,11 @@ import { fmtFecha } from '../lib/format.js'
  * proyecto.
  */
 
-const ETAPA_VACIA = { nombre: '', descripcion: '', orden: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+
+// Las fechas llegan como 'YYYY-MM-DD'; el recorte tolera también un ISO completo.
+const dia = (v) => String(v ?? '').slice(0, 10)
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -47,6 +51,8 @@ export default function PlanProyecto() {
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
   const puedeEtapas = puede('etapas.crear')
   const puedeActividades = puede('actividades.crear')
+  const puedeEditarEtapas = puede('etapas.editar')
+  const puedeEditarActividades = puede('actividades.editar')
   const puedeAcceso = puede('proyectos.gestionar_acceso')
 
   const [proyecto, setProyecto] = useState(null)
@@ -62,6 +68,13 @@ export default function PlanProyecto() {
   // Errores de negocio dentro de cada formulario, no sobre la tabla.
   const [errorEtapa, setErrorEtapa] = useState('')
   const [errorActividad, setErrorActividad] = useState('')
+  // Edición: la etapa o actividad abierta en la ventana y su formulario.
+  const [editandoEtapa, setEditandoEtapa] = useState(null)
+  const [editandoActividad, setEditandoActividad] = useState(null)
+  const [formEdicion, setFormEdicion] = useState(ETAPA_VACIA)
+  const [errorEdicion, setErrorEdicion] = useState('')
+  const [campoEdicion, setCampoEdicion] = useState(null)
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false)
   // Gestión de acceso (RBAC): quién puede consultar este proyecto.
   const [asignaciones, setAsignaciones] = useState([])
   const [accesoForm, setAccesoForm] = useState(ACCESO_VACIO)
@@ -90,6 +103,12 @@ export default function PlanProyecto() {
   useEffect(() => {
     cargar()
   }, [id])
+
+  /** Rango permitido para las actividades de una etapa (por defecto, el del proyecto). */
+  const limiteEtapa = (et) => ({
+    min: dia(et.fecha_inicio_programada) || dia(proyecto?.fecha_inicio_programada),
+    max: dia(et.fecha_fin_programada) || dia(proyecto?.fecha_fin_programada),
+  })
 
   const crearEtapa = async (e) => {
     e.preventDefault()
@@ -141,6 +160,63 @@ export default function PlanProyecto() {
       cargar()
     } catch (err) {
       setErrorAcceso(mensajeError(err, 'No se pudo finalizar la asignación.'))
+    }
+  }
+
+  const cerrarEdicion = () => {
+    setEditandoEtapa(null)
+    setEditandoActividad(null)
+    setErrorEdicion('')
+    setCampoEdicion(null)
+  }
+
+  const abrirEdicionEtapa = (et) => {
+    cerrarEdicion()
+    setFormEdicion({
+      nombre: et.nombre,
+      descripcion: et.descripcion ?? '',
+      fecha_inicio_programada: dia(et.fecha_inicio_programada),
+      fecha_fin_programada: dia(et.fecha_fin_programada),
+    })
+    setEditandoEtapa(et)
+  }
+
+  const abrirEdicionActividad = (a) => {
+    cerrarEdicion()
+    setFormEdicion({
+      nombre: a.nombre,
+      descripcion: a.descripcion ?? '',
+      responsable_id: a.responsable_id ?? '',
+      fecha_inicio_programada: dia(a.fecha_inicio_programada),
+      fecha_fin_programada: dia(a.fecha_fin_programada),
+    })
+    setEditandoActividad(a)
+  }
+
+  const guardarEdicion = async (e) => {
+    e.preventDefault()
+    setErrorEdicion('')
+    setCampoEdicion(null)
+    setAviso('')
+    setGuardandoEdicion(true)
+    try {
+      if (editandoEtapa) {
+        await api.patch(`/etapas/${editandoEtapa.id}`, formEdicion)
+        setAviso('Etapa actualizada.')
+      } else {
+        await api.patch(`/actividades/${editandoActividad.id}`, {
+          ...formEdicion,
+          responsable_id: formEdicion.responsable_id || null,
+        })
+        setAviso('Actividad actualizada.')
+      }
+      cerrarEdicion()
+      cargar()
+    } catch (err) {
+      setErrorEdicion(mensajeError(err, 'No se pudo guardar el cambio.'))
+      setCampoEdicion(campoError(err))
+    } finally {
+      setGuardandoEdicion(false)
     }
   }
 
@@ -197,22 +273,22 @@ export default function PlanProyecto() {
                 onChange={(e) => setEtapaForm({ ...etapaForm, nombre: e.target.value })} required />
             </div>
             <div>
-              <label htmlFor="e-orden" className="label">Orden</label>
-              <input id="e-orden" type="number" min="1" max="999" step="1" className="input" value={etapaForm.orden}
-                onChange={(e) => setEtapaForm({ ...etapaForm, orden: e.target.value })}
-                placeholder="Automático si se deja vacío" />
-            </div>
-            <div>
               <label htmlFor="e-inicio" className="label">Inicio programado</label>
-              <input id="e-inicio" type="date" className="input" value={etapaForm.fecha_inicio_programada}
+              <input id="e-inicio" type="date" className="input" required value={etapaForm.fecha_inicio_programada}
+                min={dia(proyecto?.fecha_inicio_programada)} max={dia(proyecto?.fecha_fin_programada)}
                 onChange={(e) => setEtapaForm({ ...etapaForm, fecha_inicio_programada: e.target.value })} />
             </div>
             <div>
               <label htmlFor="e-fin" className="label">Fin programado</label>
-              <input id="e-fin" type="date" className="input" value={etapaForm.fecha_fin_programada}
+              <input id="e-fin" type="date" className="input" required value={etapaForm.fecha_fin_programada}
+                min={etapaForm.fecha_inicio_programada || dia(proyecto?.fecha_inicio_programada)}
+                max={dia(proyecto?.fecha_fin_programada)}
                 onChange={(e) => setEtapaForm({ ...etapaForm, fecha_fin_programada: e.target.value })} />
             </div>
           </div>
+          <p className="text-xs text-slate-500">
+            El orden se asigna solo según la fecha de inicio, y las fechas no pueden solaparse con las de otra etapa.
+          </p>
           <div className="flex items-center gap-3">
             <AlertaFormulario mensaje={errorEtapa} />
             <button type="submit" className="btn-primary">Registrar etapa</button>
@@ -249,6 +325,11 @@ export default function PlanProyecto() {
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                   {et.estado?.replace('_', ' ').toLowerCase()}
                 </span>
+                {puedeEditarEtapas && (
+                  <button className="btn-ghost text-xs" onClick={() => abrirEdicionEtapa(et)}>
+                    <PencilSquareIcon className="h-4 w-4" /> Editar
+                  </button>
+                )}
                 {puedeActividades && (
                   <button
                     className="btn-ghost text-xs"
@@ -291,11 +372,13 @@ export default function PlanProyecto() {
                 <div>
                   <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
                   <input id={`a-inicio-${et.id}`} type="date" className="input" value={actividadForm.fecha_inicio_programada}
+                    min={limiteEtapa(et).min} max={limiteEtapa(et).max}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_inicio_programada: e.target.value })} required />
                 </div>
                 <div>
                   <label htmlFor={`a-fin-${et.id}`} className="label">Fin programado</label>
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={actividadForm.fecha_fin_programada}
+                    min={actividadForm.fecha_inicio_programada || limiteEtapa(et).min} max={limiteEtapa(et).max}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_fin_programada: e.target.value })} required />
                 </div>
                 <div className="sm:col-span-2">
@@ -319,6 +402,7 @@ export default function PlanProyecto() {
                     <th className="px-5 py-2.5 font-semibold">Fechas</th>
                     <th className="px-5 py-2.5 font-semibold">Estado</th>
                     <th className="px-5 py-2.5 font-semibold">Avance</th>
+                    {puedeEditarActividades && <th className="px-5 py-2.5 font-semibold">Acciones</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -337,6 +421,13 @@ export default function PlanProyecto() {
                       <td className="px-5 py-3 text-xs font-semibold tabular-nums text-slate-600">
                         {Number(a.porcentaje_avance)}%
                       </td>
+                      {puedeEditarActividades && (
+                        <td className="px-5 py-3">
+                          <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
+                            Editar
+                          </button>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -508,8 +599,81 @@ export default function PlanProyecto() {
         </div>
       )}
 
+      {/* Edición de etapa o actividad en una ventana; el error de negocio va dentro. */}
+      <ModalFormulario
+        abierto={Boolean(editandoEtapa || editandoActividad)}
+        titulo={editandoEtapa ? 'Editar etapa' : 'Editar actividad'}
+        subtitulo={editandoEtapa?.nombre ?? editandoActividad?.nombre}
+        onGuardar={guardarEdicion}
+        onCerrar={cerrarEdicion}
+        guardando={guardandoEdicion}
+        error={errorEdicion}
+        campoError={campoEdicion}
+      >
+        {(editandoEtapa || editandoActividad) && (() => {
+          const lim = editandoEtapa
+            ? { min: dia(proyecto?.fecha_inicio_programada), max: dia(proyecto?.fecha_fin_programada) }
+            : limiteEtapa(etapas.find((x) => x.id === editandoActividad.etapa_id) ?? {})
+          const marca = (campo) => (campoEdicion === campo ? ' border-red-400' : '')
+          return (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="ed-nombre" className="label">Nombre</label>
+                <input id="ed-nombre" className={`input${marca('nombre')}`} maxLength={editandoEtapa ? 100 : 150}
+                  value={formEdicion.nombre} required
+                  onChange={(e) => setFormEdicion({ ...formEdicion, nombre: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="ed-descripcion" className="label">Descripción</label>
+                <textarea id="ed-descripcion" rows={2} className={`input${marca('descripcion')}`}
+                  value={formEdicion.descripcion}
+                  onChange={(e) => setFormEdicion({ ...formEdicion, descripcion: e.target.value })} />
+              </div>
+              {editandoActividad && (
+                <div className="sm:col-span-2">
+                  <label htmlFor="ed-resp" className="label">Responsable</label>
+                  <BuscadorSelect
+                    id="ed-resp"
+                    value={formEdicion.responsable_id}
+                    onChange={(v) => setFormEdicion({ ...formEdicion, responsable_id: v })}
+                    opciones={[
+                      { value: '', label: 'Sin asignar' },
+                      ...responsables.map((t) => ({
+                        value: t.id,
+                        label: `${t.nombres} ${t.apellidos}`,
+                        sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
+                      })),
+                    ]}
+                    vacio="Sin asignar"
+                    placeholder="Escriba el nombre del responsable…"
+                  />
+                </div>
+              )}
+              <div>
+                <label htmlFor="ed-inicio" className="label">Inicio programado</label>
+                <input id="ed-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
+                  value={formEdicion.fecha_inicio_programada} min={lim.min} max={lim.max}
+                  onChange={(e) => setFormEdicion({ ...formEdicion, fecha_inicio_programada: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="ed-fin" className="label">Fin programado</label>
+                <input id="ed-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
+                  value={formEdicion.fecha_fin_programada}
+                  min={formEdicion.fecha_inicio_programada || lim.min} max={lim.max}
+                  onChange={(e) => setFormEdicion({ ...formEdicion, fecha_fin_programada: e.target.value })} />
+              </div>
+              <p className="text-xs text-slate-500 sm:col-span-2">
+                {editandoEtapa
+                  ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
+                  : 'Las fechas deben quedar dentro de las de la etapa.'}
+              </p>
+            </div>
+          )
+        })()}
+      </ModalFormulario>
+
       <p className="text-xs text-slate-400">
-        Las fechas de las etapas y actividades se validan dentro del rango del proyecto.
+        Las etapas no se solapan entre sí, y las fechas de cada actividad se limitan a las de su etapa y del proyecto.
       </p>
     </div>
   )
