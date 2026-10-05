@@ -8,6 +8,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -399,121 +400,116 @@ export default function Catalogo() {
       )}
 
       {/* Crear / editar un registro del catálogo */}
-      <Modal
+      <ModalFormulario
         abierto={modal !== null}
         titulo={`${modal === 'editar' ? 'Editar' : 'Nuevo'} ${tab.etiqueta}`}
         subtitulo="Los cambios aplican de inmediato en los formularios del sistema"
         onCerrar={cerrarModal}
+        onGuardar={guardar}
+        guardando={guardando}
+        error={errorForm}
+        campoError={campoForm}
+        textoGuardar={modal === 'editar' ? 'Guardar cambios' : 'Agregar'}
+        espaciado="space-y-4"
       >
-        <form onSubmit={guardar} className="space-y-4">
-          {tipo === 'clientes' ? (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="cat-tipo-doc" className="label">Tipo de documento</label>
-                  <select id="cat-tipo-doc" className="input" value={form.tipo_documento}
-                    onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}>
-                    {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="cat-documento" className="label">Documento</label>
-                  <input id="cat-documento" className="input" maxLength={20} value={form.numero_documento}
-                    onChange={(e) => setForm({ ...form, numero_documento: e.target.value })}
-                    disabled={modal === 'editar'} required />
-                  {modal === 'editar' && (
-                    <p className="mt-1 text-xs text-slate-500">
-                      El documento identifica al cliente y no se edita.
-                    </p>
-                  )}
-                </div>
-              </div>
+        {tipo === 'clientes' ? (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label htmlFor="cat-razon" className="label">Razón social / nombre</label>
-                <input id="cat-razon" className="input" maxLength={150} value={form.razon_social_nombre}
-                  onChange={(e) => setForm({ ...form, razon_social_nombre: e.target.value })} required />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="cat-contacto" className="label">Nombre del contacto</label>
-                  <input id="cat-contacto" className="input" value={form.nombre_contacto}
-                    onChange={(e) => setForm({ ...form, nombre_contacto: e.target.value })} />
-                </div>
-                <div>
-                  <label htmlFor="cat-telefono" className="label">Teléfono</label>
-                  <TelefonoPais id="cat-telefono" value={form.telefono}
-                    onChange={(v) => setForm({ ...form, telefono: v })}
-                    error={campoForm === 'telefono'} />
-                </div>
-                <div>
-                  <label htmlFor="cat-email" className="label">Correo</label>
-                  <input id="cat-email" type="email" maxLength={150} autoComplete="email"
-                    placeholder="nombre@correo.com" className={campo('email')} value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                </div>
-                <div className="sm:col-span-2">
-                  <label htmlFor="cat-direccion" className="label">Dirección</label>
-                  <div className="flex gap-2">
-                    <input id="cat-direccion" maxLength={255} className="input"
-                      placeholder="Escriba la dirección o selecciónela en el mapa"
-                      value={form.direccion}
-                      onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
-                    <button type="button" className="btn-ghost shrink-0" onClick={() => setMapaAbierto(true)}>
-                      <MapPinIcon className="h-4 w-4" /> Mapa
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <label htmlFor="cat-nombre" className="label">Nombre</label>
-                <input id="cat-nombre" className="input" maxLength={100} value={form.nombre} required minLength={3}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
-              </div>
-              <div>
-                <label htmlFor="cat-descripcion" className="label">Descripción</label>
-                <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
-              </div>
-              <div>
-                <label htmlFor="cat-categoria" className="label">Categoría</label>
-                <select id="cat-categoria" className="input" value={form.categoria}
-                  onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
-                  <option value="">Sin categoría (aparece en «{SIN_CATEGORIA}»)</option>
-                  {CATEGORIAS[tipo].map((c) => <option key={c} value={c}>{c}</option>)}
+                <label htmlFor="cat-tipo-doc" className="label">Tipo de documento</label>
+                <select id="cat-tipo-doc" className="input" value={form.tipo_documento}
+                  onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}>
+                  {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <p className="mt-1 text-xs text-slate-500">
-                  Agrupa este valor en los selectores del formulario de personal.
-                </p>
               </div>
-              {tipo === 'cargos' && (
-                <label className="flex items-start gap-2 text-sm text-slate-700">
-                  <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                    checked={Boolean(form.operativo)}
-                    onChange={(e) => setForm({ ...form, operativo: e.target.checked })} />
-                  <span>
-                    Es cargo de obra
-                    <span className="block text-xs text-slate-500">
-                      Para estos cargos la especialidad es obligatoria al registrar personal.
-                    </span>
+              <div>
+                <label htmlFor="cat-documento" className="label">Documento</label>
+                <input id="cat-documento" className="input" maxLength={20} value={form.numero_documento}
+                  onChange={(e) => setForm({ ...form, numero_documento: e.target.value })}
+                  disabled={modal === 'editar'} required />
+                {modal === 'editar' && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    El documento identifica al cliente y no se edita.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div>
+              <label htmlFor="cat-razon" className="label">Razón social / nombre</label>
+              <input id="cat-razon" className="input" maxLength={150} value={form.razon_social_nombre}
+                onChange={(e) => setForm({ ...form, razon_social_nombre: e.target.value })} required />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="cat-contacto" className="label">Nombre del contacto</label>
+                <input id="cat-contacto" className="input" value={form.nombre_contacto}
+                  onChange={(e) => setForm({ ...form, nombre_contacto: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="cat-telefono" className="label">Teléfono</label>
+                <TelefonoPais id="cat-telefono" value={form.telefono}
+                  onChange={(v) => setForm({ ...form, telefono: v })}
+                  error={campoForm === 'telefono'} />
+              </div>
+              <div>
+                <label htmlFor="cat-email" className="label">Correo</label>
+                <input id="cat-email" type="email" maxLength={150} autoComplete="email"
+                  placeholder="nombre@correo.com" className={campo('email')} value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              </div>
+              <div className="sm:col-span-2">
+                <label htmlFor="cat-direccion" className="label">Dirección</label>
+                <div className="flex gap-2">
+                  <input id="cat-direccion" maxLength={255} className="input"
+                    placeholder="Escriba la dirección o selecciónela en el mapa"
+                    value={form.direccion}
+                    onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+                  <button type="button" className="btn-ghost shrink-0" onClick={() => setMapaAbierto(true)}>
+                    <MapPinIcon className="h-4 w-4" /> Mapa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <label htmlFor="cat-nombre" className="label">Nombre</label>
+              <input id="cat-nombre" className="input" maxLength={100} value={form.nombre} required minLength={3}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="cat-descripcion" className="label">Descripción</label>
+              <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
+                onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+            </div>
+            <div>
+              <label htmlFor="cat-categoria" className="label">Categoría</label>
+              <select id="cat-categoria" className="input" value={form.categoria}
+                onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                <option value="">Sin categoría (aparece en «{SIN_CATEGORIA}»)</option>
+                {CATEGORIAS[tipo].map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Agrupa este valor en los selectores del formulario de personal.
+              </p>
+            </div>
+            {tipo === 'cargos' && (
+              <label className="flex items-start gap-2 text-sm text-slate-700">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                  checked={Boolean(form.operativo)}
+                  onChange={(e) => setForm({ ...form, operativo: e.target.checked })} />
+                <span>
+                  Es cargo de obra
+                  <span className="block text-xs text-slate-500">
+                    Para estos cargos la especialidad es obligatoria al registrar personal.
                   </span>
-                </label>
-              )}
-            </>
-          )}
-
-          <AlertaFormulario mensaje={errorForm} campo={campoForm} />
-
-          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-            <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
-              {guardando ? 'Guardando…' : modal === 'editar' ? 'Guardar cambios' : 'Agregar'}
-            </button>
-            <button type="button" className="btn-ghost" onClick={cerrarModal}>Cancelar</button>
-          </div>
-        </form>
-      </Modal>
+                </span>
+              </label>
+            )}
+          </>
+        )}
+      </ModalFormulario>
 
       {/* Mapa para la dirección del cliente: devuelve el texto normalizado al formulario. */}
       <SelectorUbicacion

@@ -11,7 +11,7 @@ import {
   PencilSquareIcon,
   PlusIcon,
 } from '@heroicons/react/24/outline'
-import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -382,7 +382,7 @@ export default function Proyectos() {
       </FiltrosDesplegable>
 
       {gestionaProyectos && (
-        <Modal
+        <ModalFormulario
           abierto={abierto}
           titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto'}
           subtitulo={
@@ -392,203 +392,194 @@ export default function Proyectos() {
           }
           onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
+          onGuardar={guardar}
+          guardando={guardando}
+          error={errorForm}
+          campoError={campoForm}
+          textoGuardar={editando ? 'Guardar cambios' : 'Registrar proyecto'}
         >
-          <form onSubmit={guardar} className="space-y-5">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label htmlFor="p-codigo" className="label">
-                  Código
-                </label>
-                <input
-                  id="p-codigo"
-                  maxLength={20}
-                  className={campo('codigo')}
-                  value={form.codigo}
-                  onChange={(e) => setForm({ ...form, codigo: e.target.value })}
-                  disabled={Boolean(editando)}
-                  required
-                />
-                {editando && (
-                  <p className="mt-1 text-xs text-slate-500">
-                    El código identifica el proyecto y no se edita.
-                  </p>
-                )}
-              </div>
-              <div>
-                <label htmlFor="p-nombre" className="label">
-                  Nombre
-                </label>
-                <input
-                  id="p-nombre"
-                  maxLength={150}
-                  className={campo('nombre')}
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="p-cliente" className="label">
-                  Cliente
-                </label>
-                {/* Combobox con búsqueda: la lista de clientes crece. */}
-                <BuscadorSelect
-                  id="p-cliente"
-                  value={form.cliente_id}
-                  onChange={(v) => setForm({ ...form, cliente_id: v })}
-                  opciones={opcionesClientes}
-                  placeholder="Escriba el nombre del cliente…"
-                  error={campoForm === 'cliente_id'}
-                  requerido
-                />
-                {puedeCrearCliente && (
-                  <button
-                    type="button"
-                    className="mt-1 text-xs font-medium text-brand-700 hover:underline"
-                    onClick={() => setClienteAbierto((v) => !v)}
-                  >
-                    <BuildingOffice2Icon className="mr-1 inline h-4 w-4" />
-                    El cliente no está en la lista: registrarlo
-                  </button>
-                )}
-              </div>
-              <div>
-                <label htmlFor="p-responsable" className="label">
-                  Responsable
-                </label>
-                <BuscadorSelect
-                  id="p-responsable"
-                  value={form.responsable_id}
-                  onChange={(v) => setForm({ ...form, responsable_id: v })}
-                  opciones={opcionesResponsables}
-                  placeholder="Escriba el nombre del responsable…"
-                  error={campoForm === 'responsable_id'}
-                  requerido
-                />
-              </div>
-
-              <div>
-                <label htmlFor="p-inicio" className="label">
-                  Inicio programado
-                </label>
-                <input
-                  id="p-inicio"
-                  type="date"
-                  className={campo('fecha_inicio_programada')}
-                  value={form.fecha_inicio_programada}
-                  onChange={(e) => setForm({ ...form, fecha_inicio_programada: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="p-fin" className="label">
-                  Fin programado
-                </label>
-                <input
-                  id="p-fin"
-                  type="date"
-                  className={campo('fecha_fin_programada')}
-                  value={form.fecha_fin_programada}
-                  onChange={(e) => setForm({ ...form, fecha_fin_programada: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div>
-                <label htmlFor="p-ubicacion" className="label">
-                  Ubicación
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="p-ubicacion"
-                    maxLength={255}
-                    className={campo('ubicacion')}
-                    placeholder="Escriba la dirección o selecciónela en el mapa"
-                    value={form.ubicacion}
-                    onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
-                    required
-                  />
-                  <button
-                    type="button"
-                    className="btn-ghost shrink-0"
-                    onClick={() => setMapaAbierto(true)}
-                  >
-                    <MapPinIcon className="h-4 w-4" /> Mapa
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label htmlFor="p-presupuesto" className="label">
-                  Presupuesto inicial (COP)
-                </label>
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
-                    $
-                  </span>
-                  <input
-                    id="p-presupuesto"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="850.000.000"
-                    className={`${campo('presupuesto_inicial')} pl-8 tabular-nums`}
-                    value={fmtMiles(form.presupuesto_inicial)}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        presupuesto_inicial: soloDigitos(e.target.value).slice(
-                          0,
-                          MAX_DIGITOS_PRESUPUESTO,
-                        ),
-                      })
-                    }
-                    required
-                  />
-                </div>
-                <p
-                  className={`mt-1 text-xs ${
-                    form.presupuesto_inicial && presupuestoNumero <= 0
-                      ? 'font-medium text-red-600'
-                      : 'text-slate-500'
-                  }`}
-                >
-                  {presupuestoNumero > 0
-                    ? `${fmtCOP(presupuestoNumero)} · ${montoEnPalabras(form.presupuesto_inicial)}`
-                    : form.presupuesto_inicial
-                      ? 'El presupuesto debe ser mayor que cero.'
-                      : 'Escriba el monto en pesos, sin puntos: se separan solos.'}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="p-codigo" className="label">
+                Código
+              </label>
+              <input
+                id="p-codigo"
+                maxLength={20}
+                className={campo('codigo')}
+                value={form.codigo}
+                onChange={(e) => setForm({ ...form, codigo: e.target.value })}
+                disabled={Boolean(editando)}
+                required
+              />
+              {editando && (
+                <p className="mt-1 text-xs text-slate-500">
+                  El código identifica el proyecto y no se edita.
                 </p>
-              </div>
+              )}
+            </div>
+            <div>
+              <label htmlFor="p-nombre" className="label">
+                Nombre
+              </label>
+              <input
+                id="p-nombre"
+                maxLength={150}
+                className={campo('nombre')}
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                required
+              />
+            </div>
 
-              <div className="sm:col-span-2">
-                <label htmlFor="p-descripcion" className="label">
-                  Descripción
-                </label>
-                <textarea
-                  id="p-descripcion"
-                  maxLength={5000}
-                  className="input"
-                  rows={2}
-                  value={form.descripcion}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+            <div>
+              <label htmlFor="p-cliente" className="label">
+                Cliente
+              </label>
+              {/* Combobox con búsqueda: la lista de clientes crece. */}
+              <BuscadorSelect
+                id="p-cliente"
+                value={form.cliente_id}
+                onChange={(v) => setForm({ ...form, cliente_id: v })}
+                opciones={opcionesClientes}
+                placeholder="Escriba el nombre del cliente…"
+                error={campoForm === 'cliente_id'}
+                requerido
+              />
+              {puedeCrearCliente && (
+                <button
+                  type="button"
+                  className="mt-1 text-xs font-medium text-brand-700 hover:underline"
+                  onClick={() => setClienteAbierto((v) => !v)}
+                >
+                  <BuildingOffice2Icon className="mr-1 inline h-4 w-4" />
+                  El cliente no está en la lista: registrarlo
+                </button>
+              )}
+            </div>
+            <div>
+              <label htmlFor="p-responsable" className="label">
+                Responsable
+              </label>
+              <BuscadorSelect
+                id="p-responsable"
+                value={form.responsable_id}
+                onChange={(v) => setForm({ ...form, responsable_id: v })}
+                opciones={opcionesResponsables}
+                placeholder="Escriba el nombre del responsable…"
+                error={campoForm === 'responsable_id'}
+                requerido
+              />
+            </div>
+
+            <div>
+              <label htmlFor="p-inicio" className="label">
+                Inicio programado
+              </label>
+              <input
+                id="p-inicio"
+                type="date"
+                className={campo('fecha_inicio_programada')}
+                value={form.fecha_inicio_programada}
+                onChange={(e) => setForm({ ...form, fecha_inicio_programada: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="p-fin" className="label">
+                Fin programado
+              </label>
+              <input
+                id="p-fin"
+                type="date"
+                className={campo('fecha_fin_programada')}
+                value={form.fecha_fin_programada}
+                onChange={(e) => setForm({ ...form, fecha_fin_programada: e.target.value })}
+                required
+              />
+            </div>
+
+            <div>
+              <label htmlFor="p-ubicacion" className="label">
+                Ubicación
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="p-ubicacion"
+                  maxLength={255}
+                  className={campo('ubicacion')}
+                  placeholder="Escriba la dirección o selecciónela en el mapa"
+                  value={form.ubicacion}
+                  onChange={(e) => setForm({ ...form, ubicacion: e.target.value })}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn-ghost shrink-0"
+                  onClick={() => setMapaAbierto(true)}
+                >
+                  <MapPinIcon className="h-4 w-4" /> Mapa
+                </button>
+              </div>
+            </div>
+            <div>
+              <label htmlFor="p-presupuesto" className="label">
+                Presupuesto inicial (COP)
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-400">
+                  $
+                </span>
+                <input
+                  id="p-presupuesto"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  placeholder="850.000.000"
+                  className={`${campo('presupuesto_inicial')} pl-8 tabular-nums`}
+                  value={fmtMiles(form.presupuesto_inicial)}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      presupuesto_inicial: soloDigitos(e.target.value).slice(
+                        0,
+                        MAX_DIGITOS_PRESUPUESTO,
+                      ),
+                    })
+                  }
+                  required
                 />
               </div>
+              <p
+                className={`mt-1 text-xs ${
+                  form.presupuesto_inicial && presupuestoNumero <= 0
+                    ? 'font-medium text-red-600'
+                    : 'text-slate-500'
+                }`}
+              >
+                {presupuestoNumero > 0
+                  ? `${fmtCOP(presupuestoNumero)} · ${montoEnPalabras(form.presupuesto_inicial)}`
+                  : form.presupuesto_inicial
+                    ? 'El presupuesto debe ser mayor que cero.'
+                    : 'Escriba el monto en pesos, sin puntos: se separan solos.'}
+              </p>
             </div>
 
-            {/* El error de negocio se muestra aquí, dentro del formulario. */}
-            <AlertaFormulario mensaje={errorForm} campo={campoForm} />
-
-            <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-              <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
-                {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar proyecto'}
-              </button>
-              <button type="button" className="btn-ghost" onClick={cerrarFormulario}>
-                Cancelar
-              </button>
+            <div className="sm:col-span-2">
+              <label htmlFor="p-descripcion" className="label">
+                Descripción
+              </label>
+              <textarea
+                id="p-descripcion"
+                maxLength={5000}
+                className="input"
+                rows={2}
+                value={form.descripcion}
+                onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+              />
             </div>
-          </form>
-        </Modal>
+          </div>
+        </ModalFormulario>
       )}
 
       {/* Mapa para la ubicación: devuelve el texto normalizado al formulario. */}
@@ -604,7 +595,7 @@ export default function Proyectos() {
 
       {/* CU-02 Alt 2: alta rápida del cliente dentro de su propia ventana. */}
       {puedeCrearCliente && (
-        <Modal
+        <ModalFormulario
           abierto={clienteAbierto}
           titulo="Registrar cliente"
           subtitulo="Queda guardado en el catálogo y seleccionado en el proyecto"
@@ -612,98 +603,82 @@ export default function Proyectos() {
             setClienteAbierto(false)
             setErrorCliente('')
           }}
+          onGuardar={crearCliente}
+          error={errorCliente}
+          textoGuardar="Registrar cliente"
+          espaciado="space-y-4"
         >
-          <form onSubmit={crearCliente} className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="c-tipo" className="label">
-                  Tipo de documento
-                </label>
-                <select
-                  id="c-tipo"
-                  className="input"
-                  value={clienteForm.tipo_documento}
-                  onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
-                >
-                  <option value="NIT">NIT</option>
-                  <option value="CC">CC</option>
-                  <option value="CE">CE</option>
-                  <option value="PASAPORTE">Pasaporte</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="c-doc" className="label">
-                  Documento
-                </label>
-                <input
-                  id="c-doc"
-                  maxLength={20}
-                  className="input"
-                  value={clienteForm.numero_documento}
-                  onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })}
-                  required
-                />
-              </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="c-tipo" className="label">
+                Tipo de documento
+              </label>
+              <select
+                id="c-tipo"
+                className="input"
+                value={clienteForm.tipo_documento}
+                onChange={(e) => setClienteForm({ ...clienteForm, tipo_documento: e.target.value })}
+              >
+                <option value="NIT">NIT</option>
+                <option value="CC">CC</option>
+                <option value="CE">CE</option>
+                <option value="PASAPORTE">Pasaporte</option>
+              </select>
             </div>
             <div>
-              <label htmlFor="c-nombre" className="label">
-                Razón social / nombre
+              <label htmlFor="c-doc" className="label">
+                Documento
               </label>
               <input
-                id="c-nombre"
-                maxLength={150}
+                id="c-doc"
+                maxLength={20}
                 className="input"
-                value={clienteForm.razon_social_nombre}
-                onChange={(e) => setClienteForm({ ...clienteForm, razon_social_nombre: e.target.value })}
+                value={clienteForm.numero_documento}
+                onChange={(e) => setClienteForm({ ...clienteForm, numero_documento: e.target.value })}
                 required
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="c-contacto" className="label">
-                  Nombre del contacto
-                </label>
-                <input
-                  id="c-contacto"
-                  maxLength={100}
-                  className="input"
-                  value={clienteForm.nombre_contacto}
-                  onChange={(e) => setClienteForm({ ...clienteForm, nombre_contacto: e.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="c-telefono" className="label">
-                  Teléfono
-                </label>
-                <input
-                  id="c-telefono"
-                  maxLength={20}
-                  className="input"
-                  value={clienteForm.telefono}
-                  onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
-                />
-              </div>
+          </div>
+          <div>
+            <label htmlFor="c-nombre" className="label">
+              Razón social / nombre
+            </label>
+            <input
+              id="c-nombre"
+              maxLength={150}
+              className="input"
+              value={clienteForm.razon_social_nombre}
+              onChange={(e) => setClienteForm({ ...clienteForm, razon_social_nombre: e.target.value })}
+              required
+            />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="c-contacto" className="label">
+                Nombre del contacto
+              </label>
+              <input
+                id="c-contacto"
+                maxLength={100}
+                className="input"
+                value={clienteForm.nombre_contacto}
+                onChange={(e) => setClienteForm({ ...clienteForm, nombre_contacto: e.target.value })}
+              />
             </div>
-
-            <AlertaFormulario mensaje={errorCliente} />
-
-            <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-              <button type="submit" className="btn-primary">
-                Registrar cliente
-              </button>
-              <button
-                type="button"
-                className="btn-ghost"
-                onClick={() => {
-                  setClienteAbierto(false)
-                  setErrorCliente('')
-                }}
-              >
-                Cancelar
-              </button>
+            <div>
+              <label htmlFor="c-telefono" className="label">
+                Teléfono
+              </label>
+              <input
+                id="c-telefono"
+                maxLength={20}
+                className="input"
+                value={clienteForm.telefono}
+                onChange={(e) => setClienteForm({ ...clienteForm, telefono: e.target.value })}
+              />
             </div>
-          </form>
-        </Modal>
+          </div>
+        </ModalFormulario>
       )}
 
       {proyectos === null && !error && (

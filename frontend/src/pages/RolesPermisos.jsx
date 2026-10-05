@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -459,7 +460,7 @@ export default function RolesPermisos() {
       </Modal>
 
       {/* Crear / editar rol */}
-      <Modal
+      <ModalFormulario
         abierto={modalRol !== null}
         titulo={modalRol === 'editar' ? 'Editar rol' : 'Nuevo rol'}
         subtitulo="El rol nuevo nace sin permisos: se los asigna en la matriz"
@@ -467,51 +468,44 @@ export default function RolesPermisos() {
           setModalRol(null)
           setEditandoId(null)
         }}
+        onGuardar={guardarRol}
+        guardando={guardandoRol}
+        error={errorRol}
+        campoError={campoRol}
+        textoGuardar={modalRol === 'editar' ? 'Guardar cambios' : 'Crear rol'}
+        espaciado="space-y-4"
       >
-        <form onSubmit={guardarRol} className="space-y-4">
-          <div>
-            <label htmlFor="rol-nombre" className="label">
-              Nombre
-            </label>
-            <input
-              id="rol-nombre"
-              className={`${campoRol === 'nombre' ? 'input border-red-400' : 'input'} uppercase`}
-              value={rolForm.nombre}
-              disabled={modalRol === 'editar' && editandoId != null && roles.find((r) => r.id === editandoId)?.es_sistema}
-              onChange={(e) => setRolForm({ ...rolForm, nombre: e.target.value })}
-              required
-              minLength={3}
-              maxLength={50}
-            />
-            <p className="mt-1 text-xs text-slate-500">
-              Se guarda en mayúsculas. Solo letras, números, espacios y guion bajo.
-            </p>
-          </div>
-          <div>
-            <label htmlFor="rol-descripcion" className="label">
-              Descripción
-            </label>
-            <input
-              id="rol-descripcion"
-              maxLength={255}
-              className="input"
-              value={rolForm.descripcion}
-              onChange={(e) => setRolForm({ ...rolForm, descripcion: e.target.value })}
-            />
-          </div>
-
-          <AlertaFormulario mensaje={errorRol} campo={campoRol} />
-
-          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-            <button type="submit" disabled={guardandoRol} className="btn-primary disabled:opacity-60">
-              {guardandoRol ? 'Guardando…' : modalRol === 'editar' ? 'Guardar cambios' : 'Crear rol'}
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => setModalRol(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <div>
+          <label htmlFor="rol-nombre" className="label">
+            Nombre
+          </label>
+          <input
+            id="rol-nombre"
+            className={`${campoRol === 'nombre' ? 'input border-red-400' : 'input'} uppercase`}
+            value={rolForm.nombre}
+            disabled={modalRol === 'editar' && editandoId != null && roles.find((r) => r.id === editandoId)?.es_sistema}
+            onChange={(e) => setRolForm({ ...rolForm, nombre: e.target.value })}
+            required
+            minLength={3}
+            maxLength={50}
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Se guarda en mayúsculas. Solo letras, números, espacios y guion bajo.
+          </p>
+        </div>
+        <div>
+          <label htmlFor="rol-descripcion" className="label">
+            Descripción
+          </label>
+          <input
+            id="rol-descripcion"
+            maxLength={255}
+            className="input"
+            value={rolForm.descripcion}
+            onChange={(e) => setRolForm({ ...rolForm, descripcion: e.target.value })}
+          />
+        </div>
+      </ModalFormulario>
 
       {/* Confirmación de eliminación */}
       <Modal

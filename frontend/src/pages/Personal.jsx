@@ -8,6 +8,7 @@ import {
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -454,7 +455,7 @@ export default function Personal() {
 
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
       {(puedeCrear || puedeEditar) && (
-        <Modal
+        <ModalFormulario
           abierto={abierto}
           titulo={editando ? 'Actualizar información del trabajador' : 'Registrar personal'}
           subtitulo={
@@ -464,232 +465,223 @@ export default function Personal() {
           }
           onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
+          onGuardar={guardar}
+          guardando={guardando}
+          error={errorForm}
+          campoError={campoForm}
+          textoGuardar={editando ? 'Guardar cambios' : 'Registrar trabajador'}
+          acciones={
+            editando && (
+              <button type="button" className="btn-peligro ml-auto" onClick={pedirBaja}>
+                <span aria-hidden="true">⚠️</span> Dar de baja
+              </button>
+            )
+          }
         >
-          <form onSubmit={guardar} className="space-y-5">
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label htmlFor="t-doc" className="label">
-                  Número de documento
-                </label>
-                <input
-                  id="t-doc"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  maxLength={20}
-                  className={`${campo('numero_documento')} tabular-nums`}
-                  value={form.numero_documento}
-                  onChange={(e) =>
-                    setForm({ ...form, numero_documento: soloDigitos(e.target.value).slice(0, 20) })
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="t-doc" className="label">
+                Número de documento
+              </label>
+              <input
+                id="t-doc"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={20}
+                className={`${campo('numero_documento')} tabular-nums`}
+                value={form.numero_documento}
+                onChange={(e) =>
+                  setForm({ ...form, numero_documento: soloDigitos(e.target.value).slice(0, 20) })
+                }
+                disabled={Boolean(editando)}
+                required
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                {editando
+                  ? 'El documento identifica al trabajador y no se edita.'
+                  : 'Solo números, sin puntos ni espacios.'}
+              </p>
+            </div>
+            <div>
+              <label htmlFor="t-tipo" className="label">
+                Tipo de documento
+              </label>
+              <select
+                id="t-tipo"
+                className="input"
+                value={form.tipo_documento}
+                onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}
+              >
+                <option value="CC">CC</option>
+                <option value="CE">CE</option>
+                <option value="NIT">NIT</option>
+                <option value="PASAPORTE">Pasaporte</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="t-nombres" className="label">
+                Nombres
+              </label>
+              <input
+                id="t-nombres"
+                maxLength={100}
+                className="input"
+                value={form.nombres}
+                onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="t-apellidos" className="label">
+                Apellidos
+              </label>
+              <input
+                id="t-apellidos"
+                maxLength={100}
+                className="input"
+                value={form.apellidos}
+                onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                required
+              />
+            </div>
+            <div>
+              <label htmlFor="t-email" className="label">
+                Correo personal
+              </label>
+              <input
+                id="t-email"
+                maxLength={150}
+                type="email"
+                autoComplete="email"
+                placeholder="nombre@correo.com"
+                className={campo('email')}
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="t-telefono" className="label">
+                Teléfono
+              </label>
+              <TelefonoPais
+                id="t-telefono"
+                value={form.telefono}
+                onChange={(v) => setForm({ ...form, telefono: v })}
+                error={campoForm === 'telefono'}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="t-cargo" className="label">
+                Cargo
+              </label>
+              <select
+                id="t-cargo"
+                className={campo('cargo_id')}
+                value={form.cargo_id}
+                onChange={(e) => {
+                  if (e.target.value === '__nuevo__') {
+                    setNuevoCatalogo('cargos')
+                    setCatalogoForm(CATALOGO_VACIO)
+                    setErrorCatalogo('')
+                    return
                   }
-                  disabled={Boolean(editando)}
-                  required
-                />
-                <p className="mt-1 text-xs text-slate-500">
-                  {editando
-                    ? 'El documento identifica al trabajador y no se edita.'
-                    : 'Solo números, sin puntos ni espacios.'}
-                </p>
-              </div>
-              <div>
-                <label htmlFor="t-tipo" className="label">
-                  Tipo de documento
-                </label>
-                <select
-                  id="t-tipo"
-                  className="input"
-                  value={form.tipo_documento}
-                  onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}
-                >
-                  <option value="CC">CC</option>
-                  <option value="CE">CE</option>
-                  <option value="NIT">NIT</option>
-                  <option value="PASAPORTE">Pasaporte</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="t-nombres" className="label">
-                  Nombres
-                </label>
-                <input
-                  id="t-nombres"
-                  maxLength={100}
-                  className="input"
-                  value={form.nombres}
-                  onChange={(e) => setForm({ ...form, nombres: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="t-apellidos" className="label">
-                  Apellidos
-                </label>
-                <input
-                  id="t-apellidos"
-                  maxLength={100}
-                  className="input"
-                  value={form.apellidos}
-                  onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="t-email" className="label">
-                  Correo personal
-                </label>
-                <input
-                  id="t-email"
-                  maxLength={150}
-                  type="email"
-                  autoComplete="email"
-                  placeholder="nombre@correo.com"
-                  className={campo('email')}
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="t-telefono" className="label">
-                  Teléfono
-                </label>
-                <TelefonoPais
-                  id="t-telefono"
-                  value={form.telefono}
-                  onChange={(v) => setForm({ ...form, telefono: v })}
-                  error={campoForm === 'telefono'}
-                />
-              </div>
-
-              <div>
-                <label htmlFor="t-cargo" className="label">
-                  Cargo
-                </label>
-                <select
-                  id="t-cargo"
-                  className={campo('cargo_id')}
-                  value={form.cargo_id}
-                  onChange={(e) => {
-                    if (e.target.value === '__nuevo__') {
-                      setNuevoCatalogo('cargos')
-                      setCatalogoForm(CATALOGO_VACIO)
-                      setErrorCatalogo('')
-                      return
-                    }
-                    setForm({ ...form, cargo_id: e.target.value })
-                  }}
-                  required
-                >
-                  <option value="">Seleccione un cargo…</option>
-                  <OpcionesAgrupadas filas={cargos} tipo="cargos" />
-                  {puedeCatalogos && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
-                </select>
-                <p className={`mt-1 text-xs ${cargoRetirado ? 'text-amber-700' : 'text-slate-500'}`}>
-                  {cargoRetirado
-                    ? `El cargo «${cargoRetirado}» ya no está en el catálogo: elija uno vigente.`
-                    : cargoElegido
-                      ? cargoElegido.operativo
-                        ? 'Cargo de obra: la especialidad es obligatoria.'
-                        : 'La especialidad es opcional para este cargo.'
-                      : `${cargos.length} cargos en el catálogo de la empresa.`}
-                </p>
-              </div>
-              <div>
-                <label htmlFor="t-especialidad" className="label">
-                  Especialidad
-                </label>
-                <select
-                  id="t-especialidad"
-                  className={campo('especialidad_id')}
-                  value={form.especialidad_id}
-                  onChange={(e) => {
-                    if (e.target.value === '__nuevo__') {
-                      setNuevoCatalogo('especialidades')
-                      setCatalogoForm(CATALOGO_VACIO)
-                      setErrorCatalogo('')
-                      return
-                    }
-                    setForm({ ...form, especialidad_id: e.target.value })
-                  }}
-                >
-                  <option value="">Sin especialidad</option>
-                  <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
-                  {puedeCatalogos && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
-                </select>
-                <p className="mt-1 text-xs text-slate-500">
-                  Obligatoria para los cargos de obra (maestro de obra, obrero, operario…): sin ella
-                  no se puede filtrar al trabajador para tareas específicas.
-                </p>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label htmlFor="t-direccion" className="label">
-                  Dirección
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    id="t-direccion"
-                    maxLength={255}
-                    className="input"
-                    placeholder="Escriba la dirección o selecciónela en el mapa"
-                    value={form.direccion}
-                    onChange={(e) => setForm({ ...form, direccion: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    className="btn-ghost shrink-0"
-                    onClick={() => setMapaAbierto(true)}
-                  >
-                    <MapPinIcon className="h-4 w-4" /> Mapa
-                  </button>
-                </div>
-              </div>
-
-              {/* El estado define la disponibilidad; al crear siempre queda Activo. */}
-              <div>
-                <label htmlFor="t-estado" className="label">
-                  Estado
-                </label>
-                <select
-                  id="t-estado"
-                  className="input"
-                  value={form.estado}
-                  disabled={!editando}
-                  onChange={(e) => setForm({ ...form, estado: e.target.value })}
-                >
-                  {ESTADOS.map((e2) => (
-                    <option key={e2.value} value={e2.value}>
-                      {e2.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="mt-1 text-xs text-slate-500">
-                  {editando
-                    ? 'Al pasar a un estado distinto de Activo, el trabajador deja de estar disponible.'
-                    : 'Al registrarlo queda Activo y disponible.'}
-                </p>
-              </div>
+                  setForm({ ...form, cargo_id: e.target.value })
+                }}
+                required
+              >
+                <option value="">Seleccione un cargo…</option>
+                <OpcionesAgrupadas filas={cargos} tipo="cargos" />
+                {puedeCatalogos && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
+              </select>
+              <p className={`mt-1 text-xs ${cargoRetirado ? 'text-amber-700' : 'text-slate-500'}`}>
+                {cargoRetirado
+                  ? `El cargo «${cargoRetirado}» ya no está en el catálogo: elija uno vigente.`
+                  : cargoElegido
+                    ? cargoElegido.operativo
+                      ? 'Cargo de obra: la especialidad es obligatoria.'
+                      : 'La especialidad es opcional para este cargo.'
+                    : `${cargos.length} cargos en el catálogo de la empresa.`}
+              </p>
+            </div>
+            <div>
+              <label htmlFor="t-especialidad" className="label">
+                Especialidad
+              </label>
+              <select
+                id="t-especialidad"
+                className={campo('especialidad_id')}
+                value={form.especialidad_id}
+                onChange={(e) => {
+                  if (e.target.value === '__nuevo__') {
+                    setNuevoCatalogo('especialidades')
+                    setCatalogoForm(CATALOGO_VACIO)
+                    setErrorCatalogo('')
+                    return
+                  }
+                  setForm({ ...form, especialidad_id: e.target.value })
+                }}
+              >
+                <option value="">Sin especialidad</option>
+                <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
+                {puedeCatalogos && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                Obligatoria para los cargos de obra (maestro de obra, obrero, operario…): sin ella
+                no se puede filtrar al trabajador para tareas específicas.
+              </p>
             </div>
 
-            {/* Los errores de negocio se muestran aquí, dentro del formulario. */}
-            <AlertaFormulario mensaje={errorForm} campo={campoForm} />
-
-            <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
-              <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
-                {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar trabajador'}
-              </button>
-              <button type="button" className="btn-ghost" onClick={cerrarFormulario}>
-                Cancelar
-              </button>
-              {/* HU-18: retirar a la persona. Va aparte, pegado a la derecha, y
-                  pide confirmación antes de hacer nada. */}
-              {editando && (
-                <button type="button" className="btn-peligro ml-auto" onClick={pedirBaja}>
-                  <span aria-hidden="true">⚠️</span> Dar de baja
+            <div className="sm:col-span-2">
+              <label htmlFor="t-direccion" className="label">
+                Dirección
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="t-direccion"
+                  maxLength={255}
+                  className="input"
+                  placeholder="Escriba la dirección o selecciónela en el mapa"
+                  value={form.direccion}
+                  onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                />
+                <button
+                  type="button"
+                  className="btn-ghost shrink-0"
+                  onClick={() => setMapaAbierto(true)}
+                >
+                  <MapPinIcon className="h-4 w-4" /> Mapa
                 </button>
-              )}
+              </div>
             </div>
-          </form>
-        </Modal>
+
+            {/* El estado define la disponibilidad; al crear siempre queda Activo. */}
+            <div>
+              <label htmlFor="t-estado" className="label">
+                Estado
+              </label>
+              <select
+                id="t-estado"
+                className="input"
+                value={form.estado}
+                disabled={!editando}
+                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+              >
+                {ESTADOS.map((e2) => (
+                  <option key={e2.value} value={e2.value}>
+                    {e2.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-slate-500">
+                {editando
+                  ? 'Al pasar a un estado distinto de Activo, el trabajador deja de estar disponible.'
+                  : 'Al registrarlo queda Activo y disponible.'}
+              </p>
+            </div>
+          </div>
+        </ModalFormulario>
       )}
 
       {/* Confirmación de «Dar de baja»: se abre encima del formulario de edición,
@@ -736,7 +728,7 @@ export default function Personal() {
       </Modal>
 
       {/* Alta rápida de un valor del catálogo sin salir del formulario. */}
-      <Modal
+      <ModalFormulario
         abierto={nuevoCatalogo !== null}
         titulo={CATALOGO_TITULO[nuevoCatalogo] ?? ''}
         subtitulo="Queda guardado en el catálogo de la empresa y seleccionado en el formulario"
@@ -744,81 +736,73 @@ export default function Personal() {
           setNuevoCatalogo(null)
           setErrorCatalogo('')
         }}
+        onGuardar={crearCatalogo}
+        guardando={guardandoCatalogo}
+        error={errorCatalogo}
+        textoGuardar="Agregar al catálogo"
+        espaciado="space-y-4"
       >
-        <form onSubmit={crearCatalogo} className="space-y-4">
-          <div>
-            <label htmlFor="cat-nombre" className="label">
-              Nombre
-            </label>
+        <div>
+          <label htmlFor="cat-nombre" className="label">
+            Nombre
+          </label>
+          <input
+            id="cat-nombre"
+            maxLength={100}
+            className="input"
+            value={catalogoForm.nombre}
+            required
+            minLength={3}
+            onChange={(e) => setCatalogoForm({ ...catalogoForm, nombre: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor="cat-descripcion" className="label">
+            Descripción
+          </label>
+          <input
+            id="cat-descripcion"
+            maxLength={255}
+            className="input"
+            value={catalogoForm.descripcion}
+            onChange={(e) => setCatalogoForm({ ...catalogoForm, descripcion: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor="cat-categoria" className="label">
+            Categoría
+          </label>
+          <select
+            id="cat-categoria"
+            className="input"
+            value={catalogoForm.categoria}
+            onChange={(e) => setCatalogoForm({ ...catalogoForm, categoria: e.target.value })}
+          >
+            <option value="">Sin categoría (aparece en «Otros»)</option>
+            {(CATEGORIAS[nuevoCatalogo] ?? []).map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        {nuevoCatalogo === 'cargos' && (
+          <label className="flex items-start gap-2 text-sm text-slate-700">
             <input
-              id="cat-nombre"
-              maxLength={100}
-              className="input"
-              value={catalogoForm.nombre}
-              required
-              minLength={3}
-              onChange={(e) => setCatalogoForm({ ...catalogoForm, nombre: e.target.value })}
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+              checked={catalogoForm.operativo}
+              onChange={(e) => setCatalogoForm({ ...catalogoForm, operativo: e.target.checked })}
             />
-          </div>
-          <div>
-            <label htmlFor="cat-descripcion" className="label">
-              Descripción
-            </label>
-            <input
-              id="cat-descripcion"
-              maxLength={255}
-              className="input"
-              value={catalogoForm.descripcion}
-              onChange={(e) => setCatalogoForm({ ...catalogoForm, descripcion: e.target.value })}
-            />
-          </div>
-          <div>
-            <label htmlFor="cat-categoria" className="label">
-              Categoría
-            </label>
-            <select
-              id="cat-categoria"
-              className="input"
-              value={catalogoForm.categoria}
-              onChange={(e) => setCatalogoForm({ ...catalogoForm, categoria: e.target.value })}
-            >
-              <option value="">Sin categoría (aparece en «Otros»)</option>
-              {(CATEGORIAS[nuevoCatalogo] ?? []).map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
-          {nuevoCatalogo === 'cargos' && (
-            <label className="flex items-start gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                checked={catalogoForm.operativo}
-                onChange={(e) => setCatalogoForm({ ...catalogoForm, operativo: e.target.checked })}
-              />
-              <span>
-                Es cargo de obra
-                <span className="block text-xs text-slate-500">
-                  Para estos cargos la especialidad es obligatoria.
-                </span>
+            <span>
+              Es cargo de obra
+              <span className="block text-xs text-slate-500">
+                Para estos cargos la especialidad es obligatoria.
               </span>
-            </label>
-          )}
-
-          <AlertaFormulario mensaje={errorCatalogo} />
-
-          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-            <button type="submit" disabled={guardandoCatalogo} className="btn-primary disabled:opacity-60">
-              {guardandoCatalogo ? 'Guardando…' : 'Agregar al catálogo'}
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => setNuevoCatalogo(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
+            </span>
+          </label>
+        )}
+      </ModalFormulario>
 
       {/* Mapa para la dirección: devuelve el texto normalizado al formulario. */}
       <SelectorUbicacion
