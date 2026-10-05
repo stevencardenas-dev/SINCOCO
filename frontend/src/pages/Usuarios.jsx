@@ -6,12 +6,11 @@ import {
   LockClosedIcon,
   PencilSquareIcon,
   PlusIcon,
-  UserPlusIcon,
 } from '@heroicons/react/24/outline'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import CampoPassword from '../components/CampoPassword.jsx'
-import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import Ficha, { TablaFicha } from '../components/Ficha.jsx'
 import { telefonoLegible } from '../components/TelefonoPais.jsx'
@@ -122,6 +121,12 @@ export default function Usuarios() {
     }
   }
 
+  const cerrarCrear = () => {
+    setAbierto(false)
+    setForm(VACIO)
+    setErrorForm('')
+  }
+
   // CU-01 Alt 3: asignar un rol distinto a un usuario existente.
   const cambiarRol = async (usuario, rol_id) => {
     setError('')
@@ -209,7 +214,7 @@ export default function Usuarios() {
         title="Gestión de usuarios"
         subtitle="Crear cuentas, asignar rol y controlar el acceso al sistema"
       >
-        <button className="btn-primary" onClick={() => setAbierto((v) => !v)}>
+        <button className="btn-primary" onClick={() => setAbierto(true)}>
           <PlusIcon className="h-5 w-5" />
           Nuevo usuario
         </button>
@@ -270,122 +275,107 @@ export default function Usuarios() {
         </div>
       )}
 
-      {abierto && (
-        <form onSubmit={crear} className="card space-y-5 p-6">
-          <div className="flex items-center gap-2 text-slate-900">
-            <UserPlusIcon className="h-5 w-5 text-brand-600" />
-            <h3 className="text-base font-semibold">Registrar usuario y asignar rol</h3>
+      <ModalFormulario
+        abierto={abierto}
+        titulo="Registrar usuario"
+        subtitulo="Se crea con cuenta activa y el rol elegido"
+        onCerrar={cerrarCrear}
+        ancho="max-w-3xl"
+        onGuardar={crear}
+        guardando={guardando}
+        error={errorForm}
+        textoGuardar="Crear usuario"
+        textoGuardando="Creando…"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="u-username" className="label">
+              Usuario
+            </label>
+            <input
+              id="u-username"
+              maxLength={50}
+              className="input"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+            />
           </div>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div>
-              <label htmlFor="u-username" className="label">
-                Usuario
-              </label>
-              <input
-                id="u-username"
-                maxLength={50}
-                className="input"
-                value={form.username}
-                onChange={(e) => setForm({ ...form, username: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="u-email" className="label">
-                Correo empresarial
-              </label>
-              <input
-                id="u-email"
-                maxLength={150}
-                type="email"
-                className="input"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="u-password" className="label">
-                Contraseña
-              </label>
-              <CampoPassword
-                id="u-password"
-                maxLength={72}
-                autoComplete="new-password"
-                minLength={8}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                Mínimo 8 caracteres. Se almacena cifrada.
-              </p>
-            </div>
-            <div>
-              <label htmlFor="u-rol" className="label">
-                Rol
-              </label>
-              <select
-                id="u-rol"
-                className="input"
-                value={form.rol_id}
-                onChange={(e) => setForm({ ...form, rol_id: e.target.value })}
-                required
-              >
-                <option value="">Seleccione un rol…</option>
-                {roles.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {ROL_LABEL[r.nombre] ?? r.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <label htmlFor="u-trabajador" className="label">
-                Trabajador
-              </label>
-              {/* Combobox con búsqueda: la lista de trabajadores crece. */}
-              <BuscadorSelect
-                id="u-trabajador"
-                value={form.trabajador_id}
-                onChange={(v) => setForm({ ...form, trabajador_id: v })}
-                opciones={trabajadores.map((t) => ({
-                  value: t.id,
-                  label: `${t.nombres} ${t.apellidos}`,
-                  sublabel: `${t.numero_documento}${t.cargo ? ` · ${t.cargo}` : ''}`,
-                }))}
-                placeholder="Escriba el nombre o el documento…"
-                requerido
-              />
-              <p className="mt-1 text-xs text-slate-500">
-                {trabajadores.length === 0
-                  ? 'No hay trabajadores sin cuenta disponibles.'
-                  : 'Cada cuenta se vincula a un trabajador y solo puede tener una.'}
-              </p>
-            </div>
+          <div>
+            <label htmlFor="u-email" className="label">
+              Correo empresarial
+            </label>
+            <input
+              id="u-email"
+              maxLength={150}
+              type="email"
+              className="input"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
           </div>
-
-          <AlertaFormulario mensaje={errorForm} />
-
-          <div className="flex items-center gap-3">
-            <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
-              {guardando ? 'Creando…' : 'Crear usuario'}
-            </button>
-            <button
-              type="button"
-              className="btn-ghost"
-              onClick={() => {
-                setAbierto(false)
-                setForm(VACIO)
-                setErrorForm('')
-              }}
+          <div>
+            <label htmlFor="u-password" className="label">
+              Contraseña
+            </label>
+            <CampoPassword
+              id="u-password"
+              maxLength={72}
+              autoComplete="new-password"
+              minLength={8}
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              Mínimo 8 caracteres. Se almacena cifrada.
+            </p>
+          </div>
+          <div>
+            <label htmlFor="u-rol" className="label">
+              Rol
+            </label>
+            <select
+              id="u-rol"
+              className="input"
+              value={form.rol_id}
+              onChange={(e) => setForm({ ...form, rol_id: e.target.value })}
+              required
             >
-              Cancelar
-            </button>
+              <option value="">Seleccione un rol…</option>
+              {roles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {ROL_LABEL[r.nombre] ?? r.nombre}
+                </option>
+              ))}
+            </select>
           </div>
-        </form>
-      )}
+          <div className="sm:col-span-2">
+            <label htmlFor="u-trabajador" className="label">
+              Trabajador
+            </label>
+            {/* Combobox con búsqueda: la lista de trabajadores crece. */}
+            <BuscadorSelect
+              id="u-trabajador"
+              value={form.trabajador_id}
+              onChange={(v) => setForm({ ...form, trabajador_id: v })}
+              opciones={trabajadores.map((t) => ({
+                value: t.id,
+                label: `${t.nombres} ${t.apellidos}`,
+                sublabel: `${t.numero_documento}${t.cargo ? ` · ${t.cargo}` : ''}`,
+              }))}
+              placeholder="Escriba el nombre o el documento…"
+              requerido
+            />
+            <p className="mt-1 text-xs text-slate-500">
+              {trabajadores.length === 0
+                ? 'No hay trabajadores sin cuenta disponibles.'
+                : 'Cada cuenta se vincula a un trabajador y solo puede tener una.'}
+            </p>
+          </div>
+        </div>
+      </ModalFormulario>
 
       <FiltrosDesplegable
         titulo="Buscar usuarios"
@@ -605,51 +595,46 @@ export default function Usuarios() {
         />
       )}
 
-      <Modal
+      <ModalFormulario
         abierto={editando !== null}
         titulo="Editar usuario"
         subtitulo="El rol y el estado se cambian aparte; la contraseña la restablece el propio usuario"
         onCerrar={() => setEditando(null)}
+        onGuardar={guardarEdicion}
+        guardando={guardandoEditar}
+        error={errorEditar}
+        campoError={campoEditar}
+        textoGuardar="Guardar cambios"
+        espaciado="space-y-4"
       >
-        <form onSubmit={guardarEdicion} className="space-y-4">
-          <div>
-            <label htmlFor="ue-username" className="label">
-              Usuario
-            </label>
-            <input
-              id="ue-username"
-              maxLength={50}
-              className={campoEditar === 'username' ? 'input border-red-400' : 'input'}
-              value={formEditar.username}
-              onChange={(e) => setFormEditar({ ...formEditar, username: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="ue-email" className="label">
-              Correo empresarial
-            </label>
-            <input
-              id="ue-email"
-              type="email"
-              maxLength={150}
-              className={campoEditar === 'email' ? 'input border-red-400' : 'input'}
-              value={formEditar.email}
-              onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
-              required
-            />
-          </div>
-          <AlertaFormulario mensaje={errorEditar} campo={campoEditar} />
-          <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-            <button type="submit" disabled={guardandoEditar} className="btn-primary disabled:opacity-60">
-              {guardandoEditar ? 'Guardando…' : 'Guardar cambios'}
-            </button>
-            <button type="button" className="btn-ghost" onClick={() => setEditando(null)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </Modal>
+        <div>
+          <label htmlFor="ue-username" className="label">
+            Usuario
+          </label>
+          <input
+            id="ue-username"
+            maxLength={50}
+            className={campoEditar === 'username' ? 'input border-red-400' : 'input'}
+            value={formEditar.username}
+            onChange={(e) => setFormEditar({ ...formEditar, username: e.target.value })}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="ue-email" className="label">
+            Correo empresarial
+          </label>
+          <input
+            id="ue-email"
+            type="email"
+            maxLength={150}
+            className={campoEditar === 'email' ? 'input border-red-400' : 'input'}
+            value={formEditar.email}
+            onChange={(e) => setFormEditar({ ...formEditar, email: e.target.value })}
+            required
+          />
+        </div>
+      </ModalFormulario>
     </div>
   )
 }
