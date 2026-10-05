@@ -1,8 +1,9 @@
 import {
-  listarPorProyecto, listarPorEtapa, registrarActividad,
+  listarPorProyecto, listarPorEtapa, registrarActividad, actualizarActividad,
   darDeBajaActividad, reactivarActividad,
 } from '../services/actividadService.js'
 import { RegistrarActividadDto } from '../dtos/actividad/RegistrarActividadDto.js'
+import { ActualizarActividadDto } from '../dtos/actividad/ActualizarActividadDto.js'
 import { AppError } from '../utils/AppError.js'
 
 const incluir = (q) => ['1', 'true', 'on'].includes(String(q.incluirInactivos))
@@ -33,6 +34,17 @@ export async function registrar(req, res, next) {
     const dto = RegistrarActividadDto.fromRequestBody(req.body)
     const actividad = await registrarActividad(dto, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.status(201).json({ message: 'Actividad registrada correctamente', actividad })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** PATCH /api/actividades/:id -> editar las propiedades de una actividad. */
+export async function actualizar(req, res, next) {
+  try {
+    const dto = ActualizarActividadDto.fromRequestBody(req.body)
+    const actividad = await actualizarActividad(req.params.id, dto, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
+    return res.json({ message: 'Actividad actualizada correctamente', actividad })
   } catch (error) {
     return next(error)
   }

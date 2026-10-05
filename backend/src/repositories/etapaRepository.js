@@ -52,3 +52,32 @@ export async function create(etapa) {
   )
   return result.insertId
 }
+
+/** Actualización parcial: solo se escriben los campos recibidos. */
+export async function update(id, campos) {
+  const asignaciones = Object.keys(campos).map((c) => `${c} = ?`)
+  await pool.query(
+    `UPDATE etapas_proyecto SET ${asignaciones.join(', ')} WHERE id = ?`,
+    [...Object.values(campos), id],
+  )
+}
+
+/**
+ * Reasigna `orden` (1, 2, 3…) a las etapas activas del proyecto según su fecha
+ * de inicio; las que aún no tienen fecha quedan al final, en su orden previo.
+ * Solo escribe las filas cuyo número cambia.
+ */
+export async function renumerar(proyectoId) {
+  const [rows] = await pool.query(
+    `SELECT id, orden FROM etapas_proyecto
+     WHERE proyecto_id = ? AND activo = 1
+     ORDER BY fecha_inicio_programada IS NULL, fecha_inicio_programada,
+              fecha_fin_programada, orden, id`,
+    [proyectoId],
+  )
+  for (const [i, fila] of rows.entries()) {
+    if (Number(fila.orden) !== i + 1) {
+      await pool.query('UPDATE etapas_proyecto SET orden = ? WHERE id = ?', [i + 1, fila.id])
+    }
+  }
+}
