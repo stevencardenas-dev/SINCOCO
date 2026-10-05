@@ -43,7 +43,7 @@ const vacio = (v) => v === null || v === undefined || v === false || v === ''
 /**
  * Tabla responsive dirigida por columnas.
  *
- * Cada columna: { titulo, celda(fila, enFicha), movil?, acciones?, derecha?, tdClase?, valor?(fila) }
+ * Cada columna: { titulo, celda(fila, enFicha), movil?, acciones?, derecha?, tdClase?, thClase?, valor?(fila) }
  *  - `movil`: la columna se ve también en el celular.
  *  - `acciones`: la columna son botones; en escritorio van en su celda y en el
  *    celular pasan al bloque «Acciones» de la ficha.
@@ -54,6 +54,11 @@ const vacio = (v) => v === null || v === undefined || v === false || v === ''
  * `ficha`: { titulo(fila), subtitulo?(fila), etiqueta?(fila), extras?(fila) }
  * donde `extras` añade campos que no tienen columna propia.
  * El botón «Ver ficha» solo aparece en el celular.
+ *
+ * `alinearArriba`: las celdas se alinean al primer renglón (align-top) en vez
+ * de al centro. Sirve cuando hay celdas de varias líneas: así el texto, los
+ * selectores y los botones de la fila quedan a la misma altura. Los controles
+ * más altos que una línea de texto llevan `-my-1` para centrarse en ese renglón.
  */
 export function TablaFicha({
   filas,
@@ -65,6 +70,7 @@ export function TablaFicha({
   filaProps,
   vacia,
   ficha,
+  alinearArriba = false,
 }) {
   const [fichaId, setFichaId] = useState(null)
   const actual = fichaId === null ? null : (filas.find((f) => getId(f) === fichaId) ?? null)
@@ -93,7 +99,7 @@ export function TablaFicha({
                   key={c.titulo}
                   className={`font-semibold ${c.derecha ? 'text-right' : ''} ${
                     c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : 'hidden px-5 py-3.5 md:table-cell'
-                  }`}
+                  } ${c.thClase ?? ''}`}
                 >
                   {c.titulo}
                 </th>
@@ -104,7 +110,11 @@ export function TablaFicha({
           <tbody className="divide-y divide-slate-100">
             {filas.length === 0 && vacia}
             {filas.map((f) => (
-              <tr key={getId(f)} className={filaClase?.(f) ?? ''} {...(filaProps?.(f) ?? {})}>
+              <tr
+                key={getId(f)}
+                className={`${alinearArriba ? 'align-top' : ''} ${filaClase?.(f) ?? ''}`}
+                {...(filaProps?.(f) ?? {})}
+              >
                 {columnas.map((c) => (
                   <td
                     key={c.titulo}
@@ -118,7 +128,7 @@ export function TablaFicha({
                 <td className="px-3 py-3 text-right md:hidden">
                   <button
                     type="button"
-                    className="btn-accion btn-accion-editar"
+                    className={`btn-accion btn-accion-editar ${alinearArriba ? '-my-1' : ''}`}
                     onClick={() => setFichaId(getId(f))}
                     aria-label={`Ver ficha de ${ficha.etiqueta?.(f) ?? ficha.titulo(f)}`}
                   >

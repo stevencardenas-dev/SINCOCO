@@ -56,6 +56,10 @@ $MYSQL "$DB_NAME" < docs/migracion_usuarios_editar.sql
 # Alinea los trabajadores que quedaron en INACTIVO sin baja lógica (y al revés).
 $MYSQL "$DB_NAME" < docs/migracion_personal_baja.sql
 
+# --- 2e. Categorías de cargos y especialidades (HU-04) ----------------------
+# Va antes del seed de catálogos: el seed escribe la columna `categoria`.
+$MYSQL "$DB_NAME" < docs/migracion_categorias_personal.sql
+
 $MYSQL "$DB_NAME" < docs/seed_catalogos_prueba.sql
 
 # --- 3. Roles, usuarios y trabajadores ------------------------------------

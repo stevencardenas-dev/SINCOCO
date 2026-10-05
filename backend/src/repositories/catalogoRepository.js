@@ -9,10 +9,10 @@ import { pool } from '../db/pool.js'
  * administrador necesita ese dato antes de dar de baja un valor del catálogo.
  */
 
-const CAMPOS_CARGO = `c.id, c.nombre, c.descripcion, c.operativo, c.estado, c.activo,
+const CAMPOS_CARGO = `c.id, c.nombre, c.descripcion, c.categoria, c.operativo, c.estado, c.activo,
                       (SELECT COUNT(*) FROM trabajadores t WHERE t.cargo_id = c.id) AS en_uso`
 
-const CAMPOS_ESPECIALIDAD = `e.id, e.nombre, e.descripcion, e.estado, e.activo,
+const CAMPOS_ESPECIALIDAD = `e.id, e.nombre, e.descripcion, e.categoria, e.estado, e.activo,
                              (SELECT COUNT(*) FROM trabajadores t WHERE t.especialidad_id = e.id) AS en_uso`
 
 // Los cargos operativos van primero: son los que exigen especialidad.
@@ -71,18 +71,18 @@ export async function findEspecialidadPorNombre(nombre) {
   return rows[0] ?? null
 }
 
-export async function crearCargo({ nombre, descripcion, operativo }) {
+export async function crearCargo({ nombre, descripcion, categoria, operativo }) {
   const [result] = await pool.query(
-    'INSERT INTO cargos (nombre, descripcion, operativo) VALUES (?, ?, ?)',
-    [nombre, descripcion ?? null, operativo ? 1 : 0],
+    'INSERT INTO cargos (nombre, descripcion, categoria, operativo) VALUES (?, ?, ?, ?)',
+    [nombre, descripcion ?? null, categoria ?? null, operativo ? 1 : 0],
   )
   return result.insertId
 }
 
-export async function crearEspecialidad({ nombre, descripcion }) {
+export async function crearEspecialidad({ nombre, descripcion, categoria }) {
   const [result] = await pool.query(
-    'INSERT INTO especialidades (nombre, descripcion) VALUES (?, ?)',
-    [nombre, descripcion ?? null],
+    'INSERT INTO especialidades (nombre, descripcion, categoria) VALUES (?, ?, ?)',
+    [nombre, descripcion ?? null, categoria ?? null],
   )
   return result.insertId
 }
