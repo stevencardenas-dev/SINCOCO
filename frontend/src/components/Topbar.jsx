@@ -69,8 +69,10 @@ export default function Topbar({ onMenuClick }) {
         <h1 className="text-lg font-bold tracking-tight text-slate-900">{title}</h1>
 
         <div className="ml-auto flex items-center gap-3">
-          {/* Search: filtra el listado de proyectos (corre en la base). */}
-          {ROLES_CON_PROYECTOS.includes(user?.rol) && (
+          {/* Search: filtra el listado de proyectos (corre en la base). En
+              Personal no se muestra: esa pantalla tiene su propio buscador y
+              uno de proyectos ahí confunde. */}
+          {ROLES_CON_PROYECTOS.includes(user?.rol) && pathname !== '/personal' && (
             <form onSubmit={buscar} className="relative hidden md:block">
               <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input

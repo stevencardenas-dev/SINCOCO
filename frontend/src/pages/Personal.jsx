@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
 import { fmtFecha, soloDigitos } from '../lib/format.js'
+import { CATEGORIAS, agruparPorCategoria } from '../lib/catalogos.js'
 
 /**
  * HU-04 (RF06 · RF07): registrar el personal con su cargo y especialidad.
@@ -69,7 +70,22 @@ const CATALOGO_TITULO = {
   especialidades: 'Registrar una especialidad',
 }
 
-const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', disponible: '' }
+const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '' }
+
+const CATALOGO_VACIO = { nombre: '', descripcion: '', categoria: '', operativo: false }
+
+/** Opciones de un catálogo agrupadas por categoría (<optgroup>). */
+function OpcionesAgrupadas({ filas, tipo }) {
+  return agruparPorCategoria(filas, tipo).map(({ categoria, items }) => (
+    <optgroup key={categoria} label={categoria}>
+      {items.map((f) => (
+        <option key={f.id} value={f.id}>
+          {f.nombre}
+        </option>
+      ))}
+    </optgroup>
+  ))
+}
 
 export default function Personal() {
   const { puede } = useAuth()
@@ -98,7 +114,7 @@ export default function Personal() {
   const [cargos, setCargos] = useState([])
   const [especialidades, setEspecialidades] = useState([])
   const [nuevoCatalogo, setNuevoCatalogo] = useState(null)
-  const [catalogoForm, setCatalogoForm] = useState({ nombre: '', descripcion: '', operativo: false })
+  const [catalogoForm, setCatalogoForm] = useState(CATALOGO_VACIO)
   const [errorCatalogo, setErrorCatalogo] = useState('')
   const [guardandoCatalogo, setGuardandoCatalogo] = useState(false)
 
@@ -116,6 +132,7 @@ export default function Personal() {
           ...(filtros.buscar ? { buscar: filtros.buscar } : {}),
           ...(filtros.estado ? { estado: filtros.estado } : {}),
           ...(filtros.cargo_id ? { cargo_id: filtros.cargo_id } : {}),
+          ...(filtros.especialidad_id ? { especialidad_id: filtros.especialidad_id } : {}),
           ...(filtros.disponible !== '' ? { disponible: filtros.disponible } : {}),
         },
       })
@@ -270,6 +287,7 @@ export default function Personal() {
       const { data } = await api.post(`/catalogos/${nuevoCatalogo}`, {
         nombre: catalogoForm.nombre,
         descripcion: catalogoForm.descripcion,
+        categoria: catalogoForm.categoria || null,
         ...(nuevoCatalogo === 'cargos' ? { operativo: catalogoForm.operativo } : {}),
       })
       const fila = data[nuevoCatalogo === 'cargos' ? 'cargo' : 'especialidad']
@@ -282,7 +300,7 @@ export default function Personal() {
       }
       setAviso(`${fila.nombre} agregado al catálogo y seleccionado.`)
       setNuevoCatalogo(null)
-      setCatalogoForm({ nombre: '', descripcion: '', operativo: false })
+      setCatalogoForm(CATALOGO_VACIO)
     } catch (err) {
       setErrorCatalogo(mensajeError(err, 'No se pudo registrar en el catálogo.'))
     } finally {
@@ -292,6 +310,12 @@ export default function Personal() {
 
   const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
   const cargoElegido = cargos.find((c) => String(c.id) === String(form.cargo_id))
+  // Al editar a alguien cuyo cargo se dio de baja en el catálogo (p. ej. Oficial),
+  // ese cargo ya no está en la lista: se avisa para que elija uno vigente.
+  const cargoRetirado =
+    editando && form.cargo_id && !cargoElegido
+      ? personal?.find((t) => t.id === editando)?.cargo
+      : null
   const hayFiltros = Object.values(filtros).some(Boolean)
 
   return (
@@ -386,11 +410,22 @@ export default function Personal() {
               onChange={(e) => setFiltros((f) => ({ ...f, cargo_id: e.target.value }))}
             >
               <option value="">Todos</option>
-              {cargos.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
+              <OpcionesAgrupadas filas={cargos} tipo="cargos" />
+            </select>
+          </div>
+          {/* CU-04 · Alt 2: el personal se filtra por especialidad para tareas específicas. */}
+          <div>
+            <label htmlFor="per-especialidad" className="label">
+              Especialidad
+            </label>
+            <select
+              id="per-especialidad"
+              className="input"
+              value={filtros.especialidad_id}
+              onChange={(e) => setFiltros((f) => ({ ...f, especialidad_id: e.target.value }))}
+            >
+              <option value="">Todas</option>
+              <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
             </select>
           </div>
           <div className="flex items-end">
@@ -531,7 +566,7 @@ export default function Personal() {
                   onChange={(e) => {
                     if (e.target.value === '__nuevo__') {
                       setNuevoCatalogo('cargos')
-                      setCatalogoForm({ nombre: '', descripcion: '', operativo: false })
+                      setCatalogoForm(CATALOGO_VACIO)
                       setErrorCatalogo('')
                       return
                     }
@@ -540,20 +575,17 @@ export default function Personal() {
                   required
                 >
                   <option value="">Seleccione un cargo…</option>
-                  {cargos.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nombre}
-                      {c.operativo ? ' · obra' : ''}
-                    </option>
-                  ))}
+                  <OpcionesAgrupadas filas={cargos} tipo="cargos" />
                   {puedeCatalogos && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
                 </select>
-                <p className="mt-1 text-xs text-slate-500">
-                  {cargoElegido
-                    ? cargoElegido.operativo
-                      ? 'Cargo de obra: la especialidad es obligatoria.'
-                      : 'Cargo administrativo: la especialidad es opcional.'
-                    : `${cargos.length} cargos en el catálogo de la empresa.`}
+                <p className={`mt-1 text-xs ${cargoRetirado ? 'text-amber-700' : 'text-slate-500'}`}>
+                  {cargoRetirado
+                    ? `El cargo «${cargoRetirado}» ya no está en el catálogo: elija uno vigente.`
+                    : cargoElegido
+                      ? cargoElegido.operativo
+                        ? 'Cargo de obra: la especialidad es obligatoria.'
+                        : 'La especialidad es opcional para este cargo.'
+                      : `${cargos.length} cargos en el catálogo de la empresa.`}
                 </p>
               </div>
               <div>
@@ -567,7 +599,7 @@ export default function Personal() {
                   onChange={(e) => {
                     if (e.target.value === '__nuevo__') {
                       setNuevoCatalogo('especialidades')
-                      setCatalogoForm({ nombre: '', descripcion: '', operativo: false })
+                      setCatalogoForm(CATALOGO_VACIO)
                       setErrorCatalogo('')
                       return
                     }
@@ -575,16 +607,12 @@ export default function Personal() {
                   }}
                 >
                   <option value="">Sin especialidad</option>
-                  {especialidades.map((e2) => (
-                    <option key={e2.id} value={e2.id}>
-                      {e2.nombre}
-                    </option>
-                  ))}
+                  <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
                   {puedeCatalogos && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
                 </select>
                 <p className="mt-1 text-xs text-slate-500">
-                  Obligatoria para los cargos marcados como de obra (maestro de obra, oficial,
-                  obrero…).
+                  Obligatoria para los cargos de obra (maestro de obra, obrero, operario…): sin ella
+                  no se puede filtrar al trabajador para tareas específicas.
                 </p>
               </div>
 
@@ -739,6 +767,24 @@ export default function Personal() {
               onChange={(e) => setCatalogoForm({ ...catalogoForm, descripcion: e.target.value })}
             />
           </div>
+          <div>
+            <label htmlFor="cat-categoria" className="label">
+              Categoría
+            </label>
+            <select
+              id="cat-categoria"
+              className="input"
+              value={catalogoForm.categoria}
+              onChange={(e) => setCatalogoForm({ ...catalogoForm, categoria: e.target.value })}
+            >
+              <option value="">Sin categoría (aparece en «Otros»)</option>
+              {(CATEGORIAS[nuevoCatalogo] ?? []).map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
           {nuevoCatalogo === 'cargos' && (
             <label className="flex items-start gap-2 text-sm text-slate-700">
               <input
@@ -804,9 +850,12 @@ export default function Personal() {
             filas={personal}
             minWidth="md:min-w-[860px]"
             filaClase={() => 'transition hover:bg-slate-50/70'}
+            // Hay celdas de varias líneas (cargo con especialidad, contacto): se
+            // alinea todo al primer renglón para que la fila se lea de corrido.
+            alinearArriba
             ficha={{
               titulo: (t) => `${t.nombres} ${t.apellidos}`,
-              subtitulo: (t) => t.cargo,
+              subtitulo: (t) => (t.especialidad ? `${t.cargo} · ${t.especialidad}` : t.cargo),
             }}
             columnas={[
               {
@@ -821,7 +870,6 @@ export default function Personal() {
                         Dado de baja
                       </span>
                     )}
-                    {t.especialidad && <p className="text-xs font-normal text-slate-400">{t.especialidad}</p>}
                   </>
                 ),
               },
@@ -830,10 +878,22 @@ export default function Personal() {
                 tdClase: 'text-slate-600',
                 celda: (t) => `${t.tipo_documento} ${t.numero_documento}`,
               },
-              { titulo: 'Cargo', movil: true, tdClase: 'text-slate-600', celda: (t) => t.cargo },
+              {
+                titulo: 'Cargo',
+                movil: true,
+                tdClase: 'text-slate-600',
+                // La especialidad va bajo el cargo: dice en qué oficio se desempeña.
+                celda: (t) => (
+                  <>
+                    {t.cargo}
+                    {t.especialidad && <p className="text-xs text-slate-400">{t.especialidad}</p>}
+                  </>
+                ),
+              },
               {
                 titulo: 'Contacto',
-                tdClase: 'text-xs text-slate-500',
+                // leading-5: el texto pequeño ocupa el mismo renglón que el resto de la fila.
+                tdClase: 'text-xs leading-5 text-slate-500',
                 celda: (t) => (
                   <>
                     {t.email ?? '—'}
@@ -855,10 +915,13 @@ export default function Personal() {
               },
               {
                 titulo: 'Estado',
+                // Más aire frente a Contacto y sin cortes: el selector tiene ancho fijo.
+                thClase: 'pl-6 whitespace-nowrap',
+                tdClase: 'pl-6 whitespace-nowrap',
                 celda: (t) =>
                   !t.activo ? (
                     <div>
-                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_BADGE.INACTIVO}`}>
+                      <span className={`-my-0.5 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${ESTADO_BADGE.INACTIVO}`}>
                         Inactivo
                       </span>
                       {t.fecha_baja && (
@@ -867,7 +930,9 @@ export default function Personal() {
                     </div>
                   ) : puedeEditar ? (
                     <select
-                      className="input py-1 text-xs"
+                      // Ancho fijo (cabe «Vacaciones») y poco relleno izquierdo para que el
+                      // texto quede bajo «ESTADO»; -my-1 lo centra en el primer renglón.
+                      className="input -my-1 block w-32 py-1 pl-2.5 text-xs"
                       aria-label={`Estado de ${t.nombres} ${t.apellidos}`}
                       value={t.estado}
                       onChange={(e) => cambiarEstado(t, e.target.value)}
@@ -880,7 +945,7 @@ export default function Personal() {
                     </select>
                   ) : (
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      className={`-my-0.5 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
                         ESTADO_BADGE[t.estado] ?? 'bg-slate-100 text-slate-600'
                       }`}
                     >
@@ -916,7 +981,7 @@ export default function Personal() {
                       <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
                     </button>
                   )
-                  return enFicha ? botones : <div className="flex flex-col items-stretch gap-1.5">{botones}</div>
+                  return enFicha ? botones : <div className="-my-1 flex flex-col items-stretch gap-1.5">{botones}</div>
                 },
               },
             ]}

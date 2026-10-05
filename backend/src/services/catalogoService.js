@@ -12,11 +12,26 @@ import { AppError } from '../utils/AppError.js'
  *
  * Ninguna operación borra filas: dar de baja marca `activo = 0` y conserva la
  * relación con los trabajadores que ya usaban el valor (HU-18 · RN07).
+ *
+ * `categoria` agrupa los valores en los selectores de la interfaz. Es opcional
+ * (los cargos migrados del texto libre pueden no tenerla) y, si llega, debe ser
+ * una de la lista. La misma lista vive en frontend/src/lib/catalogos.js.
  */
+export const CATEGORIAS_CARGO = ['Directivo / Técnico', 'Administrativo', 'Operativo / Obra']
+
+export const CATEGORIAS_ESPECIALIDAD = [
+  'Obra Negra y Gris (Estructura)',
+  'Instalaciones (MEP)',
+  'Acabados y Detalles',
+  'Trabajos Especializados',
+  'Seguridad y Logística',
+]
+
 const CATALOGOS = {
   cargos: {
     tabla: 'cargos',
     etiqueta: 'cargo',
+    categorias: CATEGORIAS_CARGO,
     tieneOperativo: true,
     listar: catalogoRepository.listarCargos,
     findById: catalogoRepository.findCargoById,
@@ -27,6 +42,7 @@ const CATALOGOS = {
   especialidades: {
     tabla: 'especialidades',
     etiqueta: 'especialidad',
+    categorias: CATEGORIAS_ESPECIALIDAD,
     tieneOperativo: false,
     listar: catalogoRepository.listarEspecialidades,
     findById: catalogoRepository.findEspecialidadById,
@@ -71,6 +87,20 @@ function validarDescripcion(descripcion) {
   return limpio
 }
 
+/** Categoría opcional: vacía queda sin categoría; si llega, debe ser de la lista. */
+function validarCategoria(def, categoria) {
+  if (categoria === undefined || categoria === null || String(categoria).trim() === '') return null
+  const limpio = String(categoria).trim()
+  if (!def.categorias.includes(limpio)) {
+    throw new AppError(
+      `La categoría del ${def.etiqueta} debe ser una de: ${def.categorias.join(', ')}`,
+      400,
+      'categoria',
+    )
+  }
+  return limpio
+}
+
 /** `operativo` llega como booleano del formulario o como 1/0 de un cliente API. */
 function validarOperativo(valor) {
   return valor === true || valor === 1 || valor === '1' || valor === 'true' || valor === 'on'
@@ -88,7 +118,11 @@ export async function crearCatalogo(tipo, body = {}, ctx = {}) {
   const nombre = validarNombre(def, body.nombre)
   await exigirNombreLibre(def, nombre)
 
-  const datos = { nombre, descripcion: validarDescripcion(body.descripcion) }
+  const datos = {
+    nombre,
+    descripcion: validarDescripcion(body.descripcion),
+    categoria: validarCategoria(def, body.categoria),
+  }
   if (def.tieneOperativo) datos.operativo = validarOperativo(body.operativo)
 
   const id = await def.crear(datos)
@@ -116,6 +150,7 @@ export async function actualizarCatalogo(tipo, id, body = {}, ctx = {}) {
     await exigirNombreLibre(def, campos.nombre, id)
   }
   if (body.descripcion !== undefined) campos.descripcion = validarDescripcion(body.descripcion)
+  if (body.categoria !== undefined) campos.categoria = validarCategoria(def, body.categoria)
   if (def.tieneOperativo && body.operativo !== undefined) {
     campos.operativo = validarOperativo(body.operativo) ? 1 : 0
   }

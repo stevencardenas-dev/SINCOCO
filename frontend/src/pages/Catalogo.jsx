@@ -11,6 +11,7 @@ import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
+import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
 
 /**
  * Catálogo (RF01 · RF06 · RF02): mantiene los valores de dominio que usan las
@@ -25,6 +26,9 @@ import api from '../services/api'
  * Los cargos marcan `operativo`: para esos cargos la especialidad es
  * obligatoria (criterio 2 de HU-04), y la regla la lee el backend del catálogo,
  * no del código.
+ *
+ * Cargos y especialidades llevan una categoría (lib/catalogos.js) con la que
+ * Personal agrupa sus selectores; lo que no la tiene aparece en «Otros».
  */
 
 const TABS = [
@@ -59,8 +63,8 @@ const TABS = [
 ]
 
 const VACIO = {
-  cargos: { nombre: '', descripcion: '', operativo: false },
-  especialidades: { nombre: '', descripcion: '' },
+  cargos: { nombre: '', descripcion: '', categoria: '', operativo: false },
+  especialidades: { nombre: '', descripcion: '', categoria: '' },
   clientes: {
     tipo_documento: 'NIT',
     numero_documento: '',
@@ -109,7 +113,7 @@ export default function Catalogo() {
   }
 
   const abrirEditar = (fila) => {
-    setForm({ ...VACIO[tipo], ...fila })
+    setForm({ ...VACIO[tipo], ...fila, ...(tipo !== 'clientes' ? { categoria: fila.categoria ?? '' } : {}) })
     setErrorForm('')
     setModal('editar')
   }
@@ -141,12 +145,14 @@ export default function Catalogo() {
         await api.patch(`${tab.ruta}/${form.id}`, {
           nombre: form.nombre,
           descripcion: form.descripcion,
+          categoria: form.categoria || null,
           ...(tipo === 'cargos' ? { operativo: form.operativo } : {}),
         })
       } else {
         await api.post(tab.ruta, {
           nombre: form.nombre,
           descripcion: form.descripcion,
+          categoria: form.categoria || null,
           ...(tipo === 'cargos' ? { operativo: form.operativo } : {}),
         })
       }
@@ -304,6 +310,13 @@ export default function Catalogo() {
                   ]
                 : [
                     {
+                      titulo: 'Categoría',
+                      movil: true,
+                      tdClase: 'text-slate-600',
+                      celda: (f) =>
+                        f.categoria ?? <span className="text-slate-400">{SIN_CATEGORIA}</span>,
+                    },
+                    {
                       titulo: 'Descripción',
                       movil: true,
                       tdClase: 'max-w-md text-slate-600',
@@ -430,6 +443,17 @@ export default function Catalogo() {
                 <label htmlFor="cat-descripcion" className="label">Descripción</label>
                 <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
                   onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+              </div>
+              <div>
+                <label htmlFor="cat-categoria" className="label">Categoría</label>
+                <select id="cat-categoria" className="input" value={form.categoria}
+                  onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                  <option value="">Sin categoría (aparece en «{SIN_CATEGORIA}»)</option>
+                  {CATEGORIAS[tipo].map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Agrupa este valor en los selectores del formulario de personal.
+                </p>
               </div>
               {tipo === 'cargos' && (
                 <label className="flex items-start gap-2 text-sm text-slate-700">

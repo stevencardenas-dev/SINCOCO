@@ -54,14 +54,17 @@ export async function findByEmail(email) {
  * Por defecto solo activos (HU-18: los registros dados de baja no aparecen
  * salvo petición explícita). El volumen de personal obliga a poder buscar y
  * filtrar desde la API (no solo en el navegador): `buscar` cruza nombres,
- * apellidos, documento, correo, cargo y especialidad; `estado` y `cargo_id`
- * filtran por columnas, y `disponible` por la bandera derivada.
+ * apellidos, documento, correo, cargo y especialidad; `estado`, `cargo_id` y
+ * `especialidad_id` filtran por columnas, y `disponible` por la bandera derivada.
+ * El filtro por especialidad es el que menciona CU-04 · Alt 2 («filtrado para
+ * tareas específicas»).
  */
 export async function listar({
   incluirInactivos = false,
   buscar = '',
   estado = '',
   cargoId = null,
+  especialidadId = null,
   disponible = null,
 } = {}) {
   const condiciones = []
@@ -86,6 +89,10 @@ export async function listar({
   if (cargoId) {
     condiciones.push('t.cargo_id = ?')
     params.push(cargoId)
+  }
+  if (especialidadId) {
+    condiciones.push('t.especialidad_id = ?')
+    params.push(especialidadId)
   }
   if (disponible !== null && disponible !== undefined && disponible !== '') {
     condiciones.push('t.disponible = ?')
