@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import api from '../services/api'
+import { authApi } from '../services/auth'
 
 const AuthContext = createContext(null)
 
@@ -38,7 +38,7 @@ export function AuthProvider({ children }) {
    */
   const login = async (username, password) => {
     try {
-      const { data } = await api.post('/auth/login', { username, password })
+      const data = await authApi.login(username, password)
       localStorage.setItem('sincoco_token', data.token)
       localStorage.setItem('sincoco_user', JSON.stringify(data.user))
       setUser(data.user)
@@ -56,9 +56,9 @@ export function AuthProvider({ children }) {
     }
     let vigente = true
     setCargandoPermisos(true)
-    api
-      .get('/auth/permisos')
-      .then((res) => vigente && setPermisos(res.data.permisos ?? []))
+    authApi
+      .permisos()
+      .then((data) => vigente && setPermisos(data.permisos ?? []))
       .catch(() => vigente && setPermisos([]))
       .finally(() => vigente && setCargandoPermisos(false))
     return () => {
@@ -75,7 +75,7 @@ export function AuthProvider({ children }) {
   // cuenta se libera sola tras unos minutos sin actividad.
   useEffect(() => {
     if (!user) return undefined
-    const latido = () => api.get('/auth/sesion').catch(() => {})
+    const latido = () => authApi.sesion().catch(() => {})
     const intervalo = setInterval(latido, 4 * 60 * 1000)
     return () => clearInterval(intervalo)
   }, [user])
@@ -87,7 +87,7 @@ export function AuthProvider({ children }) {
    */
   const logout = async () => {
     try {
-      await api.post('/auth/logout')
+      await authApi.logout()
     } catch {
       // Una sesión ya cerrada (o vencida) no debe impedir salir.
     }

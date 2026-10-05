@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   ArrowPathIcon,
   MapPinIcon,
@@ -15,7 +15,10 @@ import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
-import api from '../services/api'
+import { catalogosApi } from '../services/catalogos'
+import { clientesApi } from '../services/clientes'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFormulario } from '../hooks/useFormulario'
 import { useAuth } from '../context/AuthContext.jsx'
 import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
 
@@ -42,7 +45,7 @@ const TABS = [
   {
     id: 'cargos',
     label: 'Cargos',
-    ruta: '/catalogos/cargos',
+    servicio: catalogosApi.cargos,
     etiqueta: 'cargo',
     articulo: 'el',
     nuevo: 'Nuevo cargo',
@@ -52,7 +55,7 @@ const TABS = [
   {
     id: 'especialidades',
     label: 'Especialidades',
-    ruta: '/catalogos/especialidades',
+    servicio: catalogosApi.especialidades,
     etiqueta: 'especialidad',
     articulo: 'la',
     nuevo: 'Nueva especialidad',
@@ -61,7 +64,7 @@ const TABS = [
   {
     id: 'clientes',
     label: 'Clientes',
-    ruta: '/clientes',
+    servicio: clientesApi,
     etiqueta: 'cliente',
     articulo: 'el',
     nuevo: 'Nuevo cliente',
@@ -90,128 +93,72 @@ export default function Catalogo() {
   // Ver el módulo lo decide `catalogos.listar` (la ruta); operarlo, `catalogos.gestionar`.
   const puedeGestionar = puede('catalogos.gestionar')
   const [tipo, setTipo] = useState('cargos')
-  const [datos, setDatos] = useState(null)
-  const [error, setError] = useState('')
-  const [aviso, setAviso] = useState('')
   const [incluirInactivos, setIncluirInactivos] = useState(false)
 
-  const [modal, setModal] = useState(null) // 'crear' | 'editar'
-  const [form, setForm] = useState(VACIO.cargos)
-  const [errorForm, setErrorForm] = useState('')
-  const [campoForm, setCampoForm] = useState(null)
   const [mapaAbierto, setMapaAbierto] = useState(false)
-  const [guardando, setGuardando] = useState(false)
   const [porEliminar, setPorEliminar] = useState(null)
 
   const tab = TABS.find((t) => t.id === tipo)
 
-  const cargar = () => {
-    setError('')
-    setDatos(null)
-    return api
-      .get(tab.ruta, { params: incluirInactivos ? { incluirInactivos: 1 } : {} })
-      .then((res) => setDatos(res.data))
-      .catch(() => setError(`No se pudo cargar el catálogo de ${tab.label.toLowerCase()}.`))
-  }
+  // Al cambiar de pestaña se vacía la tabla: las columnas de un catálogo no
+  // sirven para las filas de otro.
+  const { datos, error, aviso, setAviso, limpiarMensajes, recargar, ejecutar } = useRecurso(
+    () => tab.servicio.listar({ incluirInactivos }),
+    [tipo, incluirInactivos],
+    { mensaje: `No se pudo cargar el catálogo de ${tab.label.toLowerCase()}.`, reiniciar: true },
+  )
 
-  useEffect(() => {
-    cargar()
-  }, [tipo, incluirInactivos])
-
-  const abrirCrear = () => {
-    setForm(VACIO[tipo])
-    setErrorForm('')
-    setCampoForm(null)
-    setModal('crear')
-  }
-
-  const abrirEditar = (fila) => {
-    setForm({ ...VACIO[tipo], ...fila, ...(tipo !== 'clientes' ? { categoria: fila.categoria ?? '' } : {}) })
-    setErrorForm('')
-    setCampoForm(null)
-    setModal('editar')
-  }
-
-  const cerrarModal = () => {
-    setModal(null)
-    setErrorForm('')
-    setCampoForm(null)
-  }
-
-  const guardar = async (e) => {
-    e.preventDefault()
-    setErrorForm('')
-    setCampoForm(null)
-    setGuardando(true)
-    try {
-      if (tipo === 'clientes') {
-        if (modal === 'editar') {
-          await api.patch(`${tab.ruta}/${form.id}`, {
-            tipo_documento: form.tipo_documento,
-            razon_social_nombre: form.razon_social_nombre,
-            nombre_contacto: form.nombre_contacto,
-            telefono: form.telefono,
-            email: form.email,
-            direccion: form.direccion,
-          })
-        } else {
-          await api.post(tab.ruta, form)
-        }
-      } else if (modal === 'editar') {
-        await api.patch(`${tab.ruta}/${form.id}`, {
-          nombre: form.nombre,
-          descripcion: form.descripcion,
-          categoria: form.categoria || null,
-          ...(tipo === 'cargos' ? { operativo: form.operativo } : {}),
-        })
-      } else {
-        await api.post(tab.ruta, {
-          nombre: form.nombre,
-          descripcion: form.descripcion,
-          categoria: form.categoria || null,
-          ...(tipo === 'cargos' ? { operativo: form.operativo } : {}),
-        })
-      }
-
-      setAviso(modal === 'editar' ? 'Registro actualizado.' : 'Registro agregado al catálogo.')
-      cerrarModal()
-      cargar()
-    } catch (err) {
-      setErrorForm(err.response?.data?.error ?? 'No se pudo guardar el registro.')
-      setCampoForm(err.response?.data?.campo ?? null)
-    } finally {
-      setGuardando(false)
+  /** Lo que se envía de cada catálogo (el documento de un cliente no se edita). */
+  const cuerpo = (form, editando) => {
+    if (tipo === 'clientes') {
+      if (!editando) return form
+      const { tipo_documento, razon_social_nombre, nombre_contacto, telefono, email, direccion } = form
+      return { tipo_documento, razon_social_nombre, nombre_contacto, telefono, email, direccion }
+    }
+    return {
+      nombre: form.nombre,
+      descripcion: form.descripcion,
+      categoria: form.categoria || null,
+      ...(tipo === 'cargos' ? { operativo: form.operativo } : {}),
     }
   }
+
+  // `registro` es la fila que se edita (null = registro nuevo).
+  const formulario = useFormulario(VACIO[tipo], {
+    enviar: (form, fila) =>
+      fila ? tab.servicio.actualizar(fila.id, cuerpo(form, true)) : tab.servicio.crear(cuerpo(form, false)),
+    alGuardar: (_, { registro }) => {
+      setAviso(registro ? 'Registro actualizado.' : 'Registro agregado al catálogo.')
+      return recargar()
+    },
+    error: 'No se pudo guardar el registro.',
+  })
+  const form = formulario.valores
+  const editando = formulario.registro !== null
+
+  const abrirEditar = (fila) =>
+    formulario.abrir(
+      { ...VACIO[tipo], ...fila, ...(tipo !== 'clientes' ? { categoria: fila.categoria ?? '' } : {}) },
+      fila,
+    )
 
   /** Eliminar = baja lógica (HU-18): el registro deja de ofrecerse, pero no se borra. */
   const eliminar = async () => {
     const fila = porEliminar
     setPorEliminar(null)
-    setError('')
-    setAviso('')
-    try {
-      await api.patch(`${tab.ruta}/${fila.id}/baja`)
-      setAviso(`Se dio de baja ${tab.articulo} ${tab.etiqueta} "${nombreDe(fila)}".`)
-      cargar()
-    } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo dar de baja el registro.')
-    }
+    await ejecutar(() => tab.servicio.baja(fila.id), {
+      exito: `Se dio de baja ${tab.articulo} ${tab.etiqueta} "${nombreDe(fila)}".`,
+      error: 'No se pudo dar de baja el registro.',
+    })
   }
 
-  const reactivar = async (fila) => {
-    setError('')
-    setAviso('')
-    try {
-      await api.patch(`${tab.ruta}/${fila.id}/reactivar`)
-      setAviso(`Se reactivó ${tab.articulo} ${tab.etiqueta} "${nombreDe(fila)}".`)
-      cargar()
-    } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo reactivar el registro.')
-    }
-  }
+  const reactivar = (fila) =>
+    ejecutar(() => tab.servicio.reactivar(fila.id), {
+      exito: `Se reactivó ${tab.articulo} ${tab.etiqueta} "${nombreDe(fila)}".`,
+      error: 'No se pudo reactivar el registro.',
+    })
 
-  const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
+  const campo = formulario.claseCampo
 
   const nombreDe = (fila) => fila.nombre ?? fila.razon_social_nombre ?? ''
 
@@ -219,12 +166,12 @@ export default function Catalogo() {
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={cargar} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title="Gestión Administrativa"
         subtitle="Cargos, especialidades y clientes de la empresa"
       >
         {puedeGestionar && (
-          <button type="button" className="btn-primary" onClick={abrirCrear}>
+          <button type="button" className="btn-primary" onClick={() => formulario.abrir()}>
             <PlusIcon className="h-5 w-5" /> {tab.nuevo}
           </button>
         )}
@@ -239,7 +186,7 @@ export default function Catalogo() {
           <button
             key={t.id}
             type="button"
-            onClick={() => { setTipo(t.id); setAviso(''); setError('') }}
+            onClick={() => { setTipo(t.id); limpiarMensajes() }}
             className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
               t.id === tipo
                 ? 'border-b-2 border-accent-400 text-brand-900'
@@ -401,15 +348,10 @@ export default function Catalogo() {
 
       {/* Crear / editar un registro del catálogo */}
       <ModalFormulario
-        abierto={modal !== null}
-        titulo={`${modal === 'editar' ? 'Editar' : 'Nuevo'} ${tab.etiqueta}`}
+        {...formulario.propsModal}
+        titulo={`${editando ? 'Editar' : 'Nuevo'} ${tab.etiqueta}`}
         subtitulo="Los cambios aplican de inmediato en los formularios del sistema"
-        onCerrar={cerrarModal}
-        onGuardar={guardar}
-        guardando={guardando}
-        error={errorForm}
-        campoError={campoForm}
-        textoGuardar={modal === 'editar' ? 'Guardar cambios' : 'Agregar'}
+        textoGuardar={editando ? 'Guardar cambios' : 'Agregar'}
         espaciado="space-y-4"
       >
         {tipo === 'clientes' ? (
@@ -418,16 +360,16 @@ export default function Catalogo() {
               <div>
                 <label htmlFor="cat-tipo-doc" className="label">Tipo de documento</label>
                 <select id="cat-tipo-doc" className="input" value={form.tipo_documento}
-                  onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}>
+                  onChange={(e) => formulario.cambiar('tipo_documento', e.target.value)}>
                   {TIPOS_DOCUMENTO.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div>
                 <label htmlFor="cat-documento" className="label">Documento</label>
                 <input id="cat-documento" className="input" maxLength={20} value={form.numero_documento}
-                  onChange={(e) => setForm({ ...form, numero_documento: e.target.value })}
-                  disabled={modal === 'editar'} required />
-                {modal === 'editar' && (
+                  onChange={(e) => formulario.cambiar('numero_documento', e.target.value)}
+                  disabled={editando} required />
+                {editando && (
                   <p className="mt-1 text-xs text-slate-500">
                     El documento identifica al cliente y no se edita.
                   </p>
@@ -437,25 +379,25 @@ export default function Catalogo() {
             <div>
               <label htmlFor="cat-razon" className="label">Razón social / nombre</label>
               <input id="cat-razon" className="input" maxLength={150} value={form.razon_social_nombre}
-                onChange={(e) => setForm({ ...form, razon_social_nombre: e.target.value })} required />
+                onChange={(e) => formulario.cambiar('razon_social_nombre', e.target.value)} required />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label htmlFor="cat-contacto" className="label">Nombre del contacto</label>
                 <input id="cat-contacto" className="input" value={form.nombre_contacto}
-                  onChange={(e) => setForm({ ...form, nombre_contacto: e.target.value })} />
+                  onChange={(e) => formulario.cambiar('nombre_contacto', e.target.value)} />
               </div>
               <div>
                 <label htmlFor="cat-telefono" className="label">Teléfono</label>
                 <TelefonoPais id="cat-telefono" value={form.telefono}
-                  onChange={(v) => setForm({ ...form, telefono: v })}
-                  error={campoForm === 'telefono'} />
+                  onChange={(v) => formulario.cambiar('telefono', v)}
+                  error={formulario.campo === 'telefono'} />
               </div>
               <div>
                 <label htmlFor="cat-email" className="label">Correo</label>
                 <input id="cat-email" type="email" maxLength={150} autoComplete="email"
                   placeholder="nombre@correo.com" className={campo('email')} value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  onChange={(e) => formulario.cambiar('email', e.target.value)} />
               </div>
               <div className="sm:col-span-2">
                 <label htmlFor="cat-direccion" className="label">Dirección</label>
@@ -463,7 +405,7 @@ export default function Catalogo() {
                   <input id="cat-direccion" maxLength={255} className="input"
                     placeholder="Escriba la dirección o selecciónela en el mapa"
                     value={form.direccion}
-                    onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+                    onChange={(e) => formulario.cambiar('direccion', e.target.value)} />
                   <button type="button" className="btn-ghost shrink-0" onClick={() => setMapaAbierto(true)}>
                     <MapPinIcon className="h-4 w-4" /> Mapa
                   </button>
@@ -476,17 +418,17 @@ export default function Catalogo() {
             <div>
               <label htmlFor="cat-nombre" className="label">Nombre</label>
               <input id="cat-nombre" className="input" maxLength={100} value={form.nombre} required minLength={3}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })} />
+                onChange={(e) => formulario.cambiar('nombre', e.target.value)} />
             </div>
             <div>
               <label htmlFor="cat-descripcion" className="label">Descripción</label>
               <input id="cat-descripcion" className="input" maxLength={255} value={form.descripcion}
-                onChange={(e) => setForm({ ...form, descripcion: e.target.value })} />
+                onChange={(e) => formulario.cambiar('descripcion', e.target.value)} />
             </div>
             <div>
               <label htmlFor="cat-categoria" className="label">Categoría</label>
               <select id="cat-categoria" className="input" value={form.categoria}
-                onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                onChange={(e) => formulario.cambiar('categoria', e.target.value)}>
                 <option value="">Sin categoría (aparece en «{SIN_CATEGORIA}»)</option>
                 {CATEGORIAS[tipo].map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -498,7 +440,7 @@ export default function Catalogo() {
               <label className="flex items-start gap-2 text-sm text-slate-700">
                 <input type="checkbox" className="mt-0.5 h-4 w-4 rounded border-slate-300"
                   checked={Boolean(form.operativo)}
-                  onChange={(e) => setForm({ ...form, operativo: e.target.checked })} />
+                  onChange={(e) => formulario.cambiar('operativo', e.target.checked)} />
                 <span>
                   Es cargo de obra
                   <span className="block text-xs text-slate-500">
@@ -517,7 +459,7 @@ export default function Catalogo() {
         valorInicial={form.direccion}
         onCerrar={() => setMapaAbierto(false)}
         onAceptar={(texto) => {
-          setForm((f) => ({ ...f, direccion: texto }))
+          formulario.cambiar('direccion', texto)
           setMapaAbierto(false)
         }}
       />

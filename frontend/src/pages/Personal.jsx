@@ -17,8 +17,11 @@ import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import api from '../services/api'
-import { campoError, mensajeError } from '../lib/errores.js'
+import { trabajadoresApi } from '../services/trabajadores'
+import { catalogosApi } from '../services/catalogos'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha, soloDigitos } from '../lib/format.js'
 import { CATEGORIAS, agruparPorCategoria } from '../lib/catalogos.js'
 
@@ -96,131 +99,145 @@ export default function Personal() {
   const puedeBaja = puede('trabajadores.dar_baja')
   const puedeCatalogos = puede('catalogos.gestionar')
 
-  const [personal, setPersonal] = useState(null)
-  const [error, setError] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [errorForm, setErrorForm] = useState('')
-  const [campoForm, setCampoForm] = useState(null)
-  const [form, setForm] = useState(VACIO)
-  const [abierto, setAbierto] = useState(false)
   const [mapaAbierto, setMapaAbierto] = useState(false)
-  // Trabajador en edición: null = el formulario está registrando uno nuevo.
-  const [editando, setEditando] = useState(null)
-  const [guardando, setGuardando] = useState(false)
   // HU-18: por defecto no se muestran los registros dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
-  const [filtros, setFiltros] = useState(SIN_FILTROS)
+  const {
+    filtros,
+    cambiar: cambiarFiltro,
+    limpiar: limpiarFiltros,
+    activos: filtrosActivos,
+    hayFiltros,
+  } = useFiltros(SIN_FILTROS)
 
   // Catálogos del cargo y la especialidad.
   const [cargos, setCargos] = useState([])
   const [especialidades, setEspecialidades] = useState([])
-  const [nuevoCatalogo, setNuevoCatalogo] = useState(null)
-  const [catalogoForm, setCatalogoForm] = useState(CATALOGO_VACIO)
-  const [errorCatalogo, setErrorCatalogo] = useState('')
-  const [guardandoCatalogo, setGuardandoCatalogo] = useState(false)
 
-  // HU-18: confirmación de «Dar de baja» (el trabajador que se va a retirar).
-  const [porDarDeBaja, setPorDarDeBaja] = useState(null)
-  const [errorBaja, setErrorBaja] = useState('')
-  const [dandoDeBaja, setDandoDeBaja] = useState(false)
-
-  const cargar = () => {
-    setError('')
-    return api
-      .get('/trabajadores', {
-        params: {
-          ...(incluirInactivos ? { incluirInactivos: 1 } : {}),
-          ...(filtros.buscar ? { buscar: filtros.buscar } : {}),
-          ...(filtros.estado ? { estado: filtros.estado } : {}),
-          ...(filtros.cargo_id ? { cargo_id: filtros.cargo_id } : {}),
-          ...(filtros.especialidad_id ? { especialidad_id: filtros.especialidad_id } : {}),
-          ...(filtros.disponible !== '' ? { disponible: filtros.disponible } : {}),
-        },
-      })
-      .then((res) => setPersonal(res.data))
-      .catch(() => setError('No se pudo cargar el personal.'))
-  }
-
-  const cargarCatalogos = () => {
-    api.get('/catalogos/cargos').then((res) => setCargos(res.data)).catch(() => {})
-    api.get('/catalogos/especialidades').then((res) => setEspecialidades(res.data)).catch(() => {})
-  }
+  const {
+    datos: personal,
+    error,
+    setError,
+    aviso,
+    setAviso,
+    recargar,
+    ejecutar,
+  } = useRecurso(
+    () =>
+      trabajadoresApi.listar({
+        incluirInactivos,
+        buscar: filtros.buscar,
+        estado: filtros.estado,
+        cargo_id: filtros.cargo_id,
+        especialidad_id: filtros.especialidad_id,
+        disponible: filtros.disponible,
+      }),
+    [incluirInactivos, filtros],
+    { mensaje: 'No se pudo cargar el personal.' },
+  )
 
   useEffect(() => {
-    cargar()
-  }, [incluirInactivos, filtros])
-  useEffect(cargarCatalogos, [])
+    catalogosApi.cargos.listar().then(setCargos).catch(() => {})
+    catalogosApi.especialidades.listar().then(setEspecialidades).catch(() => {})
+  }, [])
 
   /** Cambiar el estado reemplaza al «dar de baja»: la disponibilidad se deriva. */
-  const cambiarEstado = async (t, estado) => {
-    setError('')
-    setAviso('')
+  const cambiarEstado = (t, estado) => {
     if (estado === t.estado) return
-    try {
-      const { data } = await api.patch(`/trabajadores/${t.id}/estado`, { estado })
-      const actualizado = data.trabajador
-      setAviso(
+    // Si falla se recarga igual, para que el selector vuelva al estado real.
+    ejecutar(() => trabajadoresApi.cambiarEstado(t.id, estado), {
+      exito: ({ trabajador: actualizado }) =>
         `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
-          (Number(actualizado.disponible)
-            ? Number(actualizado.actividades_vigentes) > 0
-              ? ' · asignado'
-              : ' · disponible'
-            : ' · no disponible'),
-      )
-      cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo cambiar el estado del trabajador.'))
-      cargar()
-    }
+        (Number(actualizado.disponible)
+          ? Number(actualizado.actividades_vigentes) > 0
+            ? ' · asignado'
+            : ' · disponible'
+          : ' · no disponible'),
+      error: 'No se pudo cambiar el estado del trabajador.',
+      recargarSiFalla: true,
+    })
   }
 
-  /** CU-04: registrar o actualizar el personal con su cargo y especialidad. */
-  const guardar = async (e) => {
-    e.preventDefault()
-    setErrorForm('')
-    setCampoForm(null)
-    setGuardando(true)
-    try {
+  /**
+   * CU-04: registrar o actualizar el personal con su cargo y especialidad.
+   * `registro` es el trabajador en edición (null = se registra uno nuevo).
+   */
+  const formulario = useFormulario(VACIO, {
+    enviar: (f, trabajador) => {
       const cuerpo = {
-        ...form,
-        numero_documento: soloDigitos(form.numero_documento),
-        cargo_id: Number(form.cargo_id),
-        especialidad_id: form.especialidad_id ? Number(form.especialidad_id) : null,
+        ...f,
+        numero_documento: soloDigitos(f.numero_documento),
+        cargo_id: Number(f.cargo_id),
+        especialidad_id: f.especialidad_id ? Number(f.especialidad_id) : null,
       }
-      const { data } = editando
-        ? await api.patch(`/trabajadores/${editando}`, cuerpo)
-        : await api.post('/trabajadores', cuerpo)
-      const t = data.trabajador
+      return trabajador ? trabajadoresApi.actualizar(trabajador.id, cuerpo) : trabajadoresApi.crear(cuerpo)
+    },
+    alGuardar: ({ trabajador: t }, { registro }) => {
       setAviso(
-        editando
+        registro
           ? `${t.nombres} ${t.apellidos}: información actualizada (${t.cargo}).`
           : `${t.nombres} ${t.apellidos} registrado como ${t.cargo}.`,
       )
-      cerrarFormulario()
-      cargar()
-    } catch (err) {
-      setErrorForm(mensajeError(err, 'No se pudo guardar el trabajador.'))
-      setCampoForm(campoError(err))
-    } finally {
-      setGuardando(false)
-    }
-  }
+      return recargar()
+    },
+    error: 'No se pudo guardar el trabajador.',
+  })
+  const form = formulario.valores
+  const editando = formulario.registro
 
-  const cerrarFormulario = () => {
-    setAbierto(false)
-    setEditando(null)
-    setForm(VACIO)
-    setErrorForm('')
-    setCampoForm(null)
-  }
+  /**
+   * Registra un cargo o una especialidad nueva sin salir del formulario: queda
+   * en el catálogo (se puede editar después en Gestión Administrativa) y de
+   * una vez seleccionada en el trabajador que se está registrando.
+   * `registro` es el catálogo: 'cargos' o 'especialidades'.
+   */
+  const catalogo = useFormulario(CATALOGO_VACIO, {
+    enviar: (f, tipo) =>
+      catalogosApi[tipo].crear({
+        nombre: f.nombre,
+        descripcion: f.descripcion,
+        categoria: f.categoria || null,
+        ...(tipo === 'cargos' ? { operativo: f.operativo } : {}),
+      }),
+    alGuardar: (data, { registro: tipo }) => {
+      const fila = data[tipo === 'cargos' ? 'cargo' : 'especialidad']
+      const agregar = (prev) => [...prev, fila].sort((a, b) => a.nombre.localeCompare(b.nombre))
+      if (tipo === 'cargos') {
+        setCargos(agregar)
+        formulario.cambiar('cargo_id', String(fila.id))
+      } else {
+        setEspecialidades(agregar)
+        formulario.cambiar('especialidad_id', String(fila.id))
+      }
+      setAviso(`${fila.nombre} agregado al catálogo y seleccionado.`)
+    },
+    error: 'No se pudo registrar en el catálogo.',
+  })
+  const nuevoCatalogo = catalogo.registro
+
+  /**
+   * HU-18: confirmación de «Dar de baja» (`registro` es el trabajador que se
+   * retira). El backend la rechaza si tiene trabajo en curso a su cargo.
+   */
+  const baja = useFormulario(null, {
+    enviar: (_, t) => trabajadoresApi.baja(t.id),
+    alGuardar: (data, { registro: t }) => {
+      formulario.cerrar()
+      setError('')
+      setAviso(
+        `Se dio de baja a ${t.nombres} ${t.apellidos}.` +
+          (data.cuenta_bloqueada ? ` Su cuenta «${data.cuenta_bloqueada}» quedó bloqueada.` : ''),
+      )
+      return recargar()
+    },
+    error: 'No se pudo dar de baja al trabajador.',
+  })
+  const porDarDeBaja = baja.registro
 
   /** Pasa el trabajador a edición: el formulario se abre con sus datos actuales. */
   const abrirEditar = (t) => {
     setAviso('')
-    setErrorForm('')
-    setCampoForm(null)
-    setEditando(t.id)
-    setForm({
+    formulario.abrir({
       numero_documento: t.numero_documento ?? '',
       tipo_documento: t.tipo_documento ?? 'CC',
       nombres: t.nombres ?? '',
@@ -231,114 +248,37 @@ export default function Personal() {
       cargo_id: String(t.cargo_id ?? ''),
       especialidad_id: t.especialidad_id ? String(t.especialidad_id) : '',
       estado: t.estado ?? 'ACTIVO',
-    })
-    setAbierto(true)
+    }, t)
   }
 
   /** «⚠️ Dar de baja» del formulario de edición: abre la confirmación encima. */
-  const pedirBaja = () => {
-    setErrorBaja('')
-    setPorDarDeBaja(personal?.find((t) => t.id === editando) ?? null)
-  }
-
-  /** HU-18: baja lógica. El backend la rechaza si tiene trabajo en curso a su cargo. */
-  const confirmarBaja = async () => {
-    const t = porDarDeBaja
-    setErrorBaja('')
-    setDandoDeBaja(true)
-    try {
-      const { data } = await api.patch(`/trabajadores/${t.id}/baja`)
-      setPorDarDeBaja(null)
-      cerrarFormulario()
-      setError('')
-      setAviso(
-        `Se dio de baja a ${t.nombres} ${t.apellidos}.` +
-          (data.cuenta_bloqueada ? ` Su cuenta «${data.cuenta_bloqueada}» quedó bloqueada.` : ''),
-      )
-      cargar()
-    } catch (err) {
-      setErrorBaja(mensajeError(err, 'No se pudo dar de baja al trabajador.'))
-    } finally {
-      setDandoDeBaja(false)
-    }
-  }
+  const pedirBaja = () => baja.abrir(null, editando)
 
   /** HU-18: vuelve a la operación como Activo (y reabre la cuenta que cerró la baja). */
-  const reactivar = async (t) => {
-    setError('')
-    setAviso('')
-    try {
-      const { data } = await api.patch(`/trabajadores/${t.id}/reactivar`)
-      setAviso(
+  const reactivar = (t) =>
+    ejecutar(() => trabajadoresApi.reactivar(t.id), {
+      exito: (data) =>
         `Se reactivó a ${t.nombres} ${t.apellidos}.` +
-          (data.cuenta_reactivada ? ' Su cuenta de acceso también se reactivó.' : ''),
-      )
-      cargar()
-    } catch (err) {
-      setError(mensajeError(err, 'No se pudo reactivar al trabajador.'))
-    }
-  }
+        (data.cuenta_reactivada ? ' Su cuenta de acceso también se reactivó.' : ''),
+      error: 'No se pudo reactivar al trabajador.',
+    })
 
-  /**
-   * Registra un cargo o una especialidad nueva sin salir del formulario: queda
-   * en el catálogo (se puede editar después en Gestión Administrativa) y de
-   * una vez seleccionada en el trabajador que se está registrando.
-   */
-  const crearCatalogo = async (e) => {
-    e.preventDefault()
-    setErrorCatalogo('')
-    setGuardandoCatalogo(true)
-    try {
-      const { data } = await api.post(`/catalogos/${nuevoCatalogo}`, {
-        nombre: catalogoForm.nombre,
-        descripcion: catalogoForm.descripcion,
-        categoria: catalogoForm.categoria || null,
-        ...(nuevoCatalogo === 'cargos' ? { operativo: catalogoForm.operativo } : {}),
-      })
-      const fila = data[nuevoCatalogo === 'cargos' ? 'cargo' : 'especialidad']
-      if (nuevoCatalogo === 'cargos') {
-        setCargos((prev) => [...prev, fila].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-        setForm((f) => ({ ...f, cargo_id: String(fila.id) }))
-      } else {
-        setEspecialidades((prev) => [...prev, fila].sort((a, b) => a.nombre.localeCompare(b.nombre)))
-        setForm((f) => ({ ...f, especialidad_id: String(fila.id) }))
-      }
-      setAviso(`${fila.nombre} agregado al catálogo y seleccionado.`)
-      setNuevoCatalogo(null)
-      setCatalogoForm(CATALOGO_VACIO)
-    } catch (err) {
-      setErrorCatalogo(mensajeError(err, 'No se pudo registrar en el catálogo.'))
-    } finally {
-      setGuardandoCatalogo(false)
-    }
-  }
-
-  const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
+  const campo = formulario.claseCampo
   const cargoElegido = cargos.find((c) => String(c.id) === String(form.cargo_id))
   // Al editar a alguien cuyo cargo se dio de baja en el catálogo (p. ej. Oficial),
   // ese cargo ya no está en la lista: se avisa para que elija uno vigente.
-  const cargoRetirado =
-    editando && form.cargo_id && !cargoElegido
-      ? personal?.find((t) => t.id === editando)?.cargo
-      : null
-  const hayFiltros = Object.values(filtros).some(Boolean)
+  const cargoRetirado = editando && form.cargo_id && !cargoElegido ? editando.cargo : null
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={cargar} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title="Personal"
         subtitle="Registrar personal con su cargo y especialidad"
       >
         {puedeCrear && (
           <button
             className="btn-primary"
-            onClick={() => {
-              setEditando(null)
-              setForm(VACIO)
-              setErrorForm('')
-              setCampoForm(null)
-              setAbierto(true)
-            }}
+            onClick={() => formulario.abrir()}
           >
             <PlusIcon className="h-5 w-5" /> Nuevo trabajador
           </button>
@@ -355,7 +295,7 @@ export default function Personal() {
       <FiltrosDesplegable
         titulo="Buscar personal"
         ariaLabel="Filtros de personal"
-        activos={Object.values(filtros).filter((v) => v !== '').length}
+        activos={filtrosActivos}
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="xl:col-span-2">
@@ -368,7 +308,7 @@ export default function Personal() {
               className="input"
               placeholder="Nombre, documento, correo, cargo o especialidad"
               value={filtros.buscar}
-              onChange={(e) => setFiltros((f) => ({ ...f, buscar: e.target.value }))}
+              onChange={(e) => cambiarFiltro('buscar', e.target.value)}
             />
           </div>
           <div>
@@ -379,7 +319,7 @@ export default function Personal() {
               id="per-estado"
               className="input"
               value={filtros.estado}
-              onChange={(e) => setFiltros((f) => ({ ...f, estado: e.target.value }))}
+              onChange={(e) => cambiarFiltro('estado', e.target.value)}
             >
               <option value="">Todos</option>
               {ESTADOS.map((e2) => (
@@ -397,7 +337,7 @@ export default function Personal() {
               id="per-disponible"
               className="input"
               value={filtros.disponible}
-              onChange={(e) => setFiltros((f) => ({ ...f, disponible: e.target.value }))}
+              onChange={(e) => cambiarFiltro('disponible', e.target.value)}
             >
               <option value="">Todas</option>
               <option value="libre">Disponibles</option>
@@ -413,7 +353,7 @@ export default function Personal() {
               id="per-cargo"
               className="input"
               value={filtros.cargo_id}
-              onChange={(e) => setFiltros((f) => ({ ...f, cargo_id: e.target.value }))}
+              onChange={(e) => cambiarFiltro('cargo_id', e.target.value)}
             >
               <option value="">Todos</option>
               <OpcionesAgrupadas filas={cargos} tipo="cargos" />
@@ -428,7 +368,7 @@ export default function Personal() {
               id="per-especialidad"
               className="input"
               value={filtros.especialidad_id}
-              onChange={(e) => setFiltros((f) => ({ ...f, especialidad_id: e.target.value }))}
+              onChange={(e) => cambiarFiltro('especialidad_id', e.target.value)}
             >
               <option value="">Todas</option>
               <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
@@ -439,7 +379,7 @@ export default function Personal() {
               type="button"
               className="btn-ghost"
               disabled={!hayFiltros}
-              onClick={() => setFiltros(SIN_FILTROS)}
+              onClick={limpiarFiltros}
             >
               Limpiar filtros
             </button>
@@ -456,19 +396,14 @@ export default function Personal() {
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
       {(puedeCrear || puedeEditar) && (
         <ModalFormulario
-          abierto={abierto}
+          {...formulario.propsModal}
           titulo={editando ? 'Actualizar información del trabajador' : 'Registrar personal'}
           subtitulo={
             editando
               ? 'El cambio queda registrado en la bitácora de trazabilidad'
               : 'Cargo y especialidad salen del catálogo de la empresa'
           }
-          onCerrar={cerrarFormulario}
           ancho="max-w-3xl"
-          onGuardar={guardar}
-          guardando={guardando}
-          error={errorForm}
-          campoError={campoForm}
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar trabajador'}
           acciones={
             editando && (
@@ -492,7 +427,7 @@ export default function Personal() {
                 className={`${campo('numero_documento')} tabular-nums`}
                 value={form.numero_documento}
                 onChange={(e) =>
-                  setForm({ ...form, numero_documento: soloDigitos(e.target.value).slice(0, 20) })
+                  formulario.cambiar('numero_documento', soloDigitos(e.target.value).slice(0, 20))
                 }
                 disabled={Boolean(editando)}
                 required
@@ -511,7 +446,7 @@ export default function Personal() {
                 id="t-tipo"
                 className="input"
                 value={form.tipo_documento}
-                onChange={(e) => setForm({ ...form, tipo_documento: e.target.value })}
+                onChange={(e) => formulario.cambiar('tipo_documento', e.target.value)}
               >
                 <option value="CC">CC</option>
                 <option value="CE">CE</option>
@@ -528,7 +463,7 @@ export default function Personal() {
                 maxLength={100}
                 className="input"
                 value={form.nombres}
-                onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                onChange={(e) => formulario.cambiar('nombres', e.target.value)}
                 required
               />
             </div>
@@ -541,7 +476,7 @@ export default function Personal() {
                 maxLength={100}
                 className="input"
                 value={form.apellidos}
-                onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                onChange={(e) => formulario.cambiar('apellidos', e.target.value)}
                 required
               />
             </div>
@@ -557,7 +492,7 @@ export default function Personal() {
                 placeholder="nombre@correo.com"
                 className={campo('email')}
                 value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                onChange={(e) => formulario.cambiar('email', e.target.value)}
               />
             </div>
             <div>
@@ -567,8 +502,8 @@ export default function Personal() {
               <TelefonoPais
                 id="t-telefono"
                 value={form.telefono}
-                onChange={(v) => setForm({ ...form, telefono: v })}
-                error={campoForm === 'telefono'}
+                onChange={(v) => formulario.cambiar('telefono', v)}
+                error={formulario.campo === 'telefono'}
               />
             </div>
 
@@ -582,12 +517,10 @@ export default function Personal() {
                 value={form.cargo_id}
                 onChange={(e) => {
                   if (e.target.value === '__nuevo__') {
-                    setNuevoCatalogo('cargos')
-                    setCatalogoForm(CATALOGO_VACIO)
-                    setErrorCatalogo('')
+                    catalogo.abrir(CATALOGO_VACIO, 'cargos')
                     return
                   }
-                  setForm({ ...form, cargo_id: e.target.value })
+                  formulario.cambiar('cargo_id', e.target.value)
                 }}
                 required
               >
@@ -615,12 +548,10 @@ export default function Personal() {
                 value={form.especialidad_id}
                 onChange={(e) => {
                   if (e.target.value === '__nuevo__') {
-                    setNuevoCatalogo('especialidades')
-                    setCatalogoForm(CATALOGO_VACIO)
-                    setErrorCatalogo('')
+                    catalogo.abrir(CATALOGO_VACIO, 'especialidades')
                     return
                   }
-                  setForm({ ...form, especialidad_id: e.target.value })
+                  formulario.cambiar('especialidad_id', e.target.value)
                 }}
               >
                 <option value="">Sin especialidad</option>
@@ -644,7 +575,7 @@ export default function Personal() {
                   className="input"
                   placeholder="Escriba la dirección o selecciónela en el mapa"
                   value={form.direccion}
-                  onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                  onChange={(e) => formulario.cambiar('direccion', e.target.value)}
                 />
                 <button
                   type="button"
@@ -666,7 +597,7 @@ export default function Personal() {
                 className="input"
                 value={form.estado}
                 disabled={!editando}
-                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                onChange={(e) => formulario.cambiar('estado', e.target.value)}
               >
                 {ESTADOS.map((e2) => (
                   <option key={e2.value} value={e2.value}>
@@ -687,9 +618,9 @@ export default function Personal() {
       {/* Confirmación de «Dar de baja»: se abre encima del formulario de edición,
           con el mismo estilo que las demás confirmaciones (Roles, Gestión Administrativa). */}
       <Modal
-        abierto={porDarDeBaja !== null}
+        abierto={baja.abierto}
         titulo={porDarDeBaja ? `¿Dar de baja a ${porDarDeBaja.nombres} ${porDarDeBaja.apellidos}?` : ''}
-        onCerrar={() => !dandoDeBaja && setPorDarDeBaja(null)}
+        onCerrar={() => !baja.guardando && baja.cerrar()}
         ancho="max-w-md"
       >
         <p className="text-sm text-slate-600">Al dar de baja a esta persona:</p>
@@ -702,25 +633,25 @@ export default function Personal() {
         <p className="mt-3 rounded-xl bg-accent-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-accent-200">
           Si es responsable de proyectos o actividades en curso, primero hay que reasignarlos.
         </p>
-        {errorBaja && (
+        {baja.error && (
           <div className="mt-3">
-            <AlertaFormulario mensaje={errorBaja} />
+            <AlertaFormulario mensaje={baja.error} />
           </div>
         )}
         <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
           <button
             type="button"
             className="btn-primary disabled:opacity-60"
-            disabled={dandoDeBaja}
-            onClick={confirmarBaja}
+            disabled={baja.guardando}
+            onClick={baja.guardar}
           >
-            {dandoDeBaja ? 'Dando de baja…' : 'Dar de baja'}
+            {baja.guardando ? 'Dando de baja…' : 'Dar de baja'}
           </button>
           <button
             type="button"
             className="btn-ghost"
-            disabled={dandoDeBaja}
-            onClick={() => setPorDarDeBaja(null)}
+            disabled={baja.guardando}
+            onClick={baja.cerrar}
           >
             Cancelar
           </button>
@@ -729,16 +660,9 @@ export default function Personal() {
 
       {/* Alta rápida de un valor del catálogo sin salir del formulario. */}
       <ModalFormulario
-        abierto={nuevoCatalogo !== null}
+        {...catalogo.propsModal}
         titulo={CATALOGO_TITULO[nuevoCatalogo] ?? ''}
         subtitulo="Queda guardado en el catálogo de la empresa y seleccionado en el formulario"
-        onCerrar={() => {
-          setNuevoCatalogo(null)
-          setErrorCatalogo('')
-        }}
-        onGuardar={crearCatalogo}
-        guardando={guardandoCatalogo}
-        error={errorCatalogo}
         textoGuardar="Agregar al catálogo"
         espaciado="space-y-4"
       >
@@ -750,10 +674,10 @@ export default function Personal() {
             id="cat-nombre"
             maxLength={100}
             className="input"
-            value={catalogoForm.nombre}
+            value={catalogo.valores.nombre}
             required
             minLength={3}
-            onChange={(e) => setCatalogoForm({ ...catalogoForm, nombre: e.target.value })}
+            onChange={(e) => catalogo.cambiar('nombre', e.target.value)}
           />
         </div>
         <div>
@@ -764,8 +688,8 @@ export default function Personal() {
             id="cat-descripcion"
             maxLength={255}
             className="input"
-            value={catalogoForm.descripcion}
-            onChange={(e) => setCatalogoForm({ ...catalogoForm, descripcion: e.target.value })}
+            value={catalogo.valores.descripcion}
+            onChange={(e) => catalogo.cambiar('descripcion', e.target.value)}
           />
         </div>
         <div>
@@ -775,8 +699,8 @@ export default function Personal() {
           <select
             id="cat-categoria"
             className="input"
-            value={catalogoForm.categoria}
-            onChange={(e) => setCatalogoForm({ ...catalogoForm, categoria: e.target.value })}
+            value={catalogo.valores.categoria}
+            onChange={(e) => catalogo.cambiar('categoria', e.target.value)}
           >
             <option value="">Sin categoría (aparece en «Otros»)</option>
             {(CATEGORIAS[nuevoCatalogo] ?? []).map((c) => (
@@ -791,8 +715,8 @@ export default function Personal() {
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 rounded border-slate-300"
-              checked={catalogoForm.operativo}
-              onChange={(e) => setCatalogoForm({ ...catalogoForm, operativo: e.target.checked })}
+              checked={catalogo.valores.operativo}
+              onChange={(e) => catalogo.cambiar('operativo', e.target.checked)}
             />
             <span>
               Es cargo de obra
@@ -810,7 +734,7 @@ export default function Personal() {
         valorInicial={form.direccion}
         onCerrar={() => setMapaAbierto(false)}
         onAceptar={(texto) => {
-          setForm((f) => ({ ...f, direccion: texto }))
+          formulario.cambiar('direccion', texto)
           setMapaAbierto(false)
         }}
       />

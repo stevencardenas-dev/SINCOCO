@@ -4,7 +4,7 @@ import CampoPassword from '../components/CampoPassword.jsx'
 import Logo from '../components/Logo.jsx'
 import Modal from '../components/Modal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import api from '../services/api'
+import { authApi } from '../services/auth'
 
 export default function Login() {
   const { login } = useAuth()
@@ -42,7 +42,7 @@ export default function Login() {
     setErrorRecuperar('')
     setGuardandoRecuperar(true)
     try {
-      await api.post('/auth/solicitar-reset', { usuario: recuperar.usuario })
+      await authApi.solicitarReset(recuperar.usuario)
       setPaso('cambiar')
     } catch (err) {
       setErrorRecuperar(err.response?.data?.error ?? 'No se pudo registrar la solicitud.')
@@ -61,7 +61,7 @@ export default function Login() {
     }
     setGuardandoRecuperar(true)
     try {
-      await api.post('/auth/restablecer', {
+      await authApi.restablecer({
         usuario: recuperar.usuario,
         codigo: recuperar.codigo,
         password: recuperar.password,

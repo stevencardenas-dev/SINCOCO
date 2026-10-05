@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { DocumentMagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import DetalleBitacora, { ContenidoDetalle } from '../components/DetalleBitacora.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
-import api from '../services/api'
+import { auditoriaApi } from '../services/auditoria'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
 import { fmtFechaHora } from '../lib/format.js'
 
 /**
@@ -52,43 +54,26 @@ const TITULO_TABLA = {
 }
 
 export default function Auditoria() {
-  const [datos, setDatos] = useState(null)
-  const [error, setError] = useState('')
-  const [cargando, setCargando] = useState(true)
-  const [filtros, setFiltros] = useState(SIN_FILTROS)
   const [pagina, setPagina] = useState(1)
-
-  const cargar = useCallback(() => {
-    setCargando(true)
-    setError('')
-    return api
-      .get('/auditoria', { params: { ...filtros, pagina } })
-      .then((res) => setDatos(res.data))
-      .catch((err) =>
-        setError(err.response?.data?.error ?? 'No se pudo cargar la bitácora de trazabilidad.'),
-      )
-      .finally(() => setCargando(false))
-  }, [filtros, pagina])
-
-  useEffect(() => {
-    cargar()
-  }, [cargar])
-
   // Cualquier cambio de filtro vuelve a la primera página: si no, una página
   // alta puede quedar vacía y parecer que no hay resultados.
-  const cambiar = (campo, valor) => {
-    setFiltros((prev) => ({ ...prev, [campo]: valor }))
-    setPagina(1)
-  }
+  const { filtros, cambiar, limpiar, activos, hayFiltros } = useFiltros(SIN_FILTROS, {
+    alCambiar: () => setPagina(1),
+  })
 
-  const hayFiltros = Object.values(filtros).some(Boolean)
+  const { datos, error, cargando, recargar } = useRecurso(
+    () => auditoriaApi.listar({ ...filtros, pagina }),
+    [filtros, pagina],
+    { mensaje: 'No se pudo cargar la bitácora de trazabilidad.' },
+  )
+
   const filas = datos?.filas ?? []
   const desde = datos && filas.length > 0 ? (datos.pagina - 1) * datos.limite + 1 : 0
   const hasta = datos && filas.length > 0 ? desde + filas.length - 1 : 0
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={cargar} cargando={cargando} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} cargando={cargando} />}
         title="Trazabilidad y auditoría"
         subtitle="Quién realizó cada operación crítica y cuándo"
       >
@@ -104,7 +89,7 @@ export default function Auditoria() {
       <FiltrosDesplegable
         titulo="Buscar en la bitácora"
         ariaLabel="Filtros de auditoría"
-        activos={Object.values(filtros).filter(Boolean).length}
+        activos={activos}
       >
 
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
@@ -184,10 +169,7 @@ export default function Auditoria() {
             type="button"
             className="btn-ghost"
             disabled={!hayFiltros}
-            onClick={() => {
-              setFiltros(SIN_FILTROS)
-              setPagina(1)
-            }}
+            onClick={limpiar}
           >
             Limpiar filtros
           </button>

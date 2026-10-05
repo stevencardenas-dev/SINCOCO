@@ -11,7 +11,9 @@ import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais from '../components/TelefonoPais.jsx'
-import api from '../services/api'
+import { perfilApi } from '../services/perfil'
+import { useRecurso } from '../hooks/useRecurso'
+import { useFormulario } from '../hooks/useFormulario'
 import { fmtFechaHora } from '../lib/format.js'
 
 /**
@@ -31,90 +33,67 @@ const VACIO_DATOS = { telefono: '', email: '', direccion: '' }
 const VACIO_CLAVE = { password_actual: '', password: '', repetir: '' }
 
 export default function Perfil() {
-  const [perfil, setPerfil] = useState(null)
-  const [error, setError] = useState('')
-  const [aviso, setAviso] = useState('')
-  const [errorCampo, setErrorCampo] = useState(null)
+  const {
+    datos: perfil,
+    setDatos: setPerfil,
+    error: errorCarga,
+    aviso,
+    setAviso,
+    recargar,
+  } = useRecurso(perfilApi.obtener, [], { mensaje: 'No se pudo cargar su información personal.' })
 
-  const [datos, setDatos] = useState(VACIO_DATOS)
-  const [guardandoDatos, setGuardandoDatos] = useState(false)
   // Selector de ubicación en el mapa (Leaflet) para la dirección.
   const [mapaAbierto, setMapaAbierto] = useState(false)
 
-  const [clave, setClave] = useState(VACIO_CLAVE)
-  const [errorClave, setErrorClave] = useState('')
-  const [guardandoClave, setGuardandoClave] = useState(false)
-
-  const aplicar = (data) => {
-    setPerfil(data)
-    setDatos({
-      telefono: data.trabajador?.telefono ?? '',
-      email: data.trabajador?.email ?? '',
-      direccion: data.trabajador?.direccion ?? '',
-    })
-  }
-
-  const cargar = () => {
-    setError('')
-    return api
-      .get('/perfil')
-      .then((res) => aplicar(res.data))
-      .catch(() => setError('No se pudo cargar su información personal.'))
-  }
-
-  useEffect(() => {
-    cargar()
-  }, [])
-
-  const guardarDatos = async (e) => {
-    e.preventDefault()
-    setError('')
-    setAviso('')
-    setErrorCampo(null)
-    setGuardandoDatos(true)
-    try {
-      const { data } = await api.patch('/perfil', datos)
-      aplicar(data)
+  // Datos de contacto: el formulario sigue a la vista después de guardar.
+  const misDatos = useFormulario(VACIO_DATOS, {
+    enviar: (f) => perfilApi.actualizar(f),
+    alGuardar: (perfilActualizado) => {
+      setPerfil(perfilActualizado)
       setAviso('Su información se actualizó correctamente.')
-    } catch (err) {
-      setError(err.response?.data?.error ?? 'No se pudo guardar su información.')
-      setErrorCampo(err.response?.data?.campo ?? null)
-    } finally {
-      setGuardandoDatos(false)
-    }
-  }
+    },
+    error: 'No se pudo guardar su información.',
+    cerrarAlGuardar: false,
+  })
+  const datos = misDatos.valores
+  // El error de los datos se muestra arriba, junto al de la carga.
+  const error = errorCarga || misDatos.error
 
-  const cambiarClave = async (e) => {
-    e.preventDefault()
-    setErrorClave('')
-    setAviso('')
+  const clave = useFormulario(VACIO_CLAVE, {
     // RNF04: la validación también está en el backend; aquí se avisa antes.
-    if (clave.password !== clave.repetir) {
-      setErrorClave('La contraseña nueva y su confirmación no coinciden.')
-      return
-    }
-    setGuardandoClave(true)
-    try {
-      await api.patch('/perfil', {
-        password_actual: clave.password_actual,
-        password: clave.password,
-      })
-      setClave(VACIO_CLAVE)
-      setAviso('Contraseña actualizada. Úsela en el próximo ingreso.')
-    } catch (err) {
-      setErrorClave(err.response?.data?.error ?? 'No se pudo cambiar la contraseña.')
-    } finally {
-      setGuardandoClave(false)
-    }
+    validar: (f) => f.password !== f.repetir && 'La contraseña nueva y su confirmación no coinciden.',
+    enviar: (f) => perfilApi.actualizar({ password_actual: f.password_actual, password: f.password }),
+    alGuardar: () => setAviso('Contraseña actualizada. Úsela en el próximo ingreso.'),
+    error: 'No se pudo cambiar la contraseña.',
+  })
+
+  // El formulario se llena con lo último que devolvió la API (al cargar y al guardar).
+  useEffect(() => {
+    if (!perfil) return
+    misDatos.setValores({
+      telefono: perfil.trabajador?.telefono ?? '',
+      email: perfil.trabajador?.email ?? '',
+      direccion: perfil.trabajador?.direccion ?? '',
+    })
+  }, [perfil])
+
+  const guardarDatos = (e) => {
+    setAviso('')
+    return misDatos.guardar(e)
   }
 
-  const campo = (nombre) => (errorCampo === nombre ? 'input border-red-400' : 'input')
+  const cambiarClave = (e) => {
+    setAviso('')
+    return clave.guardar(e)
+  }
+
+  const campo = misDatos.claseCampo
   const cuenta = perfil?.usuario
   const trabajador = perfil?.trabajador
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={cargar} />}
+      <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title="Mi información personal"
         subtitle="Sus datos de acceso y su ficha de trabajador"
       >
@@ -139,7 +118,7 @@ export default function Perfil() {
         valorInicial={datos.direccion}
         onCerrar={() => setMapaAbierto(false)}
         onAceptar={(texto) => {
-          setDatos((d) => ({ ...d, direccion: texto }))
+          misDatos.cambiar('direccion', texto)
           setMapaAbierto(false)
         }}
       />
@@ -230,14 +209,14 @@ export default function Perfil() {
                       <TelefonoPais
                         id="mi-telefono"
                         value={datos.telefono}
-                        onChange={(v) => setDatos({ ...datos, telefono: v })}
-                        error={errorCampo === 'telefono'}
+                        onChange={(v) => misDatos.cambiar('telefono', v)}
+                        error={misDatos.campo === 'telefono'}
                       />
                     </div>
                     <div>
                       <label htmlFor="mi-email" className="label">Correo de contacto</label>
                       <input id="mi-email" type="email" maxLength={150} className={campo('email')} value={datos.email}
-                        onChange={(e) => setDatos({ ...datos, email: e.target.value })} />
+                        onChange={(e) => misDatos.cambiar('email', e.target.value)} />
                     </div>
                     <div className="sm:col-span-2">
                       <label htmlFor="mi-direccion" className="label">Dirección</label>
@@ -248,7 +227,7 @@ export default function Perfil() {
                           className={campo('direccion')}
                           placeholder="Escriba la dirección o selecciónela en el mapa"
                           value={datos.direccion}
-                          onChange={(e) => setDatos({ ...datos, direccion: e.target.value })}
+                          onChange={(e) => misDatos.cambiar('direccion', e.target.value)}
                         />
                         <button
                           type="button"
@@ -270,8 +249,8 @@ export default function Perfil() {
                   </div>
 
                   <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-                    <button type="submit" disabled={guardandoDatos} className="btn-primary disabled:opacity-60">
-                      {guardandoDatos ? 'Guardando…' : 'Guardar mis datos'}
+                    <button type="submit" disabled={misDatos.guardando} className="btn-primary disabled:opacity-60">
+                      {misDatos.guardando ? 'Guardando…' : 'Guardar mis datos'}
                     </button>
                     <span className="text-xs text-slate-500">
                       Los cambios quedan registrados en la bitácora de trazabilidad.
@@ -297,35 +276,35 @@ export default function Perfil() {
                 <div>
                   <label htmlFor="mi-clave-actual" className="label">Contraseña actual</label>
                   <CampoPassword id="mi-clave-actual" autoComplete="current-password"
-                    value={clave.password_actual}
-                    onChange={(e) => setClave({ ...clave, password_actual: e.target.value })} required />
+                    value={clave.valores.password_actual}
+                    onChange={(e) => clave.cambiar('password_actual', e.target.value)} required />
                 </div>
                 <div>
                   <label htmlFor="mi-clave-nueva" className="label">Nueva contraseña</label>
                   <CampoPassword id="mi-clave-nueva" autoComplete="new-password"
-                    minLength={8} value={clave.password}
-                    onChange={(e) => setClave({ ...clave, password: e.target.value })} required />
+                    minLength={8} value={clave.valores.password}
+                    onChange={(e) => clave.cambiar('password', e.target.value)} required />
                 </div>
                 <div>
                   <label htmlFor="mi-clave-repetir" className="label">Confirmar nueva contraseña</label>
                   <CampoPassword id="mi-clave-repetir" autoComplete="new-password"
-                    minLength={8} value={clave.repetir}
-                    onChange={(e) => setClave({ ...clave, repetir: e.target.value })} required />
+                    minLength={8} value={clave.valores.repetir}
+                    onChange={(e) => clave.cambiar('repetir', e.target.value)} required />
                 </div>
               </div>
 
-              {errorClave && (
+              {clave.error && (
                 <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                  {errorClave}
+                  {clave.error}
                 </p>
               )}
 
               <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-                <button type="submit" disabled={guardandoClave} className="btn-primary disabled:opacity-60">
-                  {guardandoClave ? 'Cambiando…' : 'Cambiar contraseña'}
+                <button type="submit" disabled={clave.guardando} className="btn-primary disabled:opacity-60">
+                  {clave.guardando ? 'Cambiando…' : 'Cambiar contraseña'}
                 </button>
                 <button type="button" className="btn-ghost"
-                  onClick={() => { setClave(VACIO_CLAVE); setErrorClave('') }}>
+                  onClick={clave.cerrar}>
                   Limpiar
                 </button>
               </div>
