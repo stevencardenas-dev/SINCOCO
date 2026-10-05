@@ -61,6 +61,9 @@ export async function registrarProyecto(dto, ctx = {}) {
   if (!cliente) {
     throw new AppError('El cliente indicado no existe; regístrelo antes de continuar', 404, 'cliente_id')
   }
+  if (!cliente.activo) {
+    throw new AppError('El cliente indicado está dado de baja y no puede asociarse a un proyecto', 400, 'cliente_id')
+  }
 
   // Criterio 1: responsable válido, existente y no dado de baja (HU-18:
   // los datos nunca se borran, se marcan inactivos).
@@ -189,6 +192,11 @@ export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
     const cliente = await clienteRepository.findById(campos.cliente_id)
     if (!cliente) {
       throw new AppError('El cliente indicado no existe; regístrelo antes de continuar', 404, 'cliente_id')
+    }
+    // Solo se exige cliente activo si se cambia de cliente: conservar el actual
+    // no debe impedir editar el resto del proyecto.
+    if (!cliente.activo && Number(campos.cliente_id) !== Number(actual.cliente_id)) {
+      throw new AppError('El cliente indicado está dado de baja y no puede asociarse a un proyecto', 400, 'cliente_id')
     }
   }
   if (campos.responsable_id !== undefined) {
