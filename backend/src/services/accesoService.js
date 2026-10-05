@@ -5,7 +5,7 @@ import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import { rolTienePermiso } from '../middleware/permisos.js'
 import { registrar as bitacora } from '../db/bitacora.js'
-import { validarFechasEnRango } from '../utils/fechas.js'
+import { aFechaDia } from '../utils/fechas.js'
 import { AppError } from '../utils/AppError.js'
 
 /**
@@ -120,7 +120,7 @@ export async function listarAsignaciones(filtros = {}, usuario = null) {
  * Reglas:
  *  - el proyecto y el trabajador existen y están activos;
  *  - si se indica actividad, pertenece al proyecto y está activa;
- *  - las fechas quedan dentro del rango del proyecto y son coherentes;
+ *  - el fin programado no es anterior al inicio (no se limita al rango del proyecto);
  *  - no se duplica una asignación activa al mismo destino.
  */
 export async function registrarAsignacion(dto, ctx = {}) {
@@ -143,7 +143,15 @@ export async function registrarAsignacion(dto, ctx = {}) {
     }
   }
 
-  validarFechasEnRango(dto.fecha_inicio, dto.fecha_fin_programada, proyecto)
+  // El acceso no se limita al rango del proyecto: las fechas del formulario son
+  // solo sugerencias. Se conserva únicamente que el fin no sea anterior al inicio.
+  if (dto.fecha_fin_programada && aFechaDia(dto.fecha_inicio) > aFechaDia(dto.fecha_fin_programada)) {
+    throw new AppError(
+      'La fecha de fin programada no puede ser anterior a la de inicio',
+      400,
+      'fecha_fin_programada',
+    )
+  }
 
   const duplicada = await asignacionRepository.existeActiva(
     dto.trabajador_id,

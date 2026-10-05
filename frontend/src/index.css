@@ -52,6 +52,9 @@
   .btn-accion-editar {
     @apply border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100;
   }
+  .btn-accion-plan {
+    @apply border-accent-300 bg-accent-100 text-brand-900 hover:bg-accent-200;
+  }
   .btn-accion-peligro {
     @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100;
   }

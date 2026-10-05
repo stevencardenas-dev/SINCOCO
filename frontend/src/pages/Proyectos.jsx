@@ -796,7 +796,7 @@ export default function Proyectos() {
                 titulo: 'Plan',
                 acciones: true,
                 celda: (p) => (
-                  <Link to={`/proyectos/${p.id}`} className="btn-ghost text-xs">
+                  <Link to={`/proyectos/${p.id}`} className="btn-accion btn-accion-plan">
                     <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
                   </Link>
                 ),

@@ -82,7 +82,7 @@ actividad_id = r['actividad']['id']
 
 estado, r = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto,
-    'fecha_inicio': '2026-10-05', 'rol_en_proyecto': 'Residente de obra'}, token=gerente)
+    'fecha_inicio': '2026-10-05', 'observaciones': 'Residente de obra'}, token=gerente)
 esperar('asigna personal al proyecto', estado, r, 201)
 
 estado, r = http('PATCH', f'/api/trabajadores/{responsable_id}', {'telefono': '3001234567'}, token=gerente)
@@ -124,7 +124,7 @@ estado, r = http('PATCH', f'/api/proyectos/{proyecto}/baja', token=maestro)
 esperar('NO da de baja proyectos', estado, r, 403)
 estado, r = http('POST', '/api/asignaciones', {
     'trabajador_id': trabajador_maestro, 'proyecto_id': proyecto,
-    'fecha_inicio': '2026-10-05', 'rol_en_proyecto': 'Residente de obra'}, token=maestro)
+    'fecha_inicio': '2026-10-05', 'observaciones': 'Residente de obra'}, token=maestro)
 esperar('NO asigna personal', estado, r, 403)
 estado, r = http('POST', '/api/trabajadores', {'numero_documento': f'{PREFIJO}-CC-X'}, token=maestro)
 esperar('NO registra personal', estado, r, 403)
