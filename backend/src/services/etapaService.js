@@ -5,7 +5,7 @@ import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
 import { aFechaDia, rangosSeSolapan, validarFechasEnRango } from '../utils/fechas.js'
-import { verificarAccesoProyecto } from './accesoService.js'
+import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
 
 // La regla de fechas vive en utils/fechas.js (la comparten etapas, actividades
 // y asignaciones). Se reexporta para no romper a quien ya la importaba de aquí.
@@ -46,7 +46,7 @@ async function validarSinSolape(proyectoId, inicio, fin, { excluirId = null } = 
 export async function registrarEtapa(dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(dto.proyecto_id)
   if (!proyecto) throw new AppError('El proyecto indicado no existe', 404, 'proyecto_id')
-  await verificarAccesoProyecto(ctx.usuario, dto.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, dto.proyecto_id)
   if (!proyecto.activo) throw new AppError('El proyecto está dado de baja', 400, 'proyecto_id')
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto, 'la etapa')
@@ -83,7 +83,7 @@ export async function registrarEtapa(dto, ctx = {}) {
 export async function actualizarEtapa(id, dto, ctx = {}) {
   const etapa = await etapaRepository.findById(id)
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, etapa.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
   if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
 
@@ -127,7 +127,7 @@ export async function actualizarEtapa(id, dto, ctx = {}) {
 export async function darDeBajaEtapa(id, ctx = {}) {
   const etapa = await etapaRepository.findById(id)
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, etapa.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
 
   const afectadas = await darDeBaja({ tabla: 'etapas_proyecto', id, usuarioId: ctx.usuarioId })
   if (!afectadas) throw new AppError('La etapa ya estaba dada de baja', 409)
@@ -144,7 +144,7 @@ export async function darDeBajaEtapa(id, ctx = {}) {
 export async function reactivarEtapa(id, ctx = {}) {
   const etapa = await etapaRepository.findById(id)
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, etapa.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
   // Mientras estuvo de baja pudo ocuparse su rango: no se reactiva si se solapa.
   const inicio = aFechaDia(etapa.fecha_inicio_programada)
   const fin = aFechaDia(etapa.fecha_fin_programada)

@@ -128,7 +128,7 @@ assert estado == 400, f'se esperaba 400 por fecha, llego {estado}: {r}'
 print('actividad fuera de rango ->', estado, r['error'])
 
 # RBAC: el maestro de obra consulta el plan del proyecto al que está asignado,
-# pero no lo define. El acceso a proyectos y actividades se administra con
+# pero solo el líder del proyecto, el gerente y el administrador lo modifican. El acceso a proyectos y actividades se administra con
 # asignaciones_personal: sin asignación vigente el plan no se consulta.
 maestro = login('maestro')
 trabajador_maestro = int(scalar("SELECT trabajador_id FROM usuarios WHERE username='maestro'"))
@@ -148,11 +148,25 @@ assert estado == 201, f'asignar al maestro: {estado} {r}'
 
 estado, _ = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=maestro)
 assert estado == 200, f'el maestro asignado debe poder listar etapas, llego {estado}'
+# Asignado, pero no líder del proyecto: consulta el plan sin modificarlo.
 estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa del maestro',
                                              fecha_inicio_programada='2027-03-01',
                                              fecha_fin_programada='2027-04-01'), token=maestro)
-assert estado == 201, f'el maestro asignado define etapas, llego {estado}: {r}'
-print('maestro asignado ->', 'GET 200 / POST 201 OK')
+assert estado == 403, f'el asignado que no es líder no define etapas, llego {estado}: {r}'
+print('maestro asignado ->', 'GET 200 / POST 403 OK')
+
+# Estados de ejecucion: Empezar (En curso) y Finalizar (Finalizado).
+estado, r = http('PATCH', f'/api/actividades/{a["id"]}/finalizar', token=admin)
+assert estado == 409, f'no se finaliza una actividad pendiente, llego {estado}: {r}'
+estado, r = http('PATCH', f'/api/actividades/{a["id"]}/iniciar', token=maestro)
+assert estado == 403, f'el asignado al proyecto (no a la actividad) no la cambia, llego {estado}: {r}'
+estado, r = http('PATCH', f'/api/actividades/{a["id"]}/iniciar', token=admin)
+assert estado == 200 and r['actividad']['estado'] == 'EN_PROCESO' and r['actividad']['fecha_inicio_real'], f'empezar: {estado} {r}'
+estado, r = http('PATCH', f'/api/actividades/{a["id"]}/iniciar', token=admin)
+assert estado == 409, f'no se empieza dos veces, llego {estado}'
+estado, r = http('PATCH', f'/api/actividades/{a["id"]}/finalizar', token=admin)
+assert estado == 200 and r['actividad']['estado'] == 'COMPLETADA' and float(r['actividad']['porcentaje_avance']) == 100, f'finalizar: {estado} {r}'
+print('estados -> empezar 200 · finalizar 200 · repetir 409 · asignado ajeno 403')
 
 # Listados: la etapa y la actividad creadas aparecen.
 estado, etapas = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=admin)

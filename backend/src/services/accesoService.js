@@ -53,6 +53,60 @@ export async function verificarAccesoProyecto(usuario, proyectoId) {
   return alcance
 }
 
+/**
+ * Quién puede modificar el plan de trabajo de un proyecto: el líder del
+ * proyecto (su responsable) y los roles con alcance total (gerente y
+ * administrador). Quien solo está asignado al proyecto o a una actividad lo
+ * consulta, pero no cambia etapas ni actividades.
+ */
+async function puedeGestionarPlan(usuario, proyectoId) {
+  const alcance = await alcanceDeUsuario(usuario)
+  if (alcance.total) return { gestiona: true, alcance }
+  const proyecto = await proyectoRepository.findById(proyectoId)
+  const esLider = Boolean(alcance.trabajadorId) && Number(proyecto?.responsable_id) === alcance.trabajadorId
+  return { gestiona: esLider, alcance, proyecto }
+}
+
+/** Verifica que el usuario pueda modificar el plan del proyecto; lanza 403 si no. */
+export async function verificarGestionPlan(usuario, proyectoId) {
+  await verificarAccesoProyecto(usuario, proyectoId)
+  const { gestiona } = await puedeGestionarPlan(usuario, proyectoId)
+  if (!gestiona) {
+    throw new AppError(
+      'Solo el líder del proyecto, el gerente o el administrador pueden modificar etapas y actividades',
+      403,
+    )
+  }
+}
+
+/**
+ * Verifica que el usuario pueda operar una actividad (empezarla, finalizarla,
+ * registrar avance): quien gestiona el plan, o quien tiene esa actividad
+ * asignada o es su responsable. Lanza 403 si no.
+ */
+export async function verificarOperarActividad(usuario, proyectoId, actividadId) {
+  const acceso = await miAcceso(usuario, proyectoId)
+  if (!acceso.gestiona_plan && !acceso.actividades_ids.includes(Number(actividadId))) {
+    throw new AppError('Solo puede cambiar el estado de las actividades que le corresponden', 403)
+  }
+}
+
+/**
+ * Qué puede hacer el usuario autenticado dentro de un proyecto, para que la
+ * interfaz muestre solo las acciones que le corresponden:
+ *  - `gestiona_plan`: edita etapas y actividades y registra avance en todas.
+ *  - `actividades_ids`: actividades en las que interactúa (asignación vigente
+ *    a la actividad o ser su responsable); el resto las ve en solo lectura.
+ */
+export async function miAcceso(usuario, proyectoId) {
+  await verificarAccesoProyecto(usuario, proyectoId)
+  const { gestiona, alcance } = await puedeGestionarPlan(usuario, proyectoId)
+  const actividades = alcance.trabajadorId
+    ? await asignacionRepository.actividadesDeTrabajador(proyectoId, alcance.trabajadorId)
+    : []
+  return { gestiona_plan: gestiona, actividades_ids: actividades }
+}
+
 /** Lista las asignaciones de un proyecto (o de un trabajador). */
 export async function listarAsignaciones(filtros = {}, usuario = null) {
   // Quien consulta el acceso de un proyecto debe poder verlo.

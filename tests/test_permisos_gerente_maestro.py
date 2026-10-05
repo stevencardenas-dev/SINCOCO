@@ -30,8 +30,8 @@ def permisos(token):
 
 
 pa, pg, pm, pb = permisos(admin), permisos(gerente), permisos(maestro), permisos(bodega)
-assert len(pa) == 27, f'admin conserva todo (27): {len(pa)}'
-assert len(pg) == 20 and len(pm) == 10 and len(pb) == 0, (len(pg), len(pm), len(pb))
+assert len(pa) == 29, f'admin conserva todo (29): {len(pa)}'
+assert len(pg) == 22 and len(pm) == 12 and len(pb) == 0, (len(pg), len(pm), len(pb))
 assert not any(p.startswith(('usuarios.', 'roles.', 'auditoria.')) for p in pg), \
     'el gerente no administra usuarios, roles ni auditoría'
 assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
@@ -39,7 +39,7 @@ assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
 assert 'proyectos.gestionar_acceso' not in pm and 'proyectos.registrar' not in pm \
     and 'proyectos.dar_baja' not in pm, 'el maestro no crea, da de baja ni asigna'
 assert {'proyectos.editar', 'etapas.crear', 'actividades.crear'} <= pm
-print('permisos por rol -> admin 27 · gerente 20 · maestro 10 · bodega 0')
+print('permisos por rol -> admin 29 · gerente 22 · maestro 12 · bodega 0')
 
 # --- GERENTE: crea proyecto con cliente y responsable propios ------------------
 print('GERENTE')
@@ -100,26 +100,22 @@ esperar('gestiona catálogos (da de baja el cargo)', estado, r, 200)
 estado, r = http('POST', '/api/usuarios', {'username': 'x'}, token=gerente)
 esperar('NO crea usuarios', estado, r, 403)
 
-# --- MAESTRO: asignado puede gestionar el plan y editar su proyecto ------------
-print('MAESTRO DE OBRA (asignado al proyecto)')
+# --- MAESTRO: asignado consulta el plan y edita su proyecto, pero no el plan ---
+print('MAESTRO DE OBRA (asignado al proyecto, no es su líder)')
 estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa maestro',
                                              fecha_inicio_programada='2027-01-05',
                                              fecha_fin_programada='2027-03-05'), token=maestro)
-esperar('define una etapa', estado, r, 201)
-etapa_m = r['etapa']['id']
+esperar('NO define etapas (solo el líder, gerente y admin)', estado, r, 403)
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_m, 'nombre': 'TEST-Actividad maestro', 'responsable_id': responsable_id,
-    'fecha_inicio_programada': '2027-01-06', 'fecha_fin_programada': '2027-02-06'}, token=maestro)
-esperar('define una actividad', estado, r, 201)
-act_m = r['actividad']['id']
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad maestro', 'responsable_id': responsable_id,
+    'fecha_inicio_programada': '2026-10-06', 'fecha_fin_programada': '2026-11-06'}, token=maestro)
+esperar('NO define actividades', estado, r, 403)
+estado, r = http('PATCH', f'/api/actividades/{actividad_id}', {'nombre': 'x'}, token=maestro)
+esperar('NO edita actividades', estado, r, 403)
+estado, r = http('PATCH', f'/api/etapas/{etapa_id}/baja', token=maestro)
+esperar('NO da de baja etapas', estado, r, 403)
 estado, r = http('PATCH', f'/api/proyectos/{proyecto}', {'observaciones': 'del maestro'}, token=maestro)
 esperar('edita el proyecto', estado, r, 200)
-estado, r = http('PATCH', f'/api/actividades/{act_m}/baja', token=maestro)
-esperar('da de baja su actividad', estado, r, 200)
-estado, r = http('PATCH', f'/api/actividades/{act_m}/reactivar', token=maestro)
-esperar('reactiva su actividad', estado, r, 200)
-estado, r = http('PATCH', f'/api/etapas/{etapa_m}/baja', token=maestro)
-esperar('da de baja su etapa', estado, r, 200)
 
 estado, r = http('POST', '/api/proyectos', dict(
     NUEVO_PROYECTO, codigo=f'{PREFIJO}-PRJ-MAE', nombre='Intento del maestro'), token=maestro)

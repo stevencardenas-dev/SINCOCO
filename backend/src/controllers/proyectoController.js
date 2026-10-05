@@ -2,6 +2,7 @@ import {
   registrarProyecto,
   actualizarProyecto, listarProyectos, darDeBajaProyecto, reactivarProyecto,
 } from '../services/proyectoService.js'
+import { miAcceso } from '../services/accesoService.js'
 import { RegistrarProyectoDto } from '../dtos/proyecto/RegistrarProyectoDto.js'
 
 /**
@@ -82,6 +83,15 @@ export async function reactivarCtrl(req, res, next) {
   try {
     const resultado = await reactivarProyecto(req.params.id, { usuario: req.user, usuarioId: req.user.id, ip: req.ip })
     return res.json({ message: 'Proyecto reactivado', ...resultado })
+  } catch (error) {
+    return next(error)
+  }
+}
+
+/** GET /api/proyectos/:id/mi-acceso -> qué puede hacer el usuario en el proyecto. */
+export async function miAccesoCtrl(req, res, next) {
+  try {
+    return res.json(await miAcceso(req.user, req.params.id))
   } catch (error) {
     return next(error)
   }

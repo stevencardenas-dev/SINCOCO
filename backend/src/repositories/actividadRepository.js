@@ -11,7 +11,8 @@ const SELECT_BASE = `
          a.fecha_inicio_real, a.fecha_fin_real, a.porcentaje_avance,
          a.estado, a.activo,
          e.nombre AS etapa_nombre, e.proyecto_id AS proyecto_id,
-         TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS responsable_nombre
+         TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS responsable_nombre,
+         (a.estado IN ('PENDIENTE', 'EN_PROCESO') AND a.fecha_fin_programada < CURDATE()) AS atrasada
   FROM actividades a
   JOIN etapas_proyecto e ON e.id = a.etapa_id
   LEFT JOIN trabajadores t ON t.id = a.responsable_id

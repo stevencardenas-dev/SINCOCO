@@ -4,7 +4,7 @@ import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { validarFechasEnRango } from './etapaService.js'
 import { aFechaDia, validarDentroDeEtapa } from '../utils/fechas.js'
-import { verificarAccesoProyecto } from './accesoService.js'
+import { verificarAccesoProyecto, verificarGestionPlan, verificarOperarActividad } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { darDeBaja, reactivar } from '../db/bajaLogica.js'
 import { AppError } from '../utils/AppError.js'
@@ -48,7 +48,7 @@ export async function registrarActividad(dto, ctx = {}) {
 
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
   if (!proyecto) throw new AppError('El proyecto de la etapa no existe', 404, 'etapa_id')
-  await verificarAccesoProyecto(ctx.usuario, proyecto.id)
+  await verificarGestionPlan(ctx.usuario, proyecto.id)
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto)
   validarDentroDeEtapa(dto.fecha_inicio_programada, dto.fecha_fin_programada, etapa)
@@ -84,7 +84,7 @@ export async function registrarActividad(dto, ctx = {}) {
 export async function actualizarActividad(id, dto, ctx = {}) {
   const actividad = await actividadRepository.findById(id)
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, actividad.proyecto_id)
   if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
 
   const campos = { ...dto.campos }
@@ -110,11 +110,57 @@ export async function actualizarActividad(id, dto, ctx = {}) {
   return actividadRepository.findById(id)
 }
 
+/**
+ * «Empezar»: la actividad pasa de PENDIENTE a EN_PROCESO (En curso) y queda
+ * registrada su fecha de inicio real.
+ */
+export async function iniciarActividad(id, ctx = {}) {
+  const actividad = await actividadRepository.findById(id)
+  if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarOperarActividad(ctx.usuario, actividad.proyecto_id, id)
+  if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+  if (actividad.estado !== 'PENDIENTE') {
+    throw new AppError('Solo se puede empezar una actividad pendiente', 409, 'estado')
+  }
+
+  const hoy = new Date().toISOString().slice(0, 10)
+  await actividadRepository.update(id, { estado: 'EN_PROCESO', fecha_inicio_real: hoy })
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',
+    registroId: Number(id), detalles: { nombre: actividad.nombre, cambios: { estado: 'EN_PROCESO' } }, ip: ctx.ip,
+  })
+  return actividadRepository.findById(id)
+}
+
+/**
+ * «Finalizar»: la actividad pasa de EN_PROCESO a COMPLETADA (Finalizado), con
+ * fecha fin real y avance al 100 % (HU-21: al llegar al 100 % queda completada).
+ */
+export async function finalizarActividad(id, ctx = {}) {
+  const actividad = await actividadRepository.findById(id)
+  if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarOperarActividad(ctx.usuario, actividad.proyecto_id, id)
+  if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+  if (actividad.estado !== 'EN_PROCESO') {
+    throw new AppError('Solo se puede finalizar una actividad en curso', 409, 'estado')
+  }
+
+  const hoy = new Date().toISOString().slice(0, 10)
+  await actividadRepository.update(id, { estado: 'COMPLETADA', fecha_fin_real: hoy, porcentaje_avance: 100 })
+
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',
+    registroId: Number(id), detalles: { nombre: actividad.nombre, cambios: { estado: 'COMPLETADA' } }, ip: ctx.ip,
+  })
+  return actividadRepository.findById(id)
+}
+
 /** HU-18: dar de baja lógica una actividad. */
 export async function darDeBajaActividad(id, ctx = {}) {
   const actividad = await actividadRepository.findById(id)
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
 
   const afectadas = await darDeBaja({ tabla: 'actividades', id, usuarioId: ctx.usuarioId })
   if (!afectadas) throw new AppError('La actividad ya estaba dada de baja', 409)
@@ -130,7 +176,7 @@ export async function darDeBajaActividad(id, ctx = {}) {
 export async function reactivarActividad(id, ctx = {}) {
   const actividad = await actividadRepository.findById(id)
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
-  await verificarAccesoProyecto(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
+  await verificarGestionPlan(ctx.usuario, actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id)
   const afectadas = await reactivar({ tabla: 'actividades', id })
   if (!afectadas) throw new AppError('La actividad no está dada de baja', 409)
 
