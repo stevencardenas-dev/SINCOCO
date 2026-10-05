@@ -62,7 +62,10 @@ const NAV = [
     items: [
       { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE], proximamente: true },
       // RF01 · RF06: valores de dominio (cargos, especialidades y clientes).
-      { to: '/catalogo', label: 'Catálogo', icon: RectangleStackIcon, roles: [ADMIN] },
+      // A diferencia del resto, esta opción se muestra según la matriz de Roles
+      // y permisos (`catalogos.listar` / `catalogos.gestionar`): así el menú y
+      // esa pantalla no se contradicen si el administrador cambia la matriz.
+      { to: '/catalogo', label: 'Gestión Administrativa', icon: RectangleStackIcon, permiso: ['catalogos.listar', 'catalogos.gestionar'] },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
       { to: '/roles', label: 'Roles y permisos', icon: KeyIcon, roles: [ADMIN] },
     ],
@@ -70,13 +73,15 @@ const NAV = [
 ]
 
 export default function Sidebar({ open, onClose }) {
-  const { user } = useAuth()
+  const { user, puede } = useAuth()
   const rol = user?.rol
 
-  // Solo los grupos que conservan al menos una opción visible para el rol
-  const nav = NAV.map((g) => ({ ...g, items: g.items.filter((i) => i.roles.includes(rol)) })).filter(
-    (g) => g.items.length > 0,
-  )
+  // Solo los grupos que conservan al menos una opción visible. Las opciones con
+  // `permiso` las decide la matriz Roles y permisos; las demás, el rol.
+  const nav = NAV.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => (i.permiso ? puede(...i.permiso) : i.roles.includes(rol))),
+  })).filter((g) => g.items.length > 0)
 
   return (
     <aside

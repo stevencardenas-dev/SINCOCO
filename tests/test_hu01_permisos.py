@@ -6,8 +6,10 @@
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 27 · GERENTE 18 · MAESTRO_OBRA 10 · ENCARGADO_BODEGA 0
-#   (GERENTE y MAESTRO_OBRA según docs/migracion_permisos_gerente_maestro.sql).
+#   ADMIN 27 · GERENTE 20 · MAESTRO_OBRA 10 · ENCARGADO_BODEGA 0
+#   (GERENTE y MAESTRO_OBRA según docs/migracion_permisos_gerente_maestro.sql;
+#   el GERENTE sumó `catalogos.listar` y `catalogos.gestionar` —Gestión
+#   Administrativa— en docs/migracion_catalogo_gerente.sql).
 #   (20 desde que HU-17 añadió `auditoria.listar`; 22 con los dos permisos de
 #   `catalogos`; 23 con `roles.gestionar`; 25 con la gestión de acceso a
 #   proyectos y actividades: `proyectos.gestionar_acceso` —solo ADMIN— y
@@ -46,7 +48,7 @@ for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
         f"WHERE r.nombre='{rol}'"
     )
 assert conteos['ADMINISTRADOR'] == '27', f'ADMIN debe tener 27 permisos: {conteos}'
-assert conteos['GERENTE'] == '18', f'GERENTE debe tener 18 permisos: {conteos}'
+assert conteos['GERENTE'] == '20', f'GERENTE debe tener 20 permisos: {conteos}'
 assert conteos['MAESTRO_OBRA'] == '10', f'MAESTRO_OBRA debe tener 10 permisos: {conteos}'
 assert conteos['ENCARGADO_BODEGA'] == '0', f'BODEGA no debe tener permisos: {conteos}'
 print('matriz en roles_permisos ->', conteos)

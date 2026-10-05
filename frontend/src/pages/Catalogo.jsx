@@ -11,12 +11,14 @@ import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import api from '../services/api'
+import { useAuth } from '../context/AuthContext.jsx'
 import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
 
 /**
- * Catálogo (RF01 · RF06 · RF02): mantiene los valores de dominio que usan las
- * demás pantallas —cargos de la empresa, especialidades del personal y
- * clientes— desde un solo lugar.
+ * Gestión Administrativa (RF01 · RF06 · RF02): mantiene los valores de dominio
+ * que usan las demás pantallas —cargos de la empresa, especialidades del
+ * personal y clientes— desde un solo lugar. La administran el administrador y
+ * el gerente (`catalogos.listar` / `catalogos.gestionar`).
  *
  * Cada pestaña administra una lista: crear, editar y "eliminar". Eliminar es la
  * baja lógica de HU-18 · RN07 (nunca borrado físico): el valor deja de
@@ -79,6 +81,9 @@ const VACIO = {
 const TIPOS_DOCUMENTO = ['NIT', 'CC', 'CE', 'PASAPORTE']
 
 export default function Catalogo() {
+  const { puede } = useAuth()
+  // Ver el módulo lo decide `catalogos.listar` (la ruta); operarlo, `catalogos.gestionar`.
+  const puedeGestionar = puede('catalogos.gestionar')
   const [tipo, setTipo] = useState('cargos')
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
@@ -201,12 +206,14 @@ export default function Catalogo() {
   return (
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={cargar} />}
-        title="Catálogo"
+        title="Gestión Administrativa"
         subtitle="Cargos, especialidades y clientes de la empresa"
       >
-        <button type="button" className="btn-primary" onClick={abrirCrear}>
-          <PlusIcon className="h-5 w-5" /> {tab.nuevo}
-        </button>
+        {puedeGestionar && (
+          <button type="button" className="btn-primary" onClick={abrirCrear}>
+            <PlusIcon className="h-5 w-5" /> {tab.nuevo}
+          </button>
+        )}
         <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
@@ -345,30 +352,34 @@ export default function Catalogo() {
                   </span>
                 ),
               },
-              {
-                titulo: 'Acciones',
-                acciones: true,
-                derecha: true,
-                celda: (f, enFicha) => {
-                  const botones = (
-                    <>
-                      <button type="button" className="btn-ghost text-xs" onClick={() => abrirEditar(f)}>
-                        <PencilSquareIcon className="h-4 w-4" /> Editar
-                      </button>
-                      {f.activo ? (
-                        <button type="button" className="btn-ghost text-xs" onClick={() => setPorEliminar(f)}>
-                          <TrashIcon className="h-4 w-4" /> Eliminar
-                        </button>
-                      ) : (
-                        <button type="button" className="btn-ghost text-xs" onClick={() => reactivar(f)}>
-                          <ArrowPathIcon className="h-4 w-4" /> Reactivar
-                        </button>
-                      )}
-                    </>
-                  )
-                  return enFicha ? botones : <div className="flex items-center justify-end gap-2">{botones}</div>
-                },
-              },
+              ...(puedeGestionar
+                ? [
+                    {
+                      titulo: 'Acciones',
+                      acciones: true,
+                      derecha: true,
+                      celda: (f, enFicha) => {
+                        const botones = (
+                          <>
+                            <button type="button" className="btn-ghost text-xs" onClick={() => abrirEditar(f)}>
+                              <PencilSquareIcon className="h-4 w-4" /> Editar
+                            </button>
+                            {f.activo ? (
+                              <button type="button" className="btn-ghost text-xs" onClick={() => setPorEliminar(f)}>
+                                <TrashIcon className="h-4 w-4" /> Eliminar
+                              </button>
+                            ) : (
+                              <button type="button" className="btn-ghost text-xs" onClick={() => reactivar(f)}>
+                                <ArrowPathIcon className="h-4 w-4" /> Reactivar
+                              </button>
+                            )}
+                          </>
+                        )
+                        return enFicha ? botones : <div className="flex items-center justify-end gap-2">{botones}</div>
+                      },
+                    },
+                  ]
+                : []),
             ]}
           />
         </div>

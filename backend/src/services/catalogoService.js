@@ -227,7 +227,7 @@ export async function resolverCargo({ cargo_id, cargo }) {
 
   if (!fila) {
     throw new AppError(
-      `El cargo no está en el catálogo de cargos${cargo ? `: ${cargo}` : ''}. Regístrelo en Catálogo.`,
+      `El cargo no está en el catálogo de cargos${cargo ? `: ${cargo}` : ''}. Regístrelo en Gestión Administrativa.`,
       400,
       'cargo',
     )
@@ -254,7 +254,7 @@ export async function resolverEspecialidad({ especialidad_id, especialidad }) {
 
   if (!fila) {
     throw new AppError(
-      `La especialidad no está en el catálogo${especialidad ? `: ${especialidad}` : ''}. Regístrela en Catálogo.`,
+      `La especialidad no está en el catálogo${especialidad ? `: ${especialidad}` : ''}. Regístrela en Gestión Administrativa.`,
       400,
       'especialidad',
     )

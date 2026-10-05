@@ -79,7 +79,6 @@ with sync_playwright() as pw:
     # flujo alterno 3: cambiar el rol de un usuario existente
     fila = pg.locator('table tbody tr', has_text='carlos.test')
     print("rol antes ->", fila.inner_text().split('\t')[2] if '\t' in fila.inner_text() else 'Maestro de obra')
-    fila.locator('button[title="Cambiar rol"]').click()
     pg.select_option('select[aria-label="Rol de carlos.test"]', label='Encargado de bodega')
     pg.wait_for_selector('[role=status]', timeout=8000); pg.wait_for_timeout(400)
     print("cambiar rol ->", pg.locator('[role=status]').inner_text())

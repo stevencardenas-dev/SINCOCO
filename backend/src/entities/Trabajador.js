@@ -22,6 +22,7 @@ export class Trabajador {
     estado,
     activo,
     fecha_baja,
+    actividades_vigentes,
   }) {
     this.id = id
     this.numero_documento = numero_documento
@@ -43,6 +44,8 @@ export class Trabajador {
     this.activo = activo
     // HU-18: fecha de la baja lógica (null mientras esté activo).
     this.fecha_baja = fecha_baja ?? null
+    // Derivado (no es columna): distingue «Asignado» de «Disponible».
+    this.actividades_vigentes = Number(actividades_vigentes ?? 0)
   }
 
   static fromRow(row) {

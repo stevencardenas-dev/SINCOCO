@@ -33,7 +33,7 @@ export async function registrar(req, res, next) {
   }
 }
 
-/** PATCH /api/clientes/:id -> editar la ficha desde la pantalla de Catálogo. */
+/** PATCH /api/clientes/:id -> editar la ficha desde Gestión Administrativa. */
 export async function actualizar(req, res, next) {
   try {
     const cliente = await actualizarCliente(req.params.id, req.body, {

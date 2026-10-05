@@ -59,8 +59,6 @@ export default function Usuarios() {
   const [errorForm, setErrorForm] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
-  // CU-01 Alt 3: id del usuario cuyo rol se está editando en la tabla.
-  const [editandoRol, setEditandoRol] = useState(null)
   // Ficha del trabajador vinculado a la cuenta (clic en el nombre de usuario).
   const [verTrabajador, setVerTrabajador] = useState(null)
   // Búsqueda en el listado (desplegable).
@@ -128,10 +126,7 @@ export default function Usuarios() {
   const cambiarRol = async (usuario, rol_id) => {
     setError('')
     setAviso('')
-    if (!rol_id || Number(rol_id) === usuario.rol_id) {
-      setEditandoRol(null)
-      return
-    }
+    if (!rol_id || Number(rol_id) === usuario.rol_id) return
     try {
       const { data } = await api.patch(`/usuarios/${usuario.id}/rol`, { rol_id: Number(rol_id) })
       setUsuarios((prev) =>
@@ -140,8 +135,6 @@ export default function Usuarios() {
       setAviso(`${usuario.username}: rol cambiado a ${ROL_LABEL[data.rol] ?? data.rol}.`)
     } catch (err) {
       setError(mensajeError(err, `No se pudo cambiar el rol de ${usuario.username}.`))
-    } finally {
-      setEditandoRol(null)
     }
   }
 
@@ -511,13 +504,12 @@ export default function Usuarios() {
                 // A una cuenta dada de baja no se le cambia el rol: se muestra
                 // su rol tal cual (nunca un número de relleno).
                 celda: (u) =>
-                  editandoRol === u.id && u.activo ? (
+                  u.activo ? (
                     <select
-                      className="input py-1 text-sm"
+                      // Mismo formato que el selector de «Estado» en Personal.
+                      className="input -my-1 block w-48 py-1 pl-2.5 text-xs"
                       aria-label={`Rol de ${u.username}`}
-                      defaultValue={u.rol_id}
-                      autoFocus
-                      onBlur={() => setEditandoRol(null)}
+                      value={u.rol_id}
                       onChange={(e) => cambiarRol(u, e.target.value)}
                     >
                       {roles.map((r) => (
@@ -526,15 +518,6 @@ export default function Usuarios() {
                         </option>
                       ))}
                     </select>
-                  ) : u.activo ? (
-                    <button
-                      type="button"
-                      className="rounded px-1 text-left hover:bg-slate-100 hover:underline"
-                      title="Cambiar rol"
-                      onClick={() => setEditandoRol(u.id)}
-                    >
-                      {etiquetaRol(u)}
-                    </button>
                   ) : (
                     <span>{etiquetaRol(u)}</span>
                   ),
