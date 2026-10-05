@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
   BuildingOffice2Icon,
+  CheckIcon,
+  ClipboardDocumentIcon,
   ClipboardDocumentListIcon,
   FolderIcon,
   MapPinIcon,
@@ -20,6 +22,39 @@ import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import api from '../services/api'
 import { campoError, mensajeError } from '../lib/errores.js'
+
+/** Ubicación recortada en la tabla, con botón para copiarla completa. */
+function UbicacionCopiable({ texto }) {
+  const [copiado, setCopiado] = useState(false)
+  if (!texto) return null
+
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(texto)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 1500)
+    } catch {
+      /* sin permiso de portapapeles: no hay nada que hacer */
+    }
+  }
+
+  return (
+    <span className="flex items-center gap-1">
+      <span className="truncate" title={texto}>
+        {texto}
+      </span>
+      <button
+        type="button"
+        onClick={copiar}
+        className="shrink-0 rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+        title={copiado ? 'Copiado' : 'Copiar ubicación'}
+        aria-label="Copiar ubicación"
+      >
+        {copiado ? <CheckIcon className="h-4 w-4 text-emerald-600" /> : <ClipboardDocumentIcon className="h-4 w-4" />}
+      </button>
+    </span>
+  )
+}
 import {
   estadoProyecto,
   fmtCOP,
@@ -728,11 +763,7 @@ export default function Proyectos() {
                 titulo: 'Ubicación',
                 // Ancho máximo igual al de Proyecto; el texto largo se recorta con puntos suspensivos.
                 tdClase: 'md:max-w-[9.25rem] text-slate-600',
-                celda: (p) => (
-                  <span className="block truncate" title={p.ubicacion}>
-                    {p.ubicacion}
-                  </span>
-                ),
+                celda: (p) => <UbicacionCopiable texto={p.ubicacion} />,
                 valor: (p) => p.ubicacion,
               },
               {

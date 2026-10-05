@@ -60,12 +60,12 @@ const NAV = [
   {
     group: 'Sistema',
     items: [
-      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE], proximamente: true },
       // RF01 · RF06: valores de dominio (cargos, especialidades y clientes).
       // A diferencia del resto, esta opción se muestra según la matriz de Roles
       // y permisos (`catalogos.listar` / `catalogos.gestionar`): así el menú y
       // esa pantalla no se contradicen si el administrador cambia la matriz.
       { to: '/catalogo', label: 'Gestión Administrativa', icon: RectangleStackIcon, permiso: ['catalogos.listar', 'catalogos.gestionar'] },
+      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE], proximamente: true },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
       { to: '/roles', label: 'Roles y permisos', icon: KeyIcon, roles: [ADMIN] },
     ],
