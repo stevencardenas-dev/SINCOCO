@@ -113,7 +113,7 @@ export default function Dashboard() {
           <div
             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm ring-1 ring-inset ${
               saludo.noche
-                ? 'from-indigo-400 to-indigo-700 text-white ring-indigo-700/30'
+                ? 'from-slate-400 to-slate-600 text-white ring-slate-600/30'
                 : 'from-accent-300 to-accent-500 text-brand-950 ring-accent-500/30'
             }`}
           >
