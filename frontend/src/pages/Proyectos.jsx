@@ -146,6 +146,12 @@ export default function Proyectos() {
   const [incluirInactivos, setIncluirInactivos] = useState(false)
 
   const presupuestoNumero = Number(soloDigitos(form.presupuesto_inicial) || 0)
+  // Criterio 3 de HU-02: el inicio debe ser estrictamente anterior al fin.
+  const fechasInvertidas = Boolean(
+    form.fecha_inicio_programada &&
+      form.fecha_fin_programada &&
+      form.fecha_inicio_programada >= form.fecha_fin_programada,
+  )
 
   const cargar = () => {
     setError(null)
@@ -490,9 +496,16 @@ export default function Proyectos() {
                   type="date"
                   className={campo('fecha_fin_programada')}
                   value={form.fecha_fin_programada}
+                  min={form.fecha_inicio_programada || undefined}
+                  aria-invalid={fechasInvertidas}
                   onChange={(e) => setForm({ ...form, fecha_fin_programada: e.target.value })}
                   required
                 />
+                {fechasInvertidas && (
+                  <p className="mt-1 text-xs font-medium text-red-600">
+                    La fecha de fin debe ser posterior a la de inicio.
+                  </p>
+                )}
               </div>
 
               <div>
@@ -580,7 +593,7 @@ export default function Proyectos() {
             <AlertaFormulario mensaje={errorForm} campo={campoForm} />
 
             <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
-              <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
+              <button type="submit" disabled={guardando || fechasInvertidas} className="btn-primary disabled:opacity-60">
                 {guardando ? 'Guardando…' : editando ? 'Guardar cambios' : 'Registrar proyecto'}
               </button>
               <button type="button" className="btn-ghost" onClick={cerrarFormulario}>
