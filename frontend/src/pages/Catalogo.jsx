@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
   ArrowPathIcon,
+  MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
   RectangleStackIcon,
@@ -10,6 +11,9 @@ import Modal from '../components/Modal.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
+import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
+import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext.jsx'
 import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
@@ -93,6 +97,8 @@ export default function Catalogo() {
   const [modal, setModal] = useState(null) // 'crear' | 'editar'
   const [form, setForm] = useState(VACIO.cargos)
   const [errorForm, setErrorForm] = useState('')
+  const [campoForm, setCampoForm] = useState(null)
+  const [mapaAbierto, setMapaAbierto] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [porEliminar, setPorEliminar] = useState(null)
 
@@ -114,23 +120,27 @@ export default function Catalogo() {
   const abrirCrear = () => {
     setForm(VACIO[tipo])
     setErrorForm('')
+    setCampoForm(null)
     setModal('crear')
   }
 
   const abrirEditar = (fila) => {
     setForm({ ...VACIO[tipo], ...fila, ...(tipo !== 'clientes' ? { categoria: fila.categoria ?? '' } : {}) })
     setErrorForm('')
+    setCampoForm(null)
     setModal('editar')
   }
 
   const cerrarModal = () => {
     setModal(null)
     setErrorForm('')
+    setCampoForm(null)
   }
 
   const guardar = async (e) => {
     e.preventDefault()
     setErrorForm('')
+    setCampoForm(null)
     setGuardando(true)
     try {
       if (tipo === 'clientes') {
@@ -167,6 +177,7 @@ export default function Catalogo() {
       cargar()
     } catch (err) {
       setErrorForm(err.response?.data?.error ?? 'No se pudo guardar el registro.')
+      setCampoForm(err.response?.data?.campo ?? null)
     } finally {
       setGuardando(false)
     }
@@ -198,6 +209,8 @@ export default function Catalogo() {
       setError(err.response?.data?.error ?? 'No se pudo reactivar el registro.')
     }
   }
+
+  const campo = (nombre) => (campoForm === nombre ? 'input border-red-400' : 'input')
 
   const nombreDe = (fila) => fila.nombre ?? fila.razon_social_nombre ?? ''
 
@@ -310,7 +323,7 @@ export default function Catalogo() {
                       celda: (f) => (
                         <>
                           {f.nombre_contacto ?? '—'}
-                          {f.telefono && <p className="text-xs text-slate-400">{f.telefono}</p>}
+                          {f.telefono && <p className="text-xs text-slate-400">{telefonoLegible(f.telefono)}</p>}
                         </>
                       ),
                     },
@@ -428,18 +441,27 @@ export default function Catalogo() {
                 </div>
                 <div>
                   <label htmlFor="cat-telefono" className="label">Teléfono</label>
-                  <input id="cat-telefono" className="input" value={form.telefono}
-                    onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
+                  <TelefonoPais id="cat-telefono" value={form.telefono}
+                    onChange={(v) => setForm({ ...form, telefono: v })}
+                    error={campoForm === 'telefono'} />
                 </div>
                 <div>
                   <label htmlFor="cat-email" className="label">Correo</label>
-                  <input id="cat-email" type="email" className="input" value={form.email}
+                  <input id="cat-email" type="email" maxLength={150} autoComplete="email"
+                    placeholder="nombre@correo.com" className={campo('email')} value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <label htmlFor="cat-direccion" className="label">Dirección</label>
-                  <input id="cat-direccion" className="input" value={form.direccion}
-                    onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+                  <div className="flex gap-2">
+                    <input id="cat-direccion" maxLength={255} className="input"
+                      placeholder="Escriba la dirección o selecciónela en el mapa"
+                      value={form.direccion}
+                      onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
+                    <button type="button" className="btn-ghost shrink-0" onClick={() => setMapaAbierto(true)}>
+                      <MapPinIcon className="h-4 w-4" /> Mapa
+                    </button>
+                  </div>
                 </div>
               </div>
             </>
@@ -482,11 +504,7 @@ export default function Catalogo() {
             </>
           )}
 
-          {errorForm && (
-            <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {errorForm}
-            </p>
-          )}
+          <AlertaFormulario mensaje={errorForm} campo={campoForm} />
 
           <div className="flex items-center gap-3 border-t border-slate-100 pt-4">
             <button type="submit" disabled={guardando} className="btn-primary disabled:opacity-60">
@@ -496,6 +514,17 @@ export default function Catalogo() {
           </div>
         </form>
       </Modal>
+
+      {/* Mapa para la dirección del cliente: devuelve el texto normalizado al formulario. */}
+      <SelectorUbicacion
+        abierto={mapaAbierto}
+        valorInicial={form.direccion}
+        onCerrar={() => setMapaAbierto(false)}
+        onAceptar={(texto) => {
+          setForm((f) => ({ ...f, direccion: texto }))
+          setMapaAbierto(false)
+        }}
+      />
 
       {/* Confirmación de eliminación (baja lógica) */}
       <Modal
@@ -514,6 +543,14 @@ export default function Catalogo() {
             Está en uso por {porEliminar.en_uso}{' '}
             {Number(porEliminar.en_uso) === 1 ? 'trabajador' : 'trabajadores'}: seguirán mostrándolo
             en su ficha.
+          </p>
+        )}
+        {porEliminar && Number(porEliminar.proyectos_activos) > 0 && (
+          <p role="alert" className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-xs font-medium text-amber-800 ring-1 ring-amber-200">
+            Este cliente está asignado a {porEliminar.proyectos_activos}{' '}
+            {Number(porEliminar.proyectos_activos) === 1 ? 'proyecto activo' : 'proyectos activos'}.
+            Los proyectos conservarán el cliente, pero no podrá elegirse en proyectos nuevos.
+            ¿Desea eliminarlo de todos modos?
           </p>
         )}
         <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">

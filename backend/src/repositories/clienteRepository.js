@@ -8,6 +8,8 @@ import { Cliente } from '../entities/Cliente.js'
 const CAMPOS = `id, numero_documento, tipo_documento, razon_social_nombre,
                 nombre_contacto, telefono, email, direccion, estado, activo`
 
+const CAMPOS_C = CAMPOS.split(',').map((c) => `c.${c.trim()}`).join(', ')
+
 export async function findById(id) {
   const [rows] = await pool.query(
     `SELECT ${CAMPOS} FROM clientes WHERE id = ? LIMIT 1`,
@@ -40,10 +42,16 @@ export async function listarActivos() {
  * administra también los clientes dados de baja (HU-18).
  */
 export async function listar(incluirInactivos = false) {
+  // `proyectos_activos`: proyectos vigentes del cliente (no dados de baja ni
+  // finalizados/cancelados). Gestión Administrativa lo muestra al darlo de baja.
   const [rows] = await pool.query(
-    `SELECT ${CAMPOS} FROM clientes
-     ${incluirInactivos ? '' : 'WHERE activo = 1'}
-     ORDER BY razon_social_nombre`,
+    `SELECT ${CAMPOS_C},
+            (SELECT COUNT(*) FROM proyectos p
+              WHERE p.cliente_id = c.id AND p.activo = 1
+                AND p.estado NOT IN ('FINALIZADO', 'CANCELADO')) AS proyectos_activos
+       FROM clientes c
+     ${incluirInactivos ? '' : 'WHERE c.activo = 1'}
+     ORDER BY c.razon_social_nombre`,
   )
   return rows.map(Cliente.fromRow)
 }
