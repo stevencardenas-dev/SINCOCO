@@ -278,11 +278,6 @@ export default function Auditoria() {
                 // En la ficha móvil se muestra el contenido formateado directamente.
                 valor: (f) => <ContenidoDetalle fila={f} />,
               },
-              {
-                titulo: 'IP',
-                tdClase: 'font-mono text-xs text-slate-400',
-                celda: (f) => f.direccion_ip ?? '—',
-              },
             ]}
           />
 
