@@ -41,6 +41,9 @@ const ESTADO_BADGE = {
   SUSPENDIDA: 'bg-amber-50 text-amber-700',
 }
 
+/** Fecha 'YYYY-MM-DD' (o ISO) -> 'YYYY-MM-DD', sin desplazarla por la zona horaria. */
+const soloDia = (valor) => String(valor ?? '').slice(0, 10)
+
 export default function PlanProyecto() {
   const { id } = useParams()
   const { puede } = useAuth()
@@ -67,6 +70,10 @@ export default function PlanProyecto() {
   const [accesoForm, setAccesoForm] = useState(ACCESO_VACIO)
   const [errorAcceso, setErrorAcceso] = useState('')
   const [guardandoAcceso, setGuardandoAcceso] = useState(false)
+
+  // Rango del proyecto: límite de las fechas de etapas y actividades (HU-03).
+  const proyDesde = soloDia(proyecto?.fecha_inicio_programada)
+  const proyHasta = soloDia(proyecto?.fecha_fin_programada)
 
   const cargar = () => {
     setError('')
@@ -205,11 +212,13 @@ export default function PlanProyecto() {
             <div>
               <label htmlFor="e-inicio" className="label">Inicio programado</label>
               <input id="e-inicio" type="date" className="input" value={etapaForm.fecha_inicio_programada}
+                min={proyDesde || undefined} max={etapaForm.fecha_fin_programada || proyHasta || undefined}
                 onChange={(e) => setEtapaForm({ ...etapaForm, fecha_inicio_programada: e.target.value })} />
             </div>
             <div>
               <label htmlFor="e-fin" className="label">Fin programado</label>
               <input id="e-fin" type="date" className="input" value={etapaForm.fecha_fin_programada}
+                min={etapaForm.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
                 onChange={(e) => setEtapaForm({ ...etapaForm, fecha_fin_programada: e.target.value })} />
             </div>
           </div>
@@ -291,11 +300,13 @@ export default function PlanProyecto() {
                 <div>
                   <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
                   <input id={`a-inicio-${et.id}`} type="date" className="input" value={actividadForm.fecha_inicio_programada}
+                    min={proyDesde || undefined} max={actividadForm.fecha_fin_programada || proyHasta || undefined}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_inicio_programada: e.target.value })} required />
                 </div>
                 <div>
                   <label htmlFor={`a-fin-${et.id}`} className="label">Fin programado</label>
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={actividadForm.fecha_fin_programada}
+                    min={actividadForm.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
                     onChange={(e) => setActividadForm({ ...actividadForm, fecha_fin_programada: e.target.value })} required />
                 </div>
                 <div className="sm:col-span-2">
