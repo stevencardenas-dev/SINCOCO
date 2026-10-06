@@ -155,7 +155,16 @@ export default function Login() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Iniciar sesión</h1>
           <p className="mt-1.5 text-sm text-slate-500">Ingrese sus credenciales para acceder al sistema.</p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {/* Credencial de pruebas (temporal) */}
+          <div className="mt-5 rounded-xl bg-accent-50 px-4 py-3 text-sm text-brand-800 ring-1 ring-accent-200">
+            <p className="text-xs font-semibold uppercase tracking-wide">Credencial de pruebas</p>
+            <p className="mt-1">
+              Usuario: <span className="font-mono font-bold">admin</span> · Contraseña:{' '}
+              <span className="font-mono font-bold">Prueba123!</span>
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 space-y-5">
             <div>
               <label htmlFor="username" className="label">
                 Usuario
