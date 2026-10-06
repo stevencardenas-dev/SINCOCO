@@ -121,7 +121,8 @@ export async function listarAsignaciones(filtros = {}, usuario = null) {
  *  - el proyecto y el trabajador existen y están activos;
  *  - si se indica actividad, pertenece al proyecto y está activa;
  *  - el fin programado no es anterior al inicio (no se limita al rango del proyecto);
- *  - no se duplica una asignación activa al mismo destino.
+ *  - no se duplica una asignación activa al mismo destino;
+ *  - las fechas no se solapan con otra asignación activa del trabajador.
  */
 export async function registrarAsignacion(dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(dto.proyecto_id)
@@ -165,6 +166,19 @@ export async function registrarAsignacion(dto, ctx = {}) {
         : 'Ese trabajador ya está asignado a ese proyecto',
       409,
       'trabajador_id',
+    )
+  }
+
+  const solapada = await asignacionRepository.existeSolapada(
+    dto.trabajador_id,
+    dto.fecha_inicio,
+    dto.fecha_fin_programada,
+  )
+  if (solapada) {
+    throw new AppError(
+      'Las fechas se solapan con otra asignación activa del trabajador',
+      409,
+      'fecha_inicio',
     )
   }
 
