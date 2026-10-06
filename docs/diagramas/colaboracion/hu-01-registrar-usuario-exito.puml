@@ -1,0 +1,63 @@
+@startuml
+title Escenario HU-01 (éxito): Registrar usuario y asignar rol
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazRegistroUsuario" as UIF
+control "ControlUsuarios" as CTRL
+entity "Trabajador" as TRA
+entity "Rol" as ROL
+entity "Usuario" as USU
+entity "Bitacora" as BIT
+
+note as HU #EAF2FF
+*HU-01: Registrar usuario y asignar rol*
+*Como:* Administrador
+*Quiero:* registrar usuarios y asignarles un rol
+*Para:* controlar el acceso al sistema.
+----
+*Criterios de aceptación:*
+1. El usuario debe estar vinculado a un trabajador y a un único rol activo.
+2. El nombre de usuario y el correo deben ser únicos; se valida antes de guardar.
+3. La contraseña se almacena protegida y cumple la política mínima.
+4. Los permisos salen del rol (roles_permisos), no se asignan individualmente.
+5. Un usuario inactivo no puede autenticarse ni ejecutar acciones.
+6. Toda creación, edición o cambio de estado queda en la bitácora.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: abrirFormularioUsuario() →
+UIF ..> Administrador : ← 8: formularioListo()
+Administrador --> UIF : 9: registrarUsuario(datos) →
+UIF ..> Administrador : ← 22: confirmarRegistro()
+
+UIF --> CTRL : 2: consultarCatalogos() →
+CTRL ..> UIF : ← 7: catalogos
+UIF --> CTRL : 10: procesarRegistro() →
+CTRL ..> UIF : ← 21: registroExitoso
+
+CTRL --> TRA : 3: listarTrabajadoresDisponibles() →
+TRA ..> CTRL : ← 4: trabajadores
+
+CTRL --> ROL : 5: listarRolesActivos() →
+ROL ..> CTRL : ← 6: rolesActivos
+CTRL --> ROL : 15: obtenerPermisosRol() →
+ROL ..> CTRL : ← 16: permisosDelRol
+
+CTRL --> USU : 11: verificarUnicidad() →
+USU ..> CTRL : ← 12: disponible
+CTRL --> USU : 13: validarCredencial() →
+USU ..> CTRL : ← 14: credencialValida
+CTRL --> USU : 17: crearUsuario() →
+USU ..> CTRL : ← 18: usuarioCreado
+
+CTRL --> BIT : 19: registrarTrazabilidad() →
+BIT ..> CTRL : ← 20: bitacoraRegistrada
+@enduml

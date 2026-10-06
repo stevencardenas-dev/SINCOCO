@@ -1,0 +1,43 @@
+@startuml
+title Escenario HU-01 (error): Registrar usuario con datos inválidos
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazRegistroUsuario" as UIF
+control "ControlUsuarios" as CTRL
+entity "Usuario" as USU
+
+note as HU #EAF2FF
+*HU-01: Registrar usuario y asignar rol*
+*Como:* Administrador
+*Quiero:* registrar usuarios y asignarles un rol
+*Para:* controlar el acceso al sistema.
+----
+*Criterios de aceptación:*
+1. El usuario debe estar vinculado a un trabajador y a un único rol activo.
+2. El nombre de usuario y el correo deben ser únicos; se valida antes de guardar.
+3. La contraseña se almacena protegida y cumple la política mínima.
+4. Los permisos salen del rol (roles_permisos), no se asignan individualmente.
+5. Un usuario inactivo no puede autenticarse ni ejecutar acciones.
+6. Toda creación, edición o cambio de estado queda en la bitácora.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: registrarUsuario(datos) →
+UIF ..> Administrador : ← 8: mostrarErrores()
+
+UIF --> CTRL : 2: procesarRegistro() →
+CTRL ..> UIF : ← 7: erroresDeRegistro()
+
+CTRL --> USU : 3: verificarUnicidad() →
+USU ..> CTRL : ← 4: documentoDuplicado
+CTRL --> USU : 5: validarCredencial() →
+USU ..> CTRL : ← 6: credencialInvalida
+@enduml

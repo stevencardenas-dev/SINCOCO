@@ -1,0 +1,43 @@
+@startuml
+title Escenario HU-04 (error): Personal con documento duplicado o cargo operativo sin especialidad
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazRegistroPersonal" as UIF
+control "ControlPersonal" as CTRL
+entity "Trabajador" as TRA
+entity "Cargo" as CAR
+
+note as HU #EAF2FF
+*HU-04: Registrar personal con cargo y especialidad*
+*Como:* Administrador
+*Quiero:* registrar el personal con su cargo y especialidad
+*Para:* asignarlo a proyectos.
+----
+*Criterios de aceptación:*
+1. numero_documento debe ser único en la tabla trabajadores.
+2. cargo es obligatorio; especialidad es obligatoria cuando el cargo es operativo.
+3. Al crearse, el trabajador queda disponible y con estado activo.
+4. Los trabajadores dados de baja lógica no pueden asignarse
+a nuevos proyectos o actividades (ver HU-18).
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: registrarPersonal(datos) →
+UIF ..> Administrador : ← 8: mostrarErrores()
+
+UIF --> CTRL : 2: procesarRegistro() →
+CTRL ..> UIF : ← 7: erroresDeRegistro()
+
+CTRL --> TRA : 3: verificarDocumentoUnico() →
+TRA ..> CTRL : ← 4: documentoDuplicado
+CTRL --> CAR : 5: verificarCargoYEspecialidad() →
+CAR ..> CTRL : ← 6: especialidadRequerida
+@enduml

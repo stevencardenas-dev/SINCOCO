@@ -1,0 +1,65 @@
+@startuml
+title Escenario HU-02 (éxito): Registrar proyecto de vivienda
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazRegistroProyecto" as UIF
+control "ControlProyectos" as CTRL
+entity "Cliente" as CLI
+entity "Trabajador" as TRA
+entity "Proyecto" as PRO
+entity "Bitacora" as BIT
+
+note as HU #EAF2FF
+*HU-02: Registrar proyecto de vivienda*
+*Como:* Administrador
+*Quiero:* registrar un proyecto de vivienda
+*Para:* iniciar su seguimiento en el sistema.
+----
+*Criterios de aceptación:*
+1. El proyecto requiere un cliente y un responsable válidos y existentes.
+2. El presupuesto inicial debe ser numérico y mayor a cero.
+3. La fecha de inicio debe ser estrictamente anterior a la fecha de fin.
+4. Al crearse queda en el estado inicial de planificación y con avance en cero.
+5. Queda disponible para asociarle etapas, actividades, personal,
+materiales, herramientas y proveedores.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: abrirRegistroProyecto() →
+UIF ..> Administrador : ← 4: formularioListo()
+Administrador --> UIF : 5: registrarProyecto(datos) →
+UIF ..> Administrador : ← 8: confirmarRegistro()
+
+UIF --> CTRL : 2: consultarCatalogos() →
+CTRL ..> UIF : ← 3: catalogos
+UIF --> CTRL : 6: procesarRegistro() →
+CTRL ..> UIF : ← 7: proyectoRegistrado
+
+CTRL --> CLI : 2.1: listarClientesActivos() →
+CLI ..> CTRL : ← 2.2: clientesActivos
+CTRL --> CLI : 6.1: verificarCliente() →
+CLI ..> CTRL : ← 6.2: clienteValido
+
+CTRL --> TRA : 2.3: listarResponsablesDisponibles() →
+TRA ..> CTRL : ← 2.4: responsablesDisponibles
+CTRL --> TRA : 6.3: verificarResponsable() →
+TRA ..> CTRL : ← 6.4: responsableValido
+
+CTRL --> PRO : 6.5: validarPresupuesto() →
+PRO ..> CTRL : ← 6.6: presupuestoValido
+CTRL --> PRO : 6.7: validarFechas() →
+PRO ..> CTRL : ← 6.8: fechasCoherentes
+CTRL --> PRO : 6.9: crearProyecto() →
+PRO ..> CTRL : ← 6.10: proyectoEnPlanificacion
+
+CTRL --> BIT : 6.11: registrarTrazabilidad() →
+BIT ..> CTRL : ← 6.12: bitacoraRegistrada
+@enduml

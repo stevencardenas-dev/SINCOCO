@@ -1,0 +1,50 @@
+@startuml
+title Escenario HU-03 (error): Plan con fechas fuera de rango o etapa inexistente
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazPlanProyecto" as UIF
+control "ControlPlanTrabajo" as CTRL
+entity "Etapa" as ETA
+entity "Actividad" as ACT
+
+note as HU #EAF2FF
+*HU-03: Definir etapas y actividades del plan*
+*Como:* Administrador
+*Quiero:* definir etapas y actividades del plan de trabajo
+*Para:* organizar la ejecución del proyecto.
+----
+*Criterios de aceptación:*
+1. Toda actividad pertenece a una etapa existente y toda etapa a un proyecto existente.
+2. Las etapas cuentan con un campo de orden que fija su secuencia.
+3. Las fechas de etapas y actividades se mantienen dentro del rango del proyecto.
+4. Cada actividad define responsable, descripción y peso porcentual en su etapa.
+5. El estado inicial de etapas y actividades es pendiente o no iniciado.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: registrarEtapa(datos) →
+Administrador --> UIF : 7: registrarActividad(datos) →
+UIF ..> Administrador : ← 6: mostrarErrorDeEtapa()
+UIF ..> Administrador : ← 12: mostrarErrorDeActividad()
+
+UIF --> CTRL : 2: procesarEtapa() →
+CTRL ..> UIF : ← 5: etapaRechazada
+UIF --> CTRL : 8: procesarActividad() →
+CTRL ..> UIF : ← 11: actividadRechazada
+
+CTRL --> ETA : 3: validarFechasEnRango() →
+ETA ..> CTRL : ← 4: fechasFueraDeRango
+CTRL --> ETA : 9: verificarEtapa() →
+ETA ..> CTRL : ← 10: etapaInexistente
+
+CTRL --> ACT : 9.1: descartarActividad() →
+ACT ..> CTRL : ← 9.2: actividadNoRegistrada
+@enduml

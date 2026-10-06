@@ -1,0 +1,58 @@
+@startuml
+title Escenario HU-01 (usuario inactivo): Bloqueo y denegación de acceso
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+actor "Maestro de obra" as MO
+boundary "InterfazUsuarios" as UIL
+boundary "InterfazLogin" as UIA
+control "ControlUsuarios" as CTRL
+control "ControlAcceso" as CAC
+entity "Usuario" as USU
+entity "Bitacora" as BIT
+
+note as HU #EAF2FF
+*HU-01: Registrar usuario y asignar rol*
+*Como:* Administrador
+*Quiero:* registrar usuarios y asignarles un rol
+*Para:* controlar el acceso al sistema.
+----
+*Criterios de aceptación:*
+1. El usuario debe estar vinculado a un trabajador y a un único rol activo.
+2. El nombre de usuario y el correo deben ser únicos; se valida antes de guardar.
+3. La contraseña se almacena protegida y cumple la política mínima.
+4. Los permisos salen del rol (roles_permisos), no se asignan individualmente.
+5. Un usuario inactivo no puede autenticarse ni ejecutar acciones.
+6. Toda creación, edición o cambio de estado queda en la bitácora.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIL : 1: bloquearUsuario() →
+UIL ..> Administrador : ← 8: confirmarBloqueo()
+
+UIL --> CTRL : 2: cambiarEstadoUsuario() →
+CTRL ..> UIL : ← 7: estadoActualizado
+
+CTRL --> USU : 3: desactivarUsuario() →
+USU ..> CTRL : ← 4: usuarioInactivo
+CTRL --> BIT : 5: registrarTrazabilidad() →
+BIT ..> CTRL : ← 6: bitacoraRegistrada
+
+MO --> UIA : 9: ingresarCredenciales() →
+UIA ..> MO : ← 16: mostrarDenegacion()
+
+UIA --> CAC : 10: autenticar() →
+CAC ..> UIA : ← 15: accesoDenegado
+
+CAC --> CTRL : 11: consultarEstadoUsuario() →
+CTRL ..> CAC : ← 14: usuarioInactivo
+CTRL --> USU : 12: consultarEstado() →
+USU ..> CTRL : ← 13: inactivo
+@enduml

@@ -1,0 +1,61 @@
+@startuml
+title Escenario HU-18: Baja lógica de un registro y consulta de archivados
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazListadoRegistros" as UIF
+control "ControlRegistros" as CTRL
+entity "RegistroDeNegocio" as REG
+entity "Usuario" as USU
+entity "Bitacora" as BIT
+
+note as HU #EAF2FF
+*HU-18: Baja lógica de los movimientos*
+*Como:* Administrador
+*Quiero:* que los movimientos no se eliminen físicamente
+*Para:* conservar el historial completo del proyecto.
+----
+*Criterios de aceptación:*
+1. Ninguna eliminación ejecuta borrado físico: se actualiza el estado,
+la fecha de baja y el usuario que la ejecuta.
+2. Los registros inactivos no aparecen por defecto en las listas de selección activa.
+3. Las relaciones hacia registros dados de baja se mantienen íntegras.
+4. Existe un filtro explícito para consultar los registros inactivos o archivados.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: solicitarBaja() →
+UIF ..> Administrador : ← 5: confirmarBaja()
+Administrador --> UIF : 6: abrirListadoActivo() →
+UIF ..> Administrador : ← 9: listadoSinInactivos()
+Administrador --> UIF : 10: activarFiltroArchivados() →
+UIF ..> Administrador : ← 13: mostrarArchivados()
+
+UIF --> CTRL : 2: procesarBaja() →
+CTRL ..> UIF : ← 4: bajaConfirmada
+UIF --> CTRL : 7: listarActivos() →
+CTRL ..> UIF : ← 8: listadoActivo
+UIF --> CTRL : 11: listarArchivados() →
+CTRL ..> UIF : ← 12: listadoArchivado
+
+CTRL --> USU : 2.1: obtenerUsuarioResponsable() →
+USU ..> CTRL : ← 2.2: usuarioResponsable
+CTRL --> REG : 2.3: marcarInactivo() →
+REG ..> CTRL : ← 2.4: registroConFechaDeBaja
+CTRL --> REG : 2.5: conservarRelaciones() →
+REG ..> CTRL : ← 2.6: relacionesIntegras
+CTRL --> REG : 7.1: listarActivos() →
+REG ..> CTRL : ← 7.2: registrosActivos
+CTRL --> REG : 11.1: listarInactivos() →
+REG ..> CTRL : ← 11.2: registrosArchivados
+
+CTRL --> BIT : 2.7: registrarTrazabilidad() →
+BIT ..> CTRL : ← 2.8: bitacoraRegistrada
+@enduml

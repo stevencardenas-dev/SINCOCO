@@ -1,0 +1,46 @@
+@startuml
+title Escenario HU-02 (error): Registrar proyecto con datos inválidos
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazRegistroProyecto" as UIF
+control "ControlProyectos" as CTRL
+entity "Cliente" as CLI
+entity "Proyecto" as PRO
+
+note as HU #EAF2FF
+*HU-02: Registrar proyecto de vivienda*
+*Como:* Administrador
+*Quiero:* registrar un proyecto de vivienda
+*Para:* iniciar su seguimiento en el sistema.
+----
+*Criterios de aceptación:*
+1. El proyecto requiere un cliente y un responsable válidos y existentes.
+2. El presupuesto inicial debe ser numérico y mayor a cero.
+3. La fecha de inicio debe ser estrictamente anterior a la fecha de fin.
+4. Al crearse queda en el estado inicial de planificación y con avance en cero.
+5. Queda disponible para asociarle etapas, actividades, personal,
+materiales, herramientas y proveedores.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: registrarProyecto(datos) →
+UIF ..> Administrador : ← 10: mostrarErrores()
+
+UIF --> CTRL : 2: procesarRegistro() →
+CTRL ..> UIF : ← 9: erroresDeRegistro()
+
+CTRL --> CLI : 3: verificarCliente() →
+CLI ..> CTRL : ← 4: clienteInexistente
+CTRL --> PRO : 5: validarPresupuesto() →
+PRO ..> CTRL : ← 6: presupuestoInvalido
+CTRL --> PRO : 7: validarFechas() →
+PRO ..> CTRL : ← 8: fechasIncoherentes
+@enduml

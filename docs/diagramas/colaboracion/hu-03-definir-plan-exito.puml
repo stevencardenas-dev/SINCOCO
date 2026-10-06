@@ -1,0 +1,68 @@
+@startuml
+title Escenario HU-03 (éxito): Definir etapas y actividades del plan
+left to right direction
+skinparam shadowing false
+skinparam defaultFontName Arial
+skinparam ArrowColor #333333
+skinparam actorBackgroundColor #FFE600
+skinparam boundaryBackgroundColor #CFE2FF
+skinparam controlBackgroundColor #CDEFD0
+skinparam entityBackgroundColor #FFE7A3
+
+actor Administrador
+boundary "InterfazPlanProyecto" as UIF
+control "ControlPlanTrabajo" as CTRL
+entity "Proyecto" as PRO
+entity "Etapa" as ETA
+entity "Actividad" as ACT
+entity "Trabajador" as TRA
+entity "Bitacora" as BIT
+
+note as HU #EAF2FF
+*HU-03: Definir etapas y actividades del plan*
+*Como:* Administrador
+*Quiero:* definir etapas y actividades del plan de trabajo
+*Para:* organizar la ejecución del proyecto.
+----
+*Criterios de aceptación:*
+1. Toda actividad pertenece a una etapa existente y toda etapa a un proyecto existente.
+2. Las etapas cuentan con un campo de orden que fija su secuencia.
+3. Las fechas de etapas y actividades se mantienen dentro del rango del proyecto.
+4. Cada actividad define responsable, descripción y peso porcentual en su etapa.
+5. El estado inicial de etapas y actividades es pendiente o no iniciado.
+end note
+HU -[hidden]-> Administrador
+
+Administrador --> UIF : 1: abrirPlanProyecto() →
+UIF ..> Administrador : ← 4: planListo()
+Administrador --> UIF : 5: registrarEtapa(datos) →
+Administrador --> UIF : 9: registrarActividad(datos) →
+UIF ..> Administrador : ← 17: confirmarPlan()
+
+UIF --> CTRL : 2: consultarProyecto() →
+CTRL ..> UIF : ← 3: planDelProyecto
+UIF --> CTRL : 6: procesarEtapa() →
+CTRL ..> UIF : ← 8: etapaRegistrada
+UIF --> CTRL : 10: procesarActividad() →
+CTRL ..> UIF : ← 16: actividadRegistrada
+
+CTRL --> PRO : 2.1: obtenerRangoFechas() →
+PRO ..> CTRL : ← 2.2: rangoDelProyecto
+CTRL --> PRO : 6.1: verificarProyecto() →
+PRO ..> CTRL : ← 6.2: proyectoExistente
+
+CTRL --> ETA : 6.3: validarFechasEnRango() →
+ETA ..> CTRL : ← 6.4: fechasEnRango
+CTRL --> ETA : 6.5: registrarEtapa() →
+ETA ..> CTRL : ← 6.6: etapaPendienteConOrden
+CTRL --> ETA : 10.1: verificarEtapa() →
+ETA ..> CTRL : ← 10.2: etapaExistente
+
+CTRL --> TRA : 10.3: verificarResponsable() →
+TRA ..> CTRL : ← 10.4: responsableValido
+
+CTRL --> ACT : 10.5: registrarActividad() →
+ACT ..> CTRL : ← 10.6: actividadPendienteConPeso
+CTRL --> BIT : 10.7: registrarTrazabilidad() →
+BIT ..> CTRL : ← 10.8: bitacoraRegistrada
+@enduml
