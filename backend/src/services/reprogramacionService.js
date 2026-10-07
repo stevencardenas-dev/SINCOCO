@@ -1,6 +1,7 @@
 import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as actividadRepository from '../repositories/actividadRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
+import * as asignacionRepository from '../repositories/asignacionRepository.js'
 import * as reprogramacionRepository from '../repositories/reprogramacionRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
@@ -32,6 +33,26 @@ function filaHistorial(tipo, elemento, proyectoId, nuevo, dto, ctx, origen = 'DI
     fecha_inicio_nueva: nuevo.inicio,
     fecha_fin_nueva: nuevo.fin,
   }
+}
+
+/**
+ * HU-34 · criterio 6: asignaciones de personal que quedan fuera de las nuevas
+ * fechas de las actividades indicadas ({ actividad, inicio, fin }). Solo se
+ * listan: el sistema no las modifica; la extensión se gestiona con HU-31.
+ */
+async function asignacionesAfectadas(actividades) {
+  const afectadas = []
+  for (const { actividad, inicio, fin } of actividades) {
+    const filas = await asignacionRepository.activasFueraDeRango(actividad.id, inicio, fin)
+    for (const fila of filas) {
+      afectadas.push({
+        ...fila,
+        actividad_inicio_nuevo: inicio,
+        actividad_fin_nuevo: fin,
+      })
+    }
+  }
+  return afectadas
 }
 
 /**
@@ -214,6 +235,7 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
     })),
     actividades_desplazadas: actividadesMovidas.length,
     proyecto: await proyectoRepository.findById(etapa.proyecto_id),
+    asignaciones_afectadas: await asignacionesAfectadas(actividadesMovidas),
   }
 }
 
@@ -248,7 +270,10 @@ export async function reprogramarActividad(id, dto, ctx = {}) {
     detalles: { nombre: actividad.nombre, motivo: dto.motivo, fecha_inicio_programada: inicio, fecha_fin_programada: fin },
     ip: ctx.ip,
   })
-  return { actividad: await actividadRepository.findById(id) }
+  return {
+    actividad: await actividadRepository.findById(id),
+    asignaciones_afectadas: await asignacionesAfectadas([{ actividad, inicio, fin }]),
+  }
 }
 
 /** Historial de reprogramaciones de una etapa o actividad, para quien tenga acceso al proyecto. */

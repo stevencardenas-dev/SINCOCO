@@ -10,7 +10,8 @@
 #  3. al reprogramar una etapa se recalculan las posteriores, en orden y sin solapes.
 #  4. si el recálculo excede el fin del proyecto: advertencia, confirmación y fin reprogramado.
 #  5. las etapas y actividades completadas no se reprograman; PATCH ya no cambia fechas definidas.
-from api_helper import http, login, limpiar, crear_proyecto, scalar, sql
+#  6. se listan, sin modificarlas, las asignaciones que quedan fuera de las nuevas fechas.
+from api_helper import http, login, limpiar, crear_proyecto, crear_trabajador, scalar, sql
 
 limpiar()
 admin = login('admin')
@@ -201,5 +202,29 @@ estado, r = http('PATCH', f'/api/etapas/{etapa_b}', {'nombre': 'TEST-Etapa B edi
 assert estado == 200, f'editar otras propiedades sigue permitido: {estado} {r}'
 print('criterio 5 ok')
 
+# Criterio 6: las asignaciones fuera de las nuevas fechas se listan sin modificarse.
+trabajador = crear_trabajador(admin, documento='TEST-HU34-CC-02')
+estado, r = http('POST', '/api/asignaciones', {
+    'proyecto_id': proyecto_id, 'trabajador_id': trabajador, 'actividad_id': actividad_b,
+    'fecha_inicio': '2027-02-01', 'fecha_fin_programada': '2027-02-20',
+}, token=admin)
+assert estado == 201, f'asignacion de prueba: {estado} {r}'
+asignacion_id = r['asignacion']['id']
+# La actividad B (31-ene a 21-feb) se acorta hasta el 10-feb: la asignación termina después.
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}/reprogramar', {
+    'motivo': 'Recorte de alcance', 'fecha_inicio_programada': '2027-01-31',
+    'fecha_fin_programada': '2027-02-10',
+}, token=admin)
+assert estado == 200, f'reprogramar actividad B: {estado} {r}'
+assert [x['id'] for x in r['asignaciones_afectadas']] == [asignacion_id],     f'la asignacion queda fuera y se lista: {r["asignaciones_afectadas"]}'
+assert scalar(f"SELECT fecha_fin_programada FROM asignaciones_personal WHERE id = {asignacion_id}") == '2027-02-20',     'la asignacion no se modifica automaticamente'
+# Una asignación que sí cabe no se lista.
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}/reprogramar', {
+    'motivo': 'Se amplia', 'fecha_inicio_programada': '2027-01-31',
+    'fecha_fin_programada': '2027-02-25',
+}, token=admin)
+assert estado == 200 and r['asignaciones_afectadas'] == [], f'ya cabe: {r}'
+print('criterio 6 ok')
+
 limpiar()
-print('HU-34 criterios 1 a 5: OK')
+print('HU-34 criterios 1 a 6: OK')

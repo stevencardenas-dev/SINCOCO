@@ -245,6 +245,7 @@ export default function PlanProyecto() {
   // Criterio 4: si el recálculo excede el fin del proyecto la API advierte (409);
   // el formulario pide entonces la confirmación explícita antes de reenviar.
   const [requiereConfirmacion, setRequiereConfirmacion] = useState(false)
+  const [afectadas, setAfectadas] = useState([])
   const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
     enviar: async (f, { tipo, dato }) => {
       try {
@@ -255,6 +256,8 @@ export default function PlanProyecto() {
       }
     },
     alGuardar: (data, { registro }) => {
+      // Criterio 6: asignaciones que quedan fuera de las nuevas fechas (no se modifican).
+      setAfectadas(data.asignaciones_afectadas ?? [])
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
       setAviso(
@@ -358,6 +361,7 @@ export default function PlanProyecto() {
 
   const abrirReprogramacion = (tipo, dato) => {
     setRequiereConfirmacion(false)
+    setAfectadas([])
     reprogramacion.abrir(
       {
         motivo: '',
@@ -416,6 +420,26 @@ export default function PlanProyecto() {
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+
+      {/* HU-34 · criterio 6: asignaciones fuera de las nuevas fechas; se listan, no se modifican. */}
+      {afectadas.length > 0 && (
+        <div className="card space-y-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">
+            {afectadas.length} asignación(es) de personal quedan fuera de las nuevas fechas de la actividad.
+            No se modificaron: extiéndalas o ajústelas desde «Gestión de acceso».
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-xs">
+            {afectadas.map((a) => (
+              <li key={a.id}>
+                {a.trabajador_nombre} · {a.actividad_nombre}: asignado {fmtFecha(a.fecha_inicio)}
+                {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ' (sin fin)'}; actividad
+                {' '}{fmtFecha(a.actividad_inicio_nuevo)} — {fmtFecha(a.actividad_fin_nuevo)}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn-ghost text-xs" onClick={() => setAfectadas([])}>Entendido</button>
+        </div>
+      )}
 
       {puedeEtapas && nuevaEtapa.abierto && (
         <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
