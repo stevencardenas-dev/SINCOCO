@@ -238,8 +238,14 @@ export default function PlanProyecto() {
   const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
     enviar: (f, { tipo, dato }) =>
       tipo === 'etapa' ? etapasApi.reprogramar(dato.id, f) : actividadesApi.reprogramar(dato.id, f),
-    alGuardar: (_, { registro }) => {
-      setAviso(registro.tipo === 'etapa' ? 'Etapa reprogramada.' : 'Actividad reprogramada.')
+    alGuardar: (data, { registro }) => {
+      // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
+      const movidas = data.etapas_desplazadas?.length ?? 0
+      setAviso(
+        registro.tipo === 'etapa'
+          ? `Etapa reprogramada.${movidas ? ` Se recalcularon ${movidas} etapa(s) posterior(es).` : ''}`
+          : 'Actividad reprogramada.',
+      )
       return recargar()
     },
     error: 'No se pudo reprogramar.',

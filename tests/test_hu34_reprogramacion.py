@@ -7,6 +7,7 @@
 # Criterios de aceptación cubiertos (se amplía con cada criterio implementado):
 #  1. las fechas originales se conservan inmutables desde la primera reprogramación.
 #  2. cada reprogramación registra motivo obligatorio, usuario, fecha y fechas anterior/nueva.
+#  3. al reprogramar una etapa se recalculan las posteriores, en orden y sin solapes.
 from api_helper import http, login, limpiar, crear_proyecto, scalar, sql
 
 limpiar()
@@ -91,5 +92,62 @@ print('historial de reprogramaciones -> ok')
 r = sql(f"DELETE FROM reprogramaciones_plan WHERE entidad_id = {etapa_id}")
 assert r.returncode != 0, 'el historial no se puede borrar'
 
+
+# Criterio 3: el recálculo mantiene el orden, sin solapes (desplazamiento rígido).
+def crear_etapa(nombre, inicio, fin):
+    estado, r = http('POST', '/api/etapas', {
+        'proyecto_id': proyecto_id, 'nombre': nombre,
+        'fecha_inicio_programada': inicio, 'fecha_fin_programada': fin,
+    }, token=admin)
+    assert estado == 201, f'{nombre}: {estado} {r}'
+    return r['etapa']['id']
+
+
+etapa_b = crear_etapa('TEST-Etapa B', '2027-01-15', '2027-02-15')
+etapa_c = crear_etapa('TEST-Etapa C', '2027-03-01', '2027-03-31')
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_b, 'nombre': 'TEST-Actividad de B',
+    'fecha_inicio_programada': '2027-01-20', 'fecha_fin_programada': '2027-02-10',
+}, token=admin)
+assert estado == 201, f'actividad de B: {estado} {r}'
+actividad_b = r['actividad']['id']
+
+# La etapa A pasa a terminar el 25-ene: choca con B (15-ene) -> B y C se corren 11 días.
+estado, r = reprogramar_etapa('2026-10-01', '2027-01-25', motivo='Cambio de diseno')
+assert estado == 200, f'cascada: {estado} {r}'
+movidas = {m['id']: m for m in r['etapas_desplazadas']}
+assert set(movidas) == {etapa_b, etapa_c}, f'B y C se desplazan: {r["etapas_desplazadas"]}'
+assert movidas[etapa_b]['fecha_inicio_nueva'] == '2027-01-26' and movidas[etapa_b]['fecha_fin_nueva'] == '2027-02-26'
+assert movidas[etapa_c]['fecha_inicio_nueva'] == '2027-03-12' and movidas[etapa_c]['fecha_fin_nueva'] == '2027-04-11',     'C conserva su duracion y su hueco con B'
+assert r['actividades_desplazadas'] == 1
+estado, acts = http('GET', f'/api/actividades?etapa_id={etapa_b}', token=admin)
+assert acts[0]['fecha_inicio_programada'] == '2027-01-31' and acts[0]['fecha_fin_programada'] == '2027-02-21'
+assert acts[0]['fecha_inicio_original'] == '2027-01-20', 'la actividad movida conserva su original'
+estado, etapas = http('GET', f'/api/etapas?proyecto_id={proyecto_id}', token=admin)
+assert [e['id'] for e in etapas] == [etapa_id, etapa_b, etapa_c], 'el orden se mantiene'
+for anterior, siguiente in zip(etapas, etapas[1:]):
+    assert anterior['fecha_fin_programada'] < siguiente['fecha_inicio_programada'], 'sin solapamientos'
+assert etapas[1]['fecha_inicio_original'] == '2027-01-15' and etapas[2]['fecha_fin_original'] == '2027-03-31'
+estado, h = http('GET', f'/api/etapas/{etapa_b}/reprogramaciones', token=admin)
+assert h[0]['origen'] == 'CASCADA' and h[0]['motivo'] == 'Cambio de diseno'
+print('cascada de etapas posteriores -> ok')
+
+# Sin choque no se mueve nada.
+estado, r = reprogramar_etapa('2026-10-01', '2027-01-20', motivo='Se recupera tiempo')
+assert estado == 200 and r['etapas_desplazadas'] == [], f'sin choque no hay cascada: {r}'
+
+# La etapa no puede invadir a la anterior.
+estado, r = http('PATCH', f'/api/etapas/{etapa_b}/reprogramar', {
+    'motivo': 'Adelantar', 'fecha_inicio_programada': '2027-01-10',
+    'fecha_fin_programada': '2027-02-26',
+}, token=admin)
+assert estado == 400, f'B no puede empezar antes de que termine A: {estado} {r}'
+
+# Si el recálculo se sale del proyecto (30-jun-2027), no se aplica nada (hasta el criterio 4).
+estado, r = reprogramar_etapa('2026-10-01', '2027-06-01', motivo='Muy largo')
+assert estado == 400, f'excede el proyecto: {estado} {r}'
+assert scalar(f"SELECT fecha_fin_programada FROM etapas_proyecto WHERE id = {etapa_c}") == '2027-04-11',     'un recalculo rechazado no deja cambios a medias'
+print('criterio 3 ok')
+
 limpiar()
-print('HU-34 criterios 1 y 2: OK')
+print('HU-34 criterios 1, 2 y 3: OK')
