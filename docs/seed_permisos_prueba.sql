@@ -110,7 +110,7 @@ WHERE r.`nombre` = 'ENCARGADO_BODEGA'
 -- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`,
 -- `usuarios.editar` y los de `usuarios` quedan solo en el administrador: no
 -- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
--- ya se los da a ADMINISTRADOR. Total: 31 permisos.
+-- ya se los da a ADMINISTRADOR, que recibe todo el catálogo. No se cuenta aquí el total: ver tests/permisos_core.py.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).

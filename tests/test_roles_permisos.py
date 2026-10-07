@@ -11,6 +11,7 @@
 import subprocess
 
 from api_helper import PREFIJO, crear_trabajador, http, login, mysql_args, scalar, sql
+from permisos_core import verificar_matriz_en_base
 
 RUTA = '/api/roles/permisos'
 
@@ -75,15 +76,15 @@ por_nombre = {r['nombre']: r for r in roles}
 assert por_nombre['ADMINISTRADOR']['permisos_activos'] == len(permisos), (
     'el administrador debe tener el catálogo completo de permisos'
 )
-assert por_nombre['ENCARGADO_BODEGA']['permisos_activos'] == 0, (
-    'bodega no debe tener permisos en esta matriz'
-)
+# El resto de roles se valida por reglas (núcleo y vetados), no por conteos:
+# ver tests/permisos_core.py.
+verificar_matriz_en_base()
 assert 'usuarios.listar' in [p['nombre'] for p in permisos], 'falta usuarios.listar en el catálogo'
 
 # Cada permiso debe traer su módulo: la pantalla agrupa por ahí.
 sin_modulo = [p['nombre'] for p in permisos if not p['modulo']]
 assert not sin_modulo, f'permisos sin módulo (no se podrían agrupar): {sin_modulo}'
-print('invariantes del seed -> ADMIN completo · BODEGA sin permisos · módulos completos')
+print('invariantes del seed -> ADMIN completo · núcleo y vetados por rol · módulos completos')
 
 # --- Administración de roles (permiso roles.gestionar) ------------------------
 NOMBRE_ROL = 'TEST_HU_ROL_GESTION'

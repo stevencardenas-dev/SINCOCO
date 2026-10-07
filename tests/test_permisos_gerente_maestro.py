@@ -11,6 +11,7 @@
 # Requiere el backend (3005) arriba y docs/migracion_permisos_gerente_maestro.sql
 # aplicada. Uso: python tests/test_permisos_gerente_maestro.py
 from api_helper import PREFIJO, http, limpiar, login, scalar, sql
+from permisos_core import ADMIN, catalogo_en_base, verificar_rol
 
 limpiar()
 admin, gerente, maestro, bodega = login('admin'), login('gerente'), login('maestro'), login('bodega')
@@ -30,16 +31,19 @@ def permisos(token):
 
 
 pa, pg, pm, pb = permisos(admin), permisos(gerente), permisos(maestro), permisos(bodega)
-assert len(pa) == 29, f'admin conserva todo (29): {len(pa)}'
-assert len(pg) == 22 and len(pm) == 12 and len(pb) == 0, (len(pg), len(pm), len(pb))
-assert not any(p.startswith(('usuarios.', 'roles.', 'auditoria.')) for p in pg), \
-    'el gerente no administra usuarios, roles ni auditoría'
+# Sin conteos fijos (ver tests/permisos_core.py): el admin tiene el catálogo
+# completo y cada rol, sus permisos núcleo y ninguno de los vetados.
+catalogo = catalogo_en_base()
+verificar_rol(ADMIN, pa, catalogo)
+verificar_rol('GERENTE', pg)
+verificar_rol('MAESTRO_OBRA', pm)
+verificar_rol('ENCARGADO_BODEGA', pb)
 assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
     'el gerente ve y gestiona la Gestión Administrativa (catálogos)'
 assert 'proyectos.gestionar_acceso' not in pm and 'proyectos.registrar' not in pm \
     and 'proyectos.dar_baja' not in pm, 'el maestro no crea, da de baja ni asigna'
 assert {'proyectos.editar', 'etapas.crear', 'actividades.crear'} <= pm
-print('permisos por rol -> admin 29 · gerente 22 · maestro 12 · bodega 0')
+print(f'permisos por rol -> admin {len(pa)} · gerente {len(pg)} · maestro {len(pm)} · bodega {len(pb)}')
 
 # --- GERENTE: crea proyecto con cliente y responsable propios ------------------
 print('GERENTE')
