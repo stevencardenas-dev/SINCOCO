@@ -30,8 +30,8 @@ def permisos(token):
 
 
 pa, pg, pm, pb = permisos(admin), permisos(gerente), permisos(maestro), permisos(bodega)
-assert len(pa) == 29, f'admin conserva todo (29): {len(pa)}'
-assert len(pg) == 22 and len(pm) == 12 and len(pb) == 0, (len(pg), len(pm), len(pb))
+assert len(pa) == 33, f'admin conserva todo (33): {len(pa)}'
+assert len(pg) == 22 and len(pm) == 12 and len(pb) == 4, (len(pg), len(pm), len(pb))
 assert not any(p.startswith(('usuarios.', 'roles.', 'auditoria.')) for p in pg), \
     'el gerente no administra usuarios, roles ni auditoría'
 assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
@@ -39,7 +39,7 @@ assert {'catalogos.listar', 'catalogos.gestionar'} <= pg, \
 assert 'proyectos.gestionar_acceso' not in pm and 'proyectos.registrar' not in pm \
     and 'proyectos.dar_baja' not in pm, 'el maestro no crea, da de baja ni asigna'
 assert {'proyectos.editar', 'etapas.crear', 'actividades.crear'} <= pm
-print('permisos por rol -> admin 29 · gerente 22 · maestro 12 · bodega 0')
+print('permisos por rol -> admin 33 · gerente 22 · maestro 12 · bodega 4')
 
 # --- GERENTE: crea proyecto con cliente y responsable propios ------------------
 print('GERENTE')

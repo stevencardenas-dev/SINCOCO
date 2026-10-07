@@ -6,7 +6,7 @@
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
 # que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 29 · GERENTE 22 · MAESTRO_OBRA 12 · ENCARGADO_BODEGA 0
+#   ADMIN 33 · GERENTE 22 · MAESTRO_OBRA 12 · ENCARGADO_BODEGA 4
 #   (GERENTE y MAESTRO_OBRA según docs/migracion_permisos_gerente_maestro.sql;
 #   el GERENTE sumó `catalogos.listar` y `catalogos.gestionar` —Gestión
 #   Administrativa— en docs/migracion_catalogo_gerente.sql).
@@ -14,7 +14,8 @@
 #   `catalogos`; 23 con `roles.gestionar`; 25 con la gestión de acceso a
 #   proyectos y actividades: `proyectos.gestionar_acceso` —solo ADMIN— y
 #   `proyectos.acceso_total` —ADMIN y GERENTE—; 26 con `usuarios.editar`;
-#   los roles que definen el plan sumaron `etapas.editar` y `actividades.editar`.)
+#   los roles que definen el plan sumaron `etapas.editar` y `actividades.editar`;
+#   33 y 4 desde que HU-10 añadió los cuatro `herramientas.*` a ADMIN y BODEGA.)
 from api_helper import PREFIJO, crear_trabajador, http, login, scalar, sql
 
 # La matriz del seed, por rol. Con 'incluirInactivos' se evita depender de datos.
@@ -48,10 +49,10 @@ for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
         'SELECT COUNT(*) FROM roles_permisos rp JOIN roles r ON r.id = rp.rol_id '
         f"WHERE r.nombre='{rol}'"
     )
-assert conteos['ADMINISTRADOR'] == '29', f'ADMIN debe tener 29 permisos: {conteos}'
+assert conteos['ADMINISTRADOR'] == '33', f'ADMIN debe tener 33 permisos: {conteos}'
 assert conteos['GERENTE'] == '22', f'GERENTE debe tener 22 permisos: {conteos}'
 assert conteos['MAESTRO_OBRA'] == '12', f'MAESTRO_OBRA debe tener 12 permisos: {conteos}'
-assert conteos['ENCARGADO_BODEGA'] == '0', f'BODEGA no debe tener permisos: {conteos}'
+assert conteos['ENCARGADO_BODEGA'] == '4', f'BODEGA solo debe tener los 4 de herramientas: {conteos}'
 print('matriz en roles_permisos ->', conteos)
 
 # Sin token, toda ruta protegida responde 401 (requireAuth sigue vigente).

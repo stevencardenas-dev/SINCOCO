@@ -75,15 +75,15 @@ por_nombre = {r['nombre']: r for r in roles}
 assert por_nombre['ADMINISTRADOR']['permisos_activos'] == len(permisos), (
     'el administrador debe tener el catálogo completo de permisos'
 )
-assert por_nombre['ENCARGADO_BODEGA']['permisos_activos'] == 0, (
-    'bodega no debe tener permisos en esta matriz'
+assert por_nombre['ENCARGADO_BODEGA']['permisos_activos'] == 4, (
+    'bodega solo debe tener los 4 permisos de herramientas (HU-10)'
 )
 assert 'usuarios.listar' in [p['nombre'] for p in permisos], 'falta usuarios.listar en el catálogo'
 
 # Cada permiso debe traer su módulo: la pantalla agrupa por ahí.
 sin_modulo = [p['nombre'] for p in permisos if not p['modulo']]
 assert not sin_modulo, f'permisos sin módulo (no se podrían agrupar): {sin_modulo}'
-print('invariantes del seed -> ADMIN completo · BODEGA sin permisos · módulos completos')
+print('invariantes del seed -> ADMIN completo · BODEGA solo herramientas · módulos completos')
 
 # --- Administración de roles (permiso roles.gestionar) ------------------------
 NOMBRE_ROL = 'TEST_HU_ROL_GESTION'
