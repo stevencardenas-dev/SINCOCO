@@ -27,7 +27,7 @@ const TODOS = [ADMIN, GERENTE, MAESTRO, BODEGA]
 
 /**
  * RNF05 · RBAC: cada opción declara qué roles la ven. Los roles salen del JWT
- * y corresponden a los casos de uso de cada actor (ver docs/CASOS_DE_USO.md).
+ * y corresponden a los casos de uso de cada actor (ver docs/reglas-de-negocio/CASOS_DE_USO.md).
  * Esto es control de acceso en la interfaz; el backend valida aparte con
  * requireRole() — la interfaz oculta, el servidor decide.
  */
