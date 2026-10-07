@@ -94,6 +94,22 @@ estado, data = http('POST', '/api/asignaciones', {
 print('asignación duplicada ->', estado, '·', data.get('error'))
 assert estado == 409, 'no se duplica una asignación activa al mismo destino'
 
+# Solapamiento (HU-05): en otro proyecto, fechas que se cruzan con la asignación
+# vigente del mismo trabajador se rechazan; fechas posteriores se aceptan.
+otro_proyecto_id = crear_proyecto(admin, 'TEST-HU-ACCESO-02')
+estado, data = http('POST', '/api/asignaciones', {
+    'trabajador_id': trabajador_maestro, 'proyecto_id': otro_proyecto_id,
+    'fecha_inicio': '2027-01-01', 'fecha_fin_programada': '2027-02-01',
+}, token=admin)
+print('asignación solapada ->', estado, '·', data.get('error'))
+assert estado == 409 and data.get('campo') == 'fecha_inicio', f'fechas solapadas: {estado} {data}'
+
+estado, data = http('POST', '/api/asignaciones', {
+    'trabajador_id': trabajador_maestro, 'proyecto_id': otro_proyecto_id,
+    'fecha_inicio': '2027-07-01', 'fecha_fin_programada': '2027-08-01',
+}, token=admin)
+assert estado == 201, f'fechas sin cruce deben aceptarse: {estado} {data}'
+
 # --- Con la asignación vigente, el maestro ve el proyecto y su plan -----------
 estado, proyectos = http('GET', '/api/proyectos', token=maestro)
 codigos = [p['codigo'] for p in proyectos]

@@ -63,6 +63,22 @@ export async function existeActiva(trabajadorId, proyectoId, actividadId) {
   return rows[0] ?? null
 }
 
+/**
+ * ¿El trabajador tiene otra asignación activa cuyas fechas se cruzan con
+ * [inicio, fin]? Un fin nulo se toma como abierto (sin fecha de término).
+ */
+export async function existeSolapada(trabajadorId, inicio, fin) {
+  const [rows] = await pool.query(
+    `SELECT id FROM asignaciones_personal
+      WHERE trabajador_id = ? AND estado = 'ACTIVO'
+        AND (? IS NULL OR fecha_inicio <= ?)
+        AND (fecha_fin_programada IS NULL OR fecha_fin_programada >= ?)
+      LIMIT 1`,
+    [trabajadorId, fin, fin, inicio],
+  )
+  return rows[0] ?? null
+}
+
 export async function create(asignacion) {
   const [result] = await pool.query(
     `INSERT INTO asignaciones_personal
