@@ -16,7 +16,7 @@ const PRESUPUESTO_MAXIMO = 9_999_999_999_999
 
 /**
  * Registra un nuevo proyecto (HU-02 · CU-02) aplicando los criterios de
- * aceptación de docs/HU_CRITERIOS_ACEPTACION.md:
+ * aceptación de docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md:
  *  - presupuesto_inicial numérico y mayor a cero.
  *  - fecha_inicio_programada estrictamente anterior a fecha_fin_programada
  *    (CU-02 Alt 1: fechas inconsistentes → se impide el registro).
