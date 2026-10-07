@@ -3,7 +3,7 @@
 # Requiere el backend corriendo (puerto 3005). No usa navegador.
 # Uso: python tests/test_hu03_plan.py
 #
-# Verifica los criterios de docs/HU_CRITERIOS_ACEPTACION.md (HU-03):
+# Verifica los criterios de docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md (HU-03):
 #  1. la actividad pertenece a una etapa existente; la etapa a un proyecto existente.
 #  2. las etapas tienen un orden que el sistema calcula por fecha de inicio, y no se solapan.
 #  3. las fechas de etapas y actividades quedan dentro del rango del proyecto.
