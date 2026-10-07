@@ -41,6 +41,7 @@ import { fmtFecha } from '../lib/format.js'
  */
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const ACCESO_VACIO = {
   trabajador_id: '',
@@ -179,6 +180,9 @@ export default function PlanProyecto() {
   const puedeActividades = gestionaPlan && puede('actividades.crear')
   const puedeEditarEtapas = gestionaPlan && puede('etapas.editar')
   const puedeEditarActividades = gestionaPlan && puede('actividades.editar')
+  // HU-34: reprogramar fechas (solo administrador); no aplica a lo ya completado.
+  const puedeReprogramarEtapas = gestionaPlan && puede('etapas.reprogramar')
+  const puedeReprogramarActividades = gestionaPlan && puede('actividades.reprogramar')
   // «Registrar avance»: en cualquier actividad para quien gestiona el plan; si no, solo en las suyas.
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
@@ -228,6 +232,20 @@ export default function PlanProyecto() {
   })
   const editandoEtapa = edicion.registro?.tipo === 'etapa' ? edicion.registro.dato : null
   const editandoActividad = edicion.registro?.tipo === 'actividad' ? edicion.registro.dato : null
+
+  // HU-34 · criterio 2: reprogramación en ventana, con motivo obligatorio.
+  // `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
+    enviar: (f, { tipo, dato }) =>
+      tipo === 'etapa' ? etapasApi.reprogramar(dato.id, f) : actividadesApi.reprogramar(dato.id, f),
+    alGuardar: (_, { registro }) => {
+      setAviso(registro.tipo === 'etapa' ? 'Etapa reprogramada.' : 'Actividad reprogramada.')
+      return recargar()
+    },
+    error: 'No se pudo reprogramar.',
+  })
+  const reprogramandoEtapa = reprogramacion.registro?.tipo === 'etapa' ? reprogramacion.registro.dato : null
+  const reprogramandoActividad = reprogramacion.registro?.tipo === 'actividad' ? reprogramacion.registro.dato : null
 
   // Gestión de acceso (RBAC): quién puede consultar este proyecto. El
   // formulario está siempre a la vista; al guardar solo se vacía.
@@ -314,6 +332,16 @@ export default function PlanProyecto() {
         fecha_fin_programada: soloDia(et.fecha_fin_programada),
       },
       { tipo: 'etapa', dato: et },
+    )
+
+  const abrirReprogramacion = (tipo, dato) =>
+    reprogramacion.abrir(
+      {
+        motivo: '',
+        fecha_inicio_programada: soloDia(dato.fecha_inicio_programada),
+        fecha_fin_programada: soloDia(dato.fecha_fin_programada),
+      },
+      { tipo, dato },
     )
 
   const abrirEdicionActividad = (a) =>
@@ -433,6 +461,11 @@ export default function PlanProyecto() {
                     <PencilSquareIcon className="h-4 w-4" /> Editar
                   </button>
                 )}
+                {puedeReprogramarEtapas && (
+                  <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
+                    <ArrowPathIcon className="h-4 w-4" /> Reprogramar
+                  </button>
+                )}
                 {puedeActividades && (
                   <button
                     className="btn-ghost text-xs"
@@ -531,6 +564,11 @@ export default function PlanProyecto() {
                           {puedeEditarActividades && (
                             <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
                               Editar
+                            </button>
+                          )}
+                          {puedeReprogramarActividades && (
+                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
+                              <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                             </button>
                           )}
                           {puedeAvance(a) && (a.estado === 'PENDIENTE' || a.estado === 'EN_PROCESO') && (
@@ -898,6 +936,48 @@ export default function PlanProyecto() {
                 {editandoEtapa
                   ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
                   : 'Las fechas deben quedar dentro de las de la etapa.'}
+              </p>
+            </div>
+          )
+        })()}
+      </ModalFormulario>
+
+      {/* HU-34: reprogramar fechas de una etapa o actividad; el motivo es obligatorio. */}
+      <ModalFormulario
+        {...reprogramacion.propsModal}
+        titulo={reprogramandoEtapa ? 'Reprogramar etapa' : 'Reprogramar actividad'}
+        subtitulo={reprogramandoEtapa?.nombre ?? reprogramandoActividad?.nombre}
+        textoGuardar="Reprogramar"
+      >
+        {(reprogramandoEtapa || reprogramandoActividad) && (() => {
+          const lim = reprogramandoEtapa
+            ? { min: soloDia(proyecto?.fecha_inicio_programada), max: soloDia(proyecto?.fecha_fin_programada) }
+            : limiteEtapa(etapas.find((x) => x.id === reprogramandoActividad.etapa_id) ?? {})
+          const marca = (campo) => (reprogramacion.campo === campo ? ' border-red-400' : '')
+          return (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label htmlFor="rp-motivo" className="label">Motivo de la reprogramación</label>
+                <textarea id="rp-motivo" rows={2} required maxLength={500}
+                  className={`input${marca('motivo')}`}
+                  value={reprogramacion.valores.motivo}
+                  onChange={(e) => reprogramacion.cambiar('motivo', e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="rp-inicio" className="label">Nuevo inicio</label>
+                <input id="rp-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
+                  value={reprogramacion.valores.fecha_inicio_programada} min={lim.min} max={lim.max}
+                  onChange={(e) => reprogramacion.cambiar('fecha_inicio_programada', e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="rp-fin" className="label">Nuevo fin</label>
+                <input id="rp-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
+                  value={reprogramacion.valores.fecha_fin_programada}
+                  min={reprogramacion.valores.fecha_inicio_programada || lim.min} max={lim.max}
+                  onChange={(e) => reprogramacion.cambiar('fecha_fin_programada', e.target.value)} />
+              </div>
+              <p className="text-xs text-slate-500 sm:col-span-2">
+                Las fechas programadas originales se conservan; el cronograma vigente usa las nuevas.
               </p>
             </div>
           )

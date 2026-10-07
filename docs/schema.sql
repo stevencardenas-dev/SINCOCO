@@ -824,6 +824,34 @@ CREATE TABLE `proyectos` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `reprogramaciones_plan`
+--
+-- HU-34: historial inmutable de reprogramaciones de fechas del plan de trabajo.
+--
+
+DROP TABLE IF EXISTS `reprogramaciones_plan`;
+CREATE TABLE `reprogramaciones_plan` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `proyecto_id` bigint NOT NULL,
+  `entidad_tipo` enum('ETAPA','ACTIVIDAD','PROYECTO') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `entidad_id` bigint NOT NULL,
+  `origen` enum('DIRECTA','CASCADA','FIN_PROYECTO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'DIRECTA',
+  `motivo` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `usuario_id` bigint NOT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_inicio_anterior` date DEFAULT NULL,
+  `fecha_fin_anterior` date DEFAULT NULL,
+  `fecha_inicio_nueva` date DEFAULT NULL,
+  `fecha_fin_nueva` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_reprogramaciones_entidad` (`entidad_tipo`,`entidad_id`),
+  KEY `fk_reprogramacion_proyecto` (`proyecto_id`),
+  KEY `fk_reprogramacion_usuario` (`usuario_id`),
+  CONSTRAINT `fk_reprogramacion_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reprogramacion_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
 -- Table structure for table `restablecimientos_password`
 --
 -- Recuperación de contraseña desde el login (HU-01). Cada solicitud genera un
