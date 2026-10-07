@@ -4,12 +4,15 @@ Registro de quién desarrolla cada historia de usuario y diseño de los sprints 
 a 4. El estado real vive en Jira (proyecto **AYD**); este documento es el plan
 de reparto del equipo.
 
-> **Estado del plan.** Sprint 1: asignaciones reales tomadas de Jira. Sprints 2
-> a 4: **propuesta** pendiente de aprobación; aún no está aplicada en Jira.
+> **Estado del plan.** Sprint 1: **cerrado** el 2026-10-05, con sus 5 HU en
+> *Listo*. Sprint 2: **activo** y cargado en Jira (sincronizado el 2026-10-06).
+> Sprints 3 y 4: **propuesta** pendiente de aprobación; aún no están en Jira.
+> El detalle por historia (estado, responsable, clave Jira) está en
+> `SEGUIMIENTO_HU.md`.
 
 ## Reglas del reparto
 
-- El proyecto tiene **4 sprints**; el sprint 1 ya está en curso.
+- El proyecto tiene **4 sprints**; el sprint 1 ya terminó y el sprint 2 está en curso.
 - Equipo de **6 personas**: cada sprint asigna **2 historias por persona**
   (12 historias por sprint).
 - Las HU-05 a HU-30 conservan el sprint de la Primera Entrega. Las HU-31 a
@@ -32,14 +35,14 @@ de reparto del equipo.
 
 | Sprint | Inicio | Fin | Estado en Jira |
 |---|---|---|---|
-| Sprint 1 | 2026-09-15 | 2026-10-04 | Activo |
-| Sprint 2 | 2026-10-05 | 2026-10-25 | Futuro (creado; en Jira aún figura 6 al 27 de oct) |
+| Sprint 1 | 2026-09-15 | 2026-10-04 | Cerrado (completado el 2026-10-05; en Jira figuraba hasta el 6 de oct) |
+| Sprint 2 | 2026-10-05 | 2026-10-25 | Activo (iniciado el 2026-10-05; en Jira figura hasta el 27 de oct) |
 | Sprint 3 | 2026-10-26 | 2026-11-15 | Por crear |
 | Sprint 4 | 2026-11-16 | 2026-12-06 | Por crear |
 
 Cada sprint dura 3 semanas y empieza el día siguiente al fin del anterior.
 
-## Sprint 1 (real, según Jira)
+## Sprint 1 (cerrado, según Jira)
 
 | HU | Jira | Historia | Pts | Responsable | Estado |
 |---|---|---|---|---|---|
@@ -49,28 +52,30 @@ Cada sprint dura 3 semanas y empieza el día siguiente al fin del anterior.
 | HU-04 | AYD-16 | Registro de personal | 3 | Gian Abril | Listo |
 | HU-18 | AYD-30 | Conservación de historial (eliminación lógica) | 3 | Juan Llanos | Listo |
 
-Kevin Marín no tuvo historia asignada en el sprint 1.
+Kevin Marín no tuvo historia asignada en el sprint 1; su aporte fue la tarea
+**AYD-44** (despliegue de la aplicación en la nube), también *Listo*.
 
-## Sprint 2 (cargado en Jira el 2026-10-05)
+## Sprint 2 (activo, cargado en Jira el 2026-10-05)
 
 Carga: 44 puntos (HU nuevas: 31, 33, 34). Las 12 historias están asignadas y
 en el sprint "AYD Sprint 2". Las nuevas se crearon como **AYD-45** (HU-31),
 **AYD-46** (HU-33) y **AYD-47** (HU-34), con su épica y responsable.
+Estado al 2026-10-06: 6 en *Backend-Frontend*, 6 por hacer.
 
-| Responsable | HU | Historia | Pts | Total |
-|---|---|---|---|---|
-| Alvaro Portillo | HU-17 | Registro de auditoría de operaciones | 5 | 8 |
-| | HU-31 | Extensión o prórroga de asignación de personal *(nueva)* | 3 | |
-| Jimmy Bonilla | HU-21 | Registro del porcentaje de avance | 5 | 8 |
-| | HU-28 | Detalle de servicios externos contratados | 3 | |
-| Angel Vesga | HU-34 | Reprogramación de fechas del plan de trabajo *(nueva)* | 5 | 8 |
-| | HU-14 | Registro e incidencias de obra | 3 | |
-| Gian Abril | HU-05 | Asignación de maestros o responsables | 3 | 6 |
-| | HU-33 | Disponibilidad de personal por especialidad *(nueva)* | 3 | |
-| Kevin Marín | HU-30 | Solicitud de herramientas | 5 | 8 |
-| | HU-10 | Catálogo de herramientas | 3 | |
-| Juan Llanos | HU-07 | Catálogo de materiales | 3 | 6 |
-| | HU-13 | Registro de proveedores y servicios | 3 | |
+| Responsable | HU | Historia | Pts | Total | Estado |
+|---|---|---|---|---|---|
+| Alvaro Portillo | HU-17 | Registro de auditoría de operaciones | 5 | 8 | Backend-Frontend |
+| | HU-31 | Extensión o prórroga de asignación de personal *(nueva)* | 3 | | Por hacer |
+| Jimmy Bonilla | HU-21 | Registro del porcentaje de avance | 5 | 8 | Backend-Frontend |
+| | HU-28 | Detalle de servicios externos contratados | 3 | | Por hacer |
+| Angel Vesga | HU-34 | Reprogramación de fechas del plan de trabajo *(nueva)* | 5 | 8 | Backend-Frontend |
+| | HU-14 | Registro e incidencias de obra | 3 | | Por hacer |
+| Gian Abril | HU-05 | Asignación de maestros o responsables | 3 | 6 | Backend-Frontend |
+| | HU-33 | Disponibilidad de personal por especialidad *(nueva)* | 3 | | Por hacer |
+| Kevin Marín | HU-30 | Solicitud de herramientas | 5 | 8 | Por hacer |
+| | HU-10 | Catálogo de herramientas | 3 | | Backend-Frontend |
+| Juan Llanos | HU-07 | Catálogo de materiales | 3 | 6 | Backend-Frontend |
+| | HU-13 | Registro de proveedores y servicios | 3 | | Por hacer |
 
 ## Sprint 3 (propuesto)
 
@@ -140,11 +145,12 @@ coordinar el orden entre responsables.
 
 ## Pendientes
 
-- Aprobar o ajustar este reparto.
+- Aprobar o ajustar el reparto de los sprints 3 y 4.
 - Crear en Jira los sprints 3 y 4 y mover a ellos las historias de cada uno.
   Las 8 HU nuevas de esos sprints ya existen en Jira (backlog), con épica y
   responsable: HU-32 AYD-48, HU-35 AYD-49, HU-36 AYD-50, HU-37 AYD-51,
   HU-38 AYD-52, HU-39 AYD-53, HU-40 AYD-54, HU-41 AYD-55.
-- Asignar en Jira a los responsables de las HU originales de los sprints 3 y 4.
-- Ajustar en Jira las fechas del Sprint 1 y del Sprint 2 al calendario de este
-  documento.
+- Asignar en Jira a los responsables de las HU originales de los sprints 3 y 4
+  (hoy sin asignar).
+- Ajustar en Jira la fecha de fin del Sprint 2 (27 de oct) al calendario de este
+  documento (25 de oct).
