@@ -31,9 +31,12 @@ on:
         required: false
         default: ''
 
+# contents/pull-requests: write solo para el paso que registra las migraciones
+# aplicadas (crea una rama y un PR). El despliegue los concede a su job `migrar`.
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  pull-requests: write
 
 # Grupo propio (no el del despliegue): si reutilizara `desplegar-sincoco`, al
 # ser invocado por el propio despliegue se quedaría esperándose a sí mismo.
@@ -82,6 +85,45 @@ jobs:
       - name: Aplicar las migraciones en la instancia
         run: bash deploy/remoto.sh deploy/migrar-base.sh
 
+      # Solo llega aquí si la aplicación anterior terminó bien: las pendientes
+      # ya están en el RDS, así que se mueven a aplicadas/ en una rama nueva.
+      - name: Registrar las migraciones aplicadas
+        id: registrar
+        run: |
+          shopt -s nullglob
+          pendientes=(docs/migraciones/pendientes/*.sql)
+          if [ ${#pendientes[@]} -eq 0 ]; then
+            echo "no hay migraciones pendientes que registrar"
+            exit 0
+          fi
+          rama="registrar-migraciones-${GITHUB_RUN_ID}"
+          git checkout -b "$rama"
+          for f in "${pendientes[@]}"; do
+            git mv "$f" "docs/migraciones/aplicadas/$(basename "$f")"
+          done
+          lista=$(for f in "${pendientes[@]}"; do basename "$f"; done | paste -sd, - | sed 's/,/, /g')
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Registrar migraciones aplicadas en producción (run ${GITHUB_RUN_ID})" \
+            -m "Aplicadas por el run ${GITHUB_RUN_ID}: ${lista}"
+          git push -q -u origin "$rama"
+          echo "rama=$rama" >> "$GITHUB_OUTPUT"
+          echo "lista=$lista" >> "$GITHUB_OUTPUT"
+
+      - name: Abrir el PR de registro
+        if: steps.registrar.outputs.rama != ''
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RAMA: ${{ steps.registrar.outputs.rama }}
+          LISTA: ${{ steps.registrar.outputs.lista }}
+        run: |
+          gh pr create --base main --head "$RAMA" \
+            --title "Registrar migraciones aplicadas en producción" \
+            --body "Las migraciones de este PR ya están aplicadas en el RDS de producción por el run ${GITHUB_RUN_ID}: ${LISTA}. Mueve los archivos de docs/migraciones/pendientes/ a aplicadas/ (ya están movidos aquí) y actualiza docs/MIGRACIONES.md y docs/schema.sql si cambió la estructura."
+          # Si Actions no tiene permiso para abrir PR, la rama queda subida y el
+          # enlace se muestra en el resumen.
+
       - name: Escribir el resumen
         run: |
           {
@@ -93,4 +135,8 @@ jobs:
             echo "| Motivo | ${{ inputs.motivo || '—' }} |"
             echo "| Commit | \`${{ github.sha }}\` |"
             echo "| Origen | ${{ github.event_name }} |"
+            echo "| Migraciones registradas | ${{ steps.registrar.outputs.lista || '—' }} |"
+            if [ -n "${{ steps.registrar.outputs.rama }}" ]; then
+              echo "| Rama para el PR de registro | [\`${{ steps.registrar.outputs.rama }}\`](https://github.com/${{ github.repository }}/compare/main...${{ steps.registrar.outputs.rama }}) |"
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
