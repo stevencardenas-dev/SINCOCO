@@ -53,8 +53,6 @@ def http(metodo, ruta, cuerpo=None, token=None):
 # anterior borraba todos los proyectos y se llevaba por delante los datos de
 # demostración y los de otras pruebas.
 limpieza = subprocess.run(mysql_args(['-e',
-    "DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='proyectos' "
-    "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
     "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'; "
@@ -228,8 +226,6 @@ print('bitacora -> entrada CREAR en proyectos registrada')
 
 # Limpieza final: la prueba no deja proyectos de prueba en la base.
 subprocess.run(mysql_args(['-e',
-    "DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='proyectos' "
-    "AND registro_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM asignaciones_personal WHERE proyecto_id IN "
     "(SELECT id FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'); "
     "DELETE FROM proyectos WHERE codigo LIKE 'PRJ-HU02-%'; "

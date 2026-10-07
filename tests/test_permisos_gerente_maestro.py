@@ -158,5 +158,4 @@ esperar('edita cualquier proyecto', estado, r, 200)
 
 limpiar()
 sql("DELETE FROM cargos WHERE nombre LIKE 'TEST-%'")
-sql("DELETE FROM bitacora_trazabilidad WHERE tabla_afectada IN ('cargos','especialidades')")
 print('\nPermisos de gerente y maestro: TODAS LAS PRUEBAS PASARON')

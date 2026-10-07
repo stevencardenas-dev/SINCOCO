@@ -15,8 +15,6 @@ CREDENCIALES_ADMIN = {'username': 'admin', 'password': 'Prueba123!'}
 
 
 def limpiar():
-    sql(f"DELETE FROM bitacora_trazabilidad WHERE usuario_id IN (SELECT id FROM usuarios WHERE username='{USUARIO}')")
-    sql(f"DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='usuarios' AND registro_id IN (SELECT id FROM usuarios WHERE username='{USUARIO}')")
     sql(f"DELETE FROM usuarios WHERE username='{USUARIO}'")
     sql(f"DELETE FROM trabajadores WHERE numero_documento='{DOCUMENTO}'")
 

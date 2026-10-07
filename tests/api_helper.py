@@ -86,13 +86,7 @@ PREFIJO = 'TEST-HU'
 
 
 def limpiar():
-    """Borra los datos de prueba en orden de dependencias y su bitácora."""
-    sql(
-        "DELETE FROM bitacora_trazabilidad "
-        "WHERE tabla_afectada IN ('proyectos','etapas_proyecto','actividades',"
-        "'trabajadores','clientes','usuarios') "
-        "AND fecha_registro >= NOW() - INTERVAL 1 HOUR"
-    )
+    """Borra los datos de prueba en orden de dependencias. La bitácora no se toca: es inmutable (HU-17)."""
     # Las asignaciones de personal (acceso a proyectos y actividades) van primero:
     # la FK del proyecto es RESTRICT y sin borrarlas el proyecto no se puede eliminar.
     sql(

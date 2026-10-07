@@ -22,7 +22,6 @@ OTRA = 'Kevin2026#Distinta'
 
 
 def limpiar():
-    sql(f"DELETE FROM bitacora_trazabilidad WHERE tabla_afectada='usuarios' AND registro_id IN (SELECT id FROM usuarios WHERE username='{USUARIO}')")
     sql(f"DELETE FROM usuarios WHERE username='{USUARIO}'")
     sql(f"DELETE FROM trabajadores WHERE numero_documento='{DOCUMENTO}'")
 

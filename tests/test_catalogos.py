@@ -171,7 +171,6 @@ sql(f"DELETE FROM trabajadores WHERE numero_documento LIKE '{PREFIJO}-%'")
 sql(f"DELETE FROM cargos WHERE nombre LIKE '{PREFIJO}-%'")
 sql(f"DELETE FROM especialidades WHERE nombre LIKE '{PREFIJO}-%'")
 sql(f"DELETE FROM clientes WHERE numero_documento LIKE '{PREFIJO}-%'")
-sql("DELETE FROM bitacora_trazabilidad WHERE tabla_afectada IN ('cargos','especialidades')")
 print('limpieza -> los registros de prueba no quedan en la base')
 
 print('\nCatálogos: TODAS LAS PRUEBAS PASARON')

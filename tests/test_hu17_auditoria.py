@@ -11,7 +11,7 @@
 #   4. La consulta filtra por usuario, tabla afectada y rango de fechas.
 import subprocess
 
-from api_helper import crear_proyecto, http, limpiar, login, mysql_args, scalar
+from api_helper import crear_proyecto, http, limpiar, login, mysql_args, scalar, sql
 
 RUTA = '/api/auditoria'
 ESPERADO = {'admin': 200, 'gerente': 403, 'maestro': 403, 'bodega': 403}
@@ -34,6 +34,20 @@ for metodo in ('POST', 'PATCH', 'DELETE'):
     estado, _ = http(metodo, RUTA, {}, token=TOKEN)
     assert estado == 404, f'{metodo} {RUTA}: se esperaba 404 (no hay ruta de escritura), llego {estado}'
     print(f'{metodo:6} {RUTA} -> 404 (inmutable)')
+
+# ...y también en la base (docs/migracion_bitacora_inmutable.sql): ni UPDATE ni DELETE
+# sobre una fila existente, aunque se llegue directo a MySQL.
+fila_id = scalar('SELECT id FROM bitacora_trazabilidad ORDER BY id LIMIT 1')
+assert fila_id, 'la bitácora debería tener al menos el ingreso de esta prueba'
+accion = scalar(f'SELECT accion FROM bitacora_trazabilidad WHERE id={fila_id}')
+for consulta in (f"UPDATE bitacora_trazabilidad SET accion='ALTERADA' WHERE id={fila_id}",
+                 f'DELETE FROM bitacora_trazabilidad WHERE id={fila_id}'):
+    r = sql(consulta)
+    if r.returncode == 0 and consulta.startswith('UPDATE'):
+        sql(f"UPDATE bitacora_trazabilidad SET accion='{accion}' WHERE id={fila_id}")  # no dejar la fila alterada
+    assert r.returncode != 0 and 'inmutable' in r.stderr, f'la base debe rechazar: {consulta}: {r.stderr}'
+assert scalar(f'SELECT accion FROM bitacora_trazabilidad WHERE id={fila_id}') == accion, 'la fila no debe cambiar'
+print('UPDATE y DELETE directos sobre la bitácora -> rechazados por la base (inmutable)')
 
 # --- Criterio 1: una operación crítica deja su rastro -------------------------
 # Se limpia primero para que la creación sea nueva y genere una fila propia.
