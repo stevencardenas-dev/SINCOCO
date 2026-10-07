@@ -5,18 +5,14 @@
 #
 # El criterio pide que los permisos del usuario provengan de los permisos de su
 # rol (roles_permisos), no de una lista fija en el código. Esta prueba comprueba
-# que el RBAC coincide con la matriz cargada por docs/seed_permisos_prueba.sql:
-#   ADMIN 33 · GERENTE 22 · MAESTRO_OBRA 12 · ENCARGADO_BODEGA 4
-#   (GERENTE y MAESTRO_OBRA según docs/migracion_permisos_gerente_maestro.sql;
-#   el GERENTE sumó `catalogos.listar` y `catalogos.gestionar` —Gestión
-#   Administrativa— en docs/migracion_catalogo_gerente.sql).
-#   (20 desde que HU-17 añadió `auditoria.listar`; 22 con los dos permisos de
-#   `catalogos`; 23 con `roles.gestionar`; 25 con la gestión de acceso a
-#   proyectos y actividades: `proyectos.gestionar_acceso` —solo ADMIN— y
-#   `proyectos.acceso_total` —ADMIN y GERENTE—; 26 con `usuarios.editar`;
-#   los roles que definen el plan sumaron `etapas.editar` y `actividades.editar`;
-#   33 y 4 desde que HU-10 añadió los cuatro `herramientas.*` a ADMIN y BODEGA.)
+# que el RBAC cumple las reglas de cada rol sobre la matriz de la base (cargada
+# por docs/seed_permisos_prueba.sql y editable desde "Roles y permisos"):
+# ADMINISTRADOR tiene todos los permisos del catálogo y los demás roles
+# conservan sus permisos núcleo sin tener los vetados. Las reglas viven en
+# tests/permisos_core.py. NO se cuentan permisos: un total fijo se rompe con cada
+# HU que agrega permisos (ver la explicación en ese archivo).
 from api_helper import PREFIJO, crear_trabajador, http, login, scalar, sql
+from permisos_core import verificar_matriz_en_base
 
 # La matriz del seed, por rol. Con 'incluirInactivos' se evita depender de datos.
 ESPERADO_GET = {
@@ -42,18 +38,9 @@ for usuario, rutas in ESPERADO_GET.items():
         assert estado == esperado, f'{usuario} GET {ruta}: se esperaba {esperado}, llego {estado}'
     print(f'{usuario:9} ->', ' '.join(f'{r.split("/")[-1]}={esperado}' for r, esperado in rutas.items()))
 
-# La matriz de la base debe tener los conteos del seed.
-conteos = {}
-for rol in ('ADMINISTRADOR', 'GERENTE', 'MAESTRO_OBRA', 'ENCARGADO_BODEGA'):
-    conteos[rol] = scalar(
-        'SELECT COUNT(*) FROM roles_permisos rp JOIN roles r ON r.id = rp.rol_id '
-        f"WHERE r.nombre='{rol}'"
-    )
-assert conteos['ADMINISTRADOR'] == '33', f'ADMIN debe tener 33 permisos: {conteos}'
-assert conteos['GERENTE'] == '22', f'GERENTE debe tener 22 permisos: {conteos}'
-assert conteos['MAESTRO_OBRA'] == '12', f'MAESTRO_OBRA debe tener 12 permisos: {conteos}'
-assert conteos['ENCARGADO_BODEGA'] == '4', f'BODEGA solo debe tener los 4 de herramientas: {conteos}'
-print('matriz en roles_permisos ->', conteos)
+# La matriz de la base cumple las reglas de cada rol (sin contar permisos).
+conteos = verificar_matriz_en_base()
+print('matriz en roles_permisos cumple las reglas de cada rol ->', conteos)
 
 # Sin token, toda ruta protegida responde 401 (requireAuth sigue vigente).
 for ruta in ('/api/usuarios', '/api/clientes', '/api/trabajadores', '/api/proyectos',
