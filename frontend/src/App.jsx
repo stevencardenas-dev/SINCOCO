@@ -15,6 +15,7 @@ const Perfil = lazy(() => import('./pages/Perfil.jsx'))
 const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
+const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -84,7 +85,15 @@ export default function App() {
           {/* Inventario de materiales */}
           <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" descripcion="Catálogo de materiales con existencias y nivel mínimo, y el registro de entradas, salidas y consumos de inventario." /></RutaPorRol>} />
           {/* Inventario de herramientas */}
-          <Route path="herramientas" element={<RutaPorRol roles={[ADMIN, BODEGA]}><ModulePlaceholder title="Herramientas" descripcion="Catálogo de herramientas con su estado operativo y disponibilidad, entregas a trabajador o proyecto y devoluciones con su condición." /></RutaPorRol>} />
+          {/* HU-10: catálogo de herramientas; la matriz de permisos decide quién entra. */}
+          <Route
+            path="herramientas"
+            element={
+              <RutaPorPermiso permisos={['herramientas.listar']}>
+                <Herramientas />
+              </RutaPorPermiso>
+            }
+          />
           {/* Proveedores y servicios */}
           <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" descripcion="Proveedores y servicios contratados: transporte, alquiler de maquinaria, electricidad y plomería, con responsable, proyecto, fechas y valor." /></RutaPorRol>} />
           {/* Incidencias de obra */}
