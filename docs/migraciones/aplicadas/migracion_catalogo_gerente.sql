@@ -11,7 +11,7 @@
 -- permisos desde la pantalla Roles y permisos, no los quita.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_catalogo_gerente.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_catalogo_gerente.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('catalogos.listar',    'Consultar los catálogos de cargos, especialidades y clientes', 'catalogos'),

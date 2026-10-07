@@ -5,7 +5,7 @@
 -- deploy/cargar-base.sh lo ejecuta siempre. Es idempotente.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_password_reset.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_password_reset.sql
 
 CREATE TABLE IF NOT EXISTS `restablecimientos_password` (
   `id` bigint NOT NULL AUTO_INCREMENT,

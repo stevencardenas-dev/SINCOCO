@@ -22,7 +22,7 @@
 -- la interfaz los muestra en «Otros» y el administrador puede clasificarlos.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_categorias_personal.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_categorias_personal.sql
 
 SET NAMES utf8mb4;
 

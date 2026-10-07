@@ -13,7 +13,7 @@
 -- idempotente: en una base ya alineada no cambia ninguna fila.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_personal_baja.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_personal_baja.sql
 
 UPDATE `trabajadores`
    SET `activo` = 0,

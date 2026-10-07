@@ -6,7 +6,7 @@
 -- PATCH /api/actividades/:id exigen estos permisos. Es idempotente.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_plan_editar.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_plan_editar.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`)
 VALUES ('etapas.editar', 'Editar las propiedades de una etapa', 'planificacion'),
