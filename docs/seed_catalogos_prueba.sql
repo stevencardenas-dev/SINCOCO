@@ -4,7 +4,7 @@
 -- el mismo cargo aparecía escrito de mil formas y el backend tenía la lista de
 -- cargos "operativos" escrita en el código. Ahora son tablas de dominio y
 -- `trabajadores` apunta a ellas por clave foránea (ver docs/schema.sql y
--- docs/migracion_catalogos.sql).
+-- docs/migraciones/aplicadas/migracion_catalogos.sql).
 --
 -- `operativo` decide la regla de HU-04 · criterio 2: para los cargos de obra la
 -- especialidad es obligatoria. Como vive en la tabla, el administrador puede
@@ -15,7 +15,7 @@
 --
 -- Técnico, Almacenista, Ayudante y Oficial ya no son del catálogo base (eran
 -- duplicados o se retiraron); en las bases existentes los da de baja
--- docs/migracion_categorias_personal.sql.
+-- docs/migraciones/aplicadas/migracion_categorias_personal.sql.
 --
 -- Es idempotente: se puede relanzar sin duplicar filas. La colación de la tabla
 -- (utf8mb4_unicode_ci) no distingue mayúsculas ni tildes, así que 'Mamposteria'

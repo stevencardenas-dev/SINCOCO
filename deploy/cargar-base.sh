@@ -37,32 +37,32 @@ fi
 # Se ejecuta SIEMPRE: en una base que viene del esquema anterior migra el texto
 # libre de `trabajadores.cargo` / `especialidad` a las tablas de dominio, y en
 # una base nueva no hace nada. Después se completan con el catálogo inicial.
-$MYSQL "$DB_NAME" < docs/migracion_catalogos.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_catalogos.sql
 
 # --- 2b. Recuperación de contraseña (HU-01) --------------------------------
 # Crea la tabla de códigos de un solo uso si no existe (bases anteriores).
-$MYSQL "$DB_NAME" < docs/migracion_password_reset.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_password_reset.sql
 
 # --- 2c. Seguridad y RBAC ---------------------------------------------------
 # Columnas de sesión única por cuenta, y los permisos de gestión de acceso a
 # proyectos y actividades. Son idempotentes: en una base nueva no hacen nada
 # (el seed de permisos ya los trae).
-$MYSQL "$DB_NAME" < docs/migracion_sesion_unica.sql
-$MYSQL "$DB_NAME" < docs/migracion_roles_gestionar.sql
-$MYSQL "$DB_NAME" < docs/migracion_rbac_acceso.sql
-$MYSQL "$DB_NAME" < docs/migracion_usuarios_editar.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_sesion_unica.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_roles_gestionar.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_rbac_acceso.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_usuarios_editar.sql
 
 # Gestión Administrativa (catálogos): el gerente la ve y la opera igual que el
 # administrador. En una base nueva el seed de permisos ya la trae.
-$MYSQL "$DB_NAME" < docs/migracion_catalogo_gerente.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_catalogo_gerente.sql
 
 # --- 2d. Personal: «Inactivo» = dado de baja (HU-04 · HU-18) ----------------
 # Alinea los trabajadores que quedaron en INACTIVO sin baja lógica (y al revés).
-$MYSQL "$DB_NAME" < docs/migracion_personal_baja.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_personal_baja.sql
 
 # --- 2e. Categorías de cargos y especialidades (HU-04) ----------------------
 # Va antes del seed de catálogos: el seed escribe la columna `categoria`.
-$MYSQL "$DB_NAME" < docs/migracion_categorias_personal.sql
+$MYSQL "$DB_NAME" < docs/migraciones/aplicadas/migracion_categorias_personal.sql
 
 $MYSQL "$DB_NAME" < docs/seed_catalogos_prueba.sql
 
@@ -77,6 +77,11 @@ $MYSQL "$DB_NAME" < docs/seed_permisos_prueba.sql
 
 # --- 5. Cliente de ejemplo ------------------------------------------------
 $MYSQL "$DB_NAME" < docs/seed_proyectos_prueba.sql
+
+# --- 5b. Migraciones pendientes en AWS -----------------------------------
+# Van después de los seeds: necesitan los roles y permisos ya cargados.
+$MYSQL "$DB_NAME" < docs/migraciones/pendientes/migracion_bitacora_inmutable.sql
+$MYSQL "$DB_NAME" < docs/migraciones/pendientes/migracion_herramientas.sql
 
 # --- 6. Contraseñas reales ------------------------------------------------
 # El SQL deja un hash de marcador: scripts/seed.js lo reemplaza por bcrypt.

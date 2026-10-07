@@ -34,7 +34,7 @@ Requiere Node.js 18+, Docker y el cliente `mysql`. Comandos verificados el
 ```bash
 # 1. Base de datos (contenedor `mysql`, publicado en 127.0.0.1:3306)
 docker start mysql                                # si no está arriba
-mysql -h 127.0.0.1 -uroot -p < docs/schema.sql    # 33 tablas, 4 triggers, 10 CHECK
+mysql -h 127.0.0.1 -uroot -p < docs/schema.sql    # 36 tablas, 4 triggers, 14 CHECK
 mysql -h 127.0.0.1 -uroot -p sincoco < docs/seed_usuarios_prueba.sql
 
 # 2. Backend (puerto 3005)
