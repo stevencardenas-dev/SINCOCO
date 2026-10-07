@@ -12,7 +12,7 @@
 -- information_schema antes de alterar la tabla.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_sesion_unica.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_sesion_unica.sql
 
 SET @agregar_sesion := (
   SELECT IF(
