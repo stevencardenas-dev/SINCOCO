@@ -103,7 +103,14 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
   const inicio = dto.fecha_inicio_programada
   const fin = dto.fecha_fin_programada
-  validarFechasEnRango(inicio, fin, proyecto, 'la etapa')
+  // Criterio 4: el fin del proyecto no es un límite duro (se puede extender con
+  // confirmación), pero el inicio sí debe respetar el del proyecto.
+  if (inicio < aFechaDia(proyecto.fecha_inicio_programada)) {
+    throw new AppError('La fecha no puede ser anterior al inicio del proyecto', 400, 'fecha_inicio_programada')
+  }
+  if (inicio > fin) {
+    throw new AppError('La fecha de inicio de la etapa debe ser anterior a la de fin', 400, 'fecha_fin_programada')
+  }
 
   const fuera = (await actividadRepository.listarPorEtapa(id)).find(
     (a) => aFechaDia(a.fecha_inicio_programada) < inicio || aFechaDia(a.fecha_fin_programada) > fin,
@@ -119,10 +126,25 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   const etapas = await etapaRepository.listarPorProyecto(etapa.proyecto_id)
   const movidas = calcularCascada(etapas, etapa, inicio, fin)
 
-  // Hasta que el criterio 4 permita extender el proyecto, el recálculo debe
-  // caber en sus fechas.
+  // Criterio 4: si el recálculo termina después del fin programado del proyecto,
+  // se advierte y se exige confirmación explícita; al confirmar, el fin del
+  // proyecto también se reprograma (su fecha original queda conservada).
   const ultimoFin = movidas.length ? movidas[movidas.length - 1].fin : fin
-  validarFechasEnRango(inicio, ultimoFin, proyecto, 'la etapa')
+  const finProyecto = aFechaDia(proyecto.fecha_fin_programada)
+  const excedeProyecto = ultimoFin > finProyecto
+  if (excedeProyecto && !dto.confirmar) {
+    throw new AppError(
+      `El recálculo termina el ${ultimoFin}, después del fin programado del proyecto (${finProyecto}). Confirme para reprogramar también el fin del proyecto`,
+      409,
+      'fecha_fin_programada',
+      {
+        codigo: 'REQUIERE_CONFIRMACION',
+        fin_proyecto_actual: finProyecto,
+        fin_proyecto_nuevo: ultimoFin,
+        etapas_desplazadas: movidas.length,
+      },
+    )
+  }
 
   // Las actividades de las etapas desplazadas viajan con ellas.
   const actividadesMovidas = []
@@ -154,6 +176,14 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
       )
       await reprogramacionRepository.fijarFechas(conn, 'ACTIVIDAD', m.actividad.id, m.inicio, m.fin)
     }
+    if (excedeProyecto) {
+      const inicioProyecto = aFechaDia(proyecto.fecha_inicio_programada)
+      await reprogramacionRepository.registrar(
+        conn,
+        filaHistorial('PROYECTO', proyecto, proyecto.id, { inicio: inicioProyecto, fin: ultimoFin }, dto, ctx, 'FIN_PROYECTO'),
+      )
+      await reprogramacionRepository.fijarFechas(conn, 'PROYECTO', proyecto.id, inicioProyecto, ultimoFin)
+    }
   })
   await etapaRepository.renumerar(etapa.proyecto_id)
 
@@ -164,6 +194,7 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
       nombre: etapa.nombre, motivo: dto.motivo,
       fecha_inicio_programada: inicio, fecha_fin_programada: fin,
       etapas_desplazadas: movidas.map((m) => m.etapa.id),
+      ...(excedeProyecto && { fin_proyecto_nuevo: ultimoFin }),
     },
     ip: ctx.ip,
   })
@@ -178,6 +209,7 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
       fecha_fin_nueva: m.fin,
     })),
     actividades_desplazadas: actividadesMovidas.length,
+    proyecto: await proyectoRepository.findById(etapa.proyecto_id),
   }
 }
 

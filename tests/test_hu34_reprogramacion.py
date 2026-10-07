@@ -8,6 +8,7 @@
 #  1. las fechas originales se conservan inmutables desde la primera reprogramación.
 #  2. cada reprogramación registra motivo obligatorio, usuario, fecha y fechas anterior/nueva.
 #  3. al reprogramar una etapa se recalculan las posteriores, en orden y sin solapes.
+#  4. si el recálculo excede el fin del proyecto: advertencia, confirmación y fin reprogramado.
 from api_helper import http, login, limpiar, crear_proyecto, scalar, sql
 
 limpiar()
@@ -143,11 +144,30 @@ estado, r = http('PATCH', f'/api/etapas/{etapa_b}/reprogramar', {
 }, token=admin)
 assert estado == 400, f'B no puede empezar antes de que termine A: {estado} {r}'
 
-# Si el recálculo se sale del proyecto (30-jun-2027), no se aplica nada (hasta el criterio 4).
-estado, r = reprogramar_etapa('2026-10-01', '2027-06-01', motivo='Muy largo')
-assert estado == 400, f'excede el proyecto: {estado} {r}'
-assert scalar(f"SELECT fecha_fin_programada FROM etapas_proyecto WHERE id = {etapa_c}") == '2027-04-11',     'un recalculo rechazado no deja cambios a medias'
 print('criterio 3 ok')
 
+# Criterio 4: si el recálculo excede el fin del proyecto (30-jun-2027) se advierte
+# y se exige confirmación explícita; no se aplica nada sin ella.
+estado, r = reprogramar_etapa('2026-10-01', '2027-06-01', motivo='Muy largo')
+assert estado == 409 and r.get('codigo') == 'REQUIERE_CONFIRMACION', f'debia advertir: {estado} {r}'
+assert r['fin_proyecto_actual'] == '2027-06-30' and r['fin_proyecto_nuevo'] > '2027-06-30'
+assert scalar(f"SELECT fecha_fin_programada FROM etapas_proyecto WHERE id = {etapa_c}") == '2027-04-11',     'sin confirmar no se cambia nada (C conserva la fecha vigente anterior)'
+assert scalar(f"SELECT fecha_fin_programada FROM proyectos WHERE id = {proyecto_id}") == '2027-06-30'
+print('advertencia al exceder el proyecto -> ok')
+
+# Confirmado: el fin del proyecto también se reprograma y conserva el original.
+estado, r = http('PATCH', f'/api/etapas/{etapa_id}/reprogramar', {
+    'motivo': 'Muy largo', 'fecha_inicio_programada': '2026-10-01',
+    'fecha_fin_programada': '2027-06-01', 'confirmar': True,
+}, token=admin)
+assert estado == 200, f'confirmado debia aplicarse: {estado} {r}'
+nuevo_fin = r['proyecto']['fecha_fin_programada']
+assert nuevo_fin > '2027-06-30' and nuevo_fin == scalar(f"SELECT MAX(fecha_fin_programada) FROM etapas_proyecto WHERE proyecto_id = {proyecto_id}")
+assert r['proyecto']['fecha_fin_original'] == '2027-06-30', 'se conserva el fin original del proyecto'
+assert r['proyecto']['fecha_inicio_original'] == '2026-10-01'
+filas = scalar(f"SELECT COUNT(*) FROM reprogramaciones_plan WHERE entidad_tipo = 'PROYECTO' AND entidad_id = {proyecto_id} AND origen = 'FIN_PROYECTO'")
+assert filas == '1', 'el cambio del fin del proyecto queda en el historial'
+print('criterio 4 ok')
+
 limpiar()
-print('HU-34 criterios 1, 2 y 3: OK')
+print('HU-34 criterios 1 a 4: OK')

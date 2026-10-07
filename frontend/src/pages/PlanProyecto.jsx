@@ -41,7 +41,7 @@ import { fmtFecha } from '../lib/format.js'
  */
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
-const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
 const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const ACCESO_VACIO = {
   trabajador_id: '',
@@ -235,9 +235,18 @@ export default function PlanProyecto() {
 
   // HU-34 · criterio 2: reprogramación en ventana, con motivo obligatorio.
   // `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  // Criterio 4: si el recálculo excede el fin del proyecto la API advierte (409);
+  // el formulario pide entonces la confirmación explícita antes de reenviar.
+  const [requiereConfirmacion, setRequiereConfirmacion] = useState(false)
   const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
-    enviar: (f, { tipo, dato }) =>
-      tipo === 'etapa' ? etapasApi.reprogramar(dato.id, f) : actividadesApi.reprogramar(dato.id, f),
+    enviar: async (f, { tipo, dato }) => {
+      try {
+        return await (tipo === 'etapa' ? etapasApi.reprogramar(dato.id, f) : actividadesApi.reprogramar(dato.id, f))
+      } catch (err) {
+        setRequiereConfirmacion(err.response?.data?.codigo === 'REQUIERE_CONFIRMACION')
+        throw err
+      }
+    },
     alGuardar: (data, { registro }) => {
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
@@ -340,15 +349,18 @@ export default function PlanProyecto() {
       { tipo: 'etapa', dato: et },
     )
 
-  const abrirReprogramacion = (tipo, dato) =>
+  const abrirReprogramacion = (tipo, dato) => {
+    setRequiereConfirmacion(false)
     reprogramacion.abrir(
       {
         motivo: '',
         fecha_inicio_programada: soloDia(dato.fecha_inicio_programada),
         fecha_fin_programada: soloDia(dato.fecha_fin_programada),
+        confirmar: false,
       },
       { tipo, dato },
     )
+  }
 
   const abrirEdicionActividad = (a) =>
     edicion.abrir(
@@ -982,6 +994,17 @@ export default function PlanProyecto() {
                   min={reprogramacion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => reprogramacion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
+              {requiereConfirmacion && (
+                <label className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 sm:col-span-2">
+                  <input type="checkbox" className="mt-0.5"
+                    checked={reprogramacion.valores.confirmar}
+                    onChange={(e) => reprogramacion.cambiar('confirmar', e.target.checked)} />
+                  <span>
+                    Confirmo que también se reprograme el fin del proyecto. La fecha fin
+                    original del proyecto se conserva.
+                  </span>
+                </label>
+              )}
               <p className="text-xs text-slate-500 sm:col-span-2">
                 Las fechas programadas originales se conservan; el cronograma vigente usa las nuevas.
               </p>
