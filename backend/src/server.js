@@ -10,6 +10,7 @@ import proyectosRoutes from './routes/proyectos.js'
 import clientesRoutes from './routes/clientes.js'
 import trabajadoresRoutes from './routes/trabajadores.js'
 import catalogosRoutes from './routes/catalogos.js'
+import herramientasRoutes from './routes/herramientas.js'
 import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
 import actividadesRoutes from './routes/actividades.js'
@@ -45,6 +46,7 @@ app.use('/api/proyectos', rutasSeguras(proyectosRoutes))
 app.use('/api/clientes', rutasSeguras(clientesRoutes))
 app.use('/api/trabajadores', rutasSeguras(trabajadoresRoutes))
 app.use('/api/catalogos', rutasSeguras(catalogosRoutes))
+app.use('/api/herramientas', rutasSeguras(herramientasRoutes))
 app.use('/api/perfil', rutasSeguras(perfilRoutes))
 app.use('/api/etapas', rutasSeguras(etapasRoutes))
 app.use('/api/actividades', rutasSeguras(actividadesRoutes))

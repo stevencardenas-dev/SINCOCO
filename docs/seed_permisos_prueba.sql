@@ -45,7 +45,12 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('auditoria.listar',         'Consultar la bitácora de trazabilidad',    'auditoria'),
   -- Catálogos del personal (cargos y especialidades) y de clientes.
   ('catalogos.listar',         'Consultar los catálogos de cargos, especialidades y clientes', 'catalogos'),
-  ('catalogos.gestionar',      'Crear, editar y dar de baja cargos, especialidades y clientes', 'catalogos')
+  ('catalogos.gestionar',      'Crear, editar y dar de baja cargos, especialidades y clientes', 'catalogos'),
+  -- HU-10: catálogo de herramientas (administrador y encargado de bodega).
+  ('herramientas.listar',      'Consultar el catálogo de herramientas',    'herramientas'),
+  ('herramientas.crear',       'Registrar herramientas en el catálogo',    'herramientas'),
+  ('herramientas.editar',      'Editar los datos y el estado de una herramienta', 'herramientas'),
+  ('herramientas.dar_baja',    'Dar de baja lógica una herramienta',       'herramientas')
 ON DUPLICATE KEY UPDATE
   `descripcion` = VALUES(`descripcion`),
   `modulo` = VALUES(`modulo`);
@@ -93,12 +98,19 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
     'clientes.listar', 'trabajadores.listar'
   );
 
--- ENCARGADO_BODEGA y TRABAJADOR: sin permisos sobre estos módulos.
+-- ENCARGADO_BODEGA: catálogo de herramientas (HU-10).
+INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
+SELECT r.`id`, p.`id`
+FROM `roles` r JOIN `permisos` p
+WHERE r.`nombre` = 'ENCARGADO_BODEGA'
+  AND p.`modulo` = 'herramientas';
+
+-- TRABAJADOR: sin permisos sobre estos módulos.
 --
 -- `auditoria.listar` (HU-17), `roles.gestionar`, `proyectos.gestionar_acceso`,
 -- `usuarios.editar` y los de `usuarios` quedan solo en el administrador: no
 -- aparecen en las listas de GERENTE ni MAESTRO_OBRA, y el CROSS JOIN de arriba
--- ya se los da a ADMINISTRADOR. Total: 27 permisos.
+-- ya se los da a ADMINISTRADOR. Total: 31 permisos.
 --
 -- Aviso: esta matriz es el punto de partida. La pantalla Roles y permisos
 -- permite al administrador cambiarla después (roles.gestionar).
