@@ -14,7 +14,7 @@
 -- perder el dato.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_catalogos.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_catalogos.sql
 --
 -- Las bases nuevas no la necesitan: docs/schema.sql ya trae el modelo nuevo.
 -- Esta migración es para las bases que vienen del esquema anterior (local y
