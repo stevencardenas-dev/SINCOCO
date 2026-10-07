@@ -15,13 +15,13 @@ robustez antes de entregarlo.
 
 | Fuente | Para qué |
 |---|---|
-| `docs/HU_CRITERIOS_ACEPTACION.md` | épica, prioridad, estimación y **criterios de aceptación** de cada HU |
-| `docs/CASOS_DE_USO.md` | los CU con su flujo principal y alternativos (CU-NN ↔ HU-NN) |
+| `docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md` | épica, prioridad, estimación y **criterios de aceptación** de cada HU |
+| `docs/reglas-de-negocio/CASOS_DE_USO.md` | los CU con su flujo principal y alternativos (CU-NN ↔ HU-NN) |
 | Jira (proyecto **AYD**) | estado real; es la fuente de verdad |
-| `docs/ASIGNACIONES_SPRINTS.md` | quién desarrolla cada HU y a qué sprint pertenece |
+| `docs/reglas-de-negocio/ASIGNACIONES_SPRINTS.md` | quién desarrolla cada HU y a qué sprint pertenece |
 | código (`backend/src`, `frontend/src`) | solo para reutilizar los nombres del dominio |
 
-Entrega: `docs/diagramas/colaboracion/<hu-xx-nombre>.puml` (la carpeta se crea al
+Entrega: `docs/reglas-de-negocio/diagramas/colaboracion/<hu-xx-nombre>.puml` (la carpeta se crea al
 generar el primer diagrama; hoy el repositorio no tiene ningún `.puml`).
 
 Estilo del proyecto: nombres en español y en lenguaje del negocio; sin conceptos
@@ -108,7 +108,7 @@ corregidas.
 
 ## Paso 3: Entregables
 
-1. Archivo `docs/diagramas/colaboracion/<hu-xx-nombre>.puml` en PlantUML,
+1. Archivo `docs/reglas-de-negocio/diagramas/colaboracion/<hu-xx-nombre>.puml` en PlantUML,
    siguiendo EXACTAMENTE la plantilla de estilo de abajo.
 2. Una tabla de trazabilidad:
 
