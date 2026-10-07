@@ -8,7 +8,7 @@
 #                proyectos donde está asignado.
 #   ADMINISTRADOR conserva todo.
 #
-# Requiere el backend (3005) arriba y docs/migracion_permisos_gerente_maestro.sql
+# Requiere el backend (3005) arriba y docs/migraciones/aplicadas/migracion_permisos_gerente_maestro.sql
 # aplicada. Uso: python tests/test_permisos_gerente_maestro.py
 from api_helper import PREFIJO, http, limpiar, login, scalar, sql
 from permisos_core import ADMIN, catalogo_en_base, verificar_rol

@@ -1,6 +1,7 @@
 name: Migrar base de datos (SINCOCO)
 
-# Aplica al RDS de producción las migraciones docs/migracion_*.sql. Son
+# Aplica al RDS de producción las migraciones PENDIENTES (docs/migraciones/pendientes/).
+# Las ya aplicadas en AWS viven en docs/migraciones/aplicadas/ y no se repiten. Son
 # idempotentes y no destructivas: este workflow NUNCA carga docs/schema.sql ni
 # borra datos (para eso está deploy/cargar-base.sh, que es otra cosa).
 #
