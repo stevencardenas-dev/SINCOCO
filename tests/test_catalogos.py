@@ -38,7 +38,7 @@ print('RBAC ->', 'admin/gerente/maestro 200 · bodega 403 · catálogo inexisten
 NOMBRE_CARGO = f'{PREFIJO}-Cargo de prueba'
 NOMBRE_ESPECIALIDAD = f'{PREFIJO}-Especialidad de prueba'
 
-# El gerente administra la Gestión Administrativa (docs/migracion_catalogo_gerente.sql).
+# El gerente administra la Gestión Administrativa (docs/migraciones/aplicadas/migracion_catalogo_gerente.sql).
 estado, r = http('POST', CARGOS, {'nombre': NOMBRE_CARGO, 'operativo': True}, token=TOKEN['gerente'])
 assert estado == 201, f'el gerente debe gestionar el catálogo: {estado} {r}'
 cargo_id = r['cargo']['id']

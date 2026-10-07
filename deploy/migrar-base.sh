@@ -1,5 +1,6 @@
 #!/bin/bash
-# Aplica al RDS de SINCOCO las MIGRACIONES de esquema (docs/migracion_*.sql).
+# Aplica al RDS de SINCOCO las MIGRACIONES PENDIENTES (docs/migraciones/pendientes/*.sql).
+# Las ya aplicadas en AWS están en docs/migraciones/aplicadas/ y NO se vuelven a correr.
 # Se ejecuta EN LA INSTANCIA (vía SSM), igual que cargar-base.sh: el RDS no es
 # accesible desde Internet, así que GitHub Actions no puede hablar con MySQL
 # directamente; manda este script por SSM y la instancia hace el trabajo.
@@ -12,9 +13,9 @@
 #
 # Diferencias con cargar-base.sh, que son el motivo de que exista este script:
 #   - NUNCA carga docs/schema.sql (empieza con DROP TABLE) ni borra datos.
-#   - Solo aplica los docs/migracion_*.sql, que se protegen solos (comprueban
-#     information_schema antes de tocar nada), así que es idempotente y "fluido":
-#     si añades una migración nueva al repo, la próxima ejecución la aplica.
+#   - Solo aplica docs/migraciones/pendientes/*.sql, que se protegen solas
+#     (comprueban information_schema antes de tocar nada). Cuando una migración
+#     ya está aplicada en el RDS, se mueve a docs/migraciones/aplicadas/.
 #   - No reinicia el backend: es una corrección de esquema, no un despliegue.
 #
 # Requisitos previos: el paquete sincoco-migraciones.tar.gz en el bucket de
@@ -43,11 +44,10 @@ set +a
 export MYSQL_PWD="$DB_PASSWORD"
 MYSQL="mysql -h $DB_HOST -u $DB_USER"
 
-# --- 3. Aplicar cada migración, en orden alfabético ------------------------
-# El nombre manda en el orden. Es el mismo que usa cargar-base.sh: catálogos
-# antes que password_reset. Si un sprint añade otra migración, basta con dejarla
-# en docs/migracion_<algo>.sql y encajará en este orden.
-migraciones=$(ls "$DEST"/docs/migracion_*.sql 2>/dev/null || true)
+# --- 3. Aplicar cada migración pendiente, en orden alfabético -------------
+# Si un sprint añade otra migración, basta con dejarla en
+# docs/migraciones/pendientes/migracion_<algo>.sql y encajará en este orden.
+migraciones=$(ls "$DEST"/docs/migraciones/pendientes/*.sql 2>/dev/null || true)
 if [ -z "$migraciones" ]; then
   echo "no hay migraciones que aplicar"
 else

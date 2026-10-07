@@ -15,7 +15,7 @@ con recursos dimensionados a la capa gratuita.
       (build de Vite, privado,                    │  nginx :80  →  127.0.0.1:3005
        leído por CloudFront vía OAC)              │  (systemd: sincoco-backend)
                                                   ▼
-                                     RDS sincoco-db (MySQL 8.0.46, db.t4g.micro)
+                                     RDS sincoco-db (MySQL 8.4.11, db.t4g.micro)
                                      privado, solo acepta 3306 desde la EC2
 ```
 
@@ -53,7 +53,7 @@ tiene su propia semántica de errores.
 | IP elástica | `18.225.67.26` (`eipalloc-019d24dab138f5a2f`) | el origen de CloudFront no cambia si reinicias la instancia |
 | Security group app | `sincoco-ec2-sg` (`sg-0d163fcb94489cf3d`) | 80 al mundo (CloudFront), 22 solo a una IP de administración |
 | Security group DB | `sincoco-rds-sg` (`sg-041af3b79637401c2`) | 3306 solo desde `sincoco-ec2-sg` |
-| RDS | `sincoco-db` | MySQL 8.0.46, db.t4g.micro, 20 GB gp2, sin acceso público, protección contra borrado |
+| RDS | `sincoco-db` | MySQL 8.4.11, db.t4g.micro, 20 GB gp2, sin acceso público, protección contra borrado |
 | S3 frontend | `sincoco-frontend-388371826611` | privado, acceso solo por CloudFront (OAC `E2GFKHK7O2Z7MH`) |
 | S3 despliegue | `sincoco-deploy-388371826611` | guarda `sincoco-backend.tar.gz` |
 | CloudFront | `E3ISG1W90B8Z49` → `d2u6xogluht7jo.cloudfront.net` | `PriceClass_100`, HTTPS obligatorio |
@@ -97,7 +97,7 @@ aws ssm put-parameter --name /sincoco/origin-verify --type SecureString --overwr
 # 3. Empaquetar el backend y subirlo
 tar -czf deploy/local/sincoco-backend.tar.gz \
   --exclude='node_modules' --exclude='*/.env' --exclude='.env' \
-  backend deploy docs/schema.sql docs/seed_permisos_prueba.sql docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql docs/seed_catalogos_prueba.sql docs/migracion_*.sql
+  backend deploy docs/schema.sql docs/seed_permisos_prueba.sql docs/seed_usuarios_prueba.sql docs/seed_proyectos_prueba.sql docs/seed_catalogos_prueba.sql docs/migraciones
 aws s3 cp deploy/local/sincoco-backend.tar.gz s3://sincoco-deploy-388371826611/
 
 # 4. Instalar/actualizar en la instancia (ver deploy/instalar-backend.sh)
@@ -173,8 +173,8 @@ instancia. Verificado con `iam:simulate-principal-policy`: `s3:PutObject` y
 
 | Job | Trabajo |
 |---|---|
-| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds, aplica `docs/migracion_*.sql` (las mismas que producción, porque el código nuevo consulta `usuarios.sesion_actual`) y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18, más la batería de casos límite (`tests/test_bordes_api.py`), que exige que toda entrada imposible —texto larguísimo, número fuera de rango, fecha imposible, token viejo o id inexistente— devuelva 400/403/404 y nunca un 500, contra un backend recién arrancado. |
-| `migrar` | Deja el esquema del RDS al día aplicando `docs/migracion_*.sql` (idempotente, sin borrar datos) **antes** de tocar la instancia. Invoca el workflow reutilizable `migrar-base.yml`. |
+| `pruebas` | Comprueba que se lanza desde `main`, levanta MySQL 8 como servicio, carga esquema + seeds, aplica todas las de `docs/migraciones/` (aplicadas y pendientes, porque el código nuevo consulta `usuarios.sesion_actual`) y corre las pruebas de API de HU-01, HU-03, HU-04 y HU-18, más la batería de casos límite (`tests/test_bordes_api.py`), que exige que toda entrada imposible —texto larguísimo, número fuera de rango, fecha imposible, token viejo o id inexistente— devuelva 400/403/404 y nunca un 500, contra un backend recién arrancado. |
+| `migrar` | Deja el esquema del RDS al día aplicando las pendientes de `docs/migraciones/pendientes/` (idempotente, sin borrar datos) **antes** de tocar la instancia. Invoca el workflow reutilizable `migrar-base.yml`. |
 | `backend` | Empaqueta, sube a S3 y ejecuta `deploy/instalar-backend.sh` en la instancia con `deploy/remoto.sh` (SSM, sin SSH). |
 | `frontend` | `npm ci` + build, sincroniza a S3 e invalida `/` y `/index.html` en CloudFront. |
 | `resumen` | Escribe en la ejecución quién desplegó, qué componente, con qué motivo y el resultado de cada job. |
@@ -200,9 +200,14 @@ El pipeline **no carga `docs/schema.sql`** en producción: ese dump empieza con
 `DROP TABLE`. Relanzar `deploy/cargar-base.sh` tampoco migra, porque omite el
 esquema si ya existe y `FORZAR_ESQUEMA=1` **borra los datos**.
 
-Para cambios de esquema (columnas o tablas nuevas) se añade un
-`docs/migracion_<algo>.sql` **idempotente**: que compruebe `information_schema`
-antes de tocar nada, como los que ya existen:
+Para cambios de esquema (columnas o tablas nuevas) se añade un archivo
+`docs/migraciones/pendientes/migracion_<algo>.sql` **idempotente**: que compruebe
+`information_schema` antes de tocar nada, como los que ya existen. Las que ya
+están aplicadas en AWS viven en `docs/migraciones/aplicadas/`; el estado de cada
+una está en `docs/MIGRACIONES.md`.
+
+Las migraciones que aparecen en la tabla siguiente son las **aplicadas** en
+`docs/migraciones/aplicadas/`:
 
 | Archivo | Qué deja en la base |
 |---|---|
@@ -217,15 +222,20 @@ antes de tocar nada, como los que ya existen:
 | `migracion_permisos_gerente_maestro.sql` | el GERENTE pasa a gestionar la operación (proyectos, personal, plan) y el MAESTRO_OBRA su plan, sin tocar usuarios, roles ni auditoría |
 | `migracion_catalogo_gerente.sql` | permisos `catalogos.listar` y `catalogos.gestionar` para GERENTE (Gestión Administrativa) |
 
-**No hay tabla de control**: se
-aplican todos en orden alfabético cada vez, y como se protegen solos, repetirlos
-no hace daño. Basta con dejar el archivo en `docs/`; no hay que registrarlo en
-ningún sitio. Al terminar, `deploy/migrar-base.sh` imprime en el log de SSM las
+**Ciclo de vida de una migración:**
+1. Se crea en `docs/migraciones/pendientes/` y se prueba en CI.
+2. Al desplegar, `migrar` aplica solo las pendientes, en orden alfabético.
+3. Cuando el RDS ya la tiene, se **mueve** a `docs/migraciones/aplicadas/` y se
+   actualiza `docs/MIGRACIONES.md` (y `docs/schema.sql` si cambió la estructura).
+   Ese paso va en un PR aparte.
+
+Las aplicadas no se vuelven a correr en producción, pero se conservan: una base
+nueva se carga con `deploy/cargar-base.sh` y necesita el historial completo. Al terminar, `deploy/migrar-base.sh` imprime en el log de SSM las
 columnas de sesión y la matriz **permisos por rol** (debe salir 27 / 20 / 10 / 0),
 que es la forma de comprobar desde el propio despliegue que la base quedó al día.
 
-El job `pruebas` aplica estas mismas migraciones sobre la base de CI: así la
-puerta de entrada reproduce el esquema de producción en vez de uno más viejo.
+El job `pruebas` aplica todas las migraciones (aplicadas y pendientes) sobre la base
+de CI: así la puerta de entrada reproduce el esquema de producción en vez de uno más viejo.
 
 Ese trabajo lo hace el workflow **`.github/workflows/migrar-base.yml`**:
 
@@ -256,7 +266,7 @@ peor: publica a medias):
 | Hace falta en `main` | Si falta |
 |---|---|
 | `frontend/package.json` y `package-lock.json` con `leaflet`, `react-leaflet` y `react-phone-number-input` | `npm ci` falla: el lock no coincide con el `package.json` |
-| `docs/migracion_sesion_unica.sql` y `docs/migracion_rbac_acceso.sql` | la base no tendría `usuarios.sesion_actual` y **nadie podría iniciar sesión** |
+| `docs/migraciones/aplicadas/migracion_sesion_unica.sql` y `docs/migraciones/aplicadas/migracion_rbac_acceso.sql` | la base no tendría `usuarios.sesion_actual` y **nadie podría iniciar sesión** |
 | `backend/src/**` nuevos (asignaciones, `accesoService`, `auth.js`, `authController.js`…) | el backend sigue siendo el viejo: sin sesión única ni RBAC de acceso |
 | `tests/test_sesion_unica.py` y `tests/test_rbac_acceso_proyectos.py` | el job `pruebas` falla con *can't open file* |
 | `.github/workflows/desplegar.yml` con el paso *Aplicar las migraciones de esquema* | la base de CI no tendría `sesion_actual` y todas las pruebas darían 401 |
@@ -358,7 +368,7 @@ EC2/RDS**, que es lo que de verdad puede salirse de la capa gratuita.
 
 - Las **migraciones de esquema** van por su propio workflow (ver *Migraciones de
   esquema*). `docs/schema.sql` **no** se aplica en producción, así que un cambio
-  de esquema siempre necesita su `docs/migracion_*.sql` idempotente.
+  de esquema siempre necesita su migración idempotente en `docs/migraciones/pendientes/` (y, al aplicarse, en `aplicadas/`).
 - El despliegue del backend **reinicia el servicio** (unos segundos de corte).
 - El job `pruebas` corre las pruebas de **API**, no las de interfaz
   (`test_ui_*.py`): esas necesitan Playwright y un navegador, y se ejecutan en
@@ -393,7 +403,7 @@ Para ejecutarlo a mano:
 export MYSQL_PWD="$(grep -m1 '^DB_PASSWORD=' /opt/sincoco/backend/.env | cut -d= -f2-)"
 EP=$(grep -m1 '^DB_HOST=' /opt/sincoco/backend/.env | cut -d= -f2-)
 mysql -h "$EP" -u sincoco < /tmp/schema-rds.sql
-for m in /tmp/sincoco-src/docs/migracion_*.sql; do mysql -h "$EP" -u sincoco sincoco < "$m"; done
+for m in /tmp/sincoco-src/docs/migraciones/aplicadas/*.sql /tmp/sincoco-src/docs/migraciones/pendientes/*.sql; do mysql -h "$EP" -u sincoco sincoco < "$m"; done
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_usuarios_prueba.sql
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_permisos_prueba.sql
 mysql -h "$EP" -u sincoco sincoco < /tmp/sincoco-src/docs/seed_proyectos_prueba.sql
@@ -403,7 +413,7 @@ cd /opt/sincoco/backend && sudo -u ubuntu node scripts/seed.js
 > Sin `docs/seed_permisos_prueba.sql` el RBAC deja a todo el mundo sin permisos:
 > ese archivo es el que llena `roles_permisos` (ADMINISTRADOR 27, GERENTE 20,
 > MAESTRO_OBRA 10, ENCARGADO_BODEGA 0). Una base de un sprint anterior se migra
-> sola: `docs/migracion_*.sql` añade los permisos nuevos a la matriz; no hace
+> sola: las migraciones pendientes de `docs/migraciones/pendientes/` añaden los permisos nuevos a la matriz; no hace
 > falta recargar la base.
 
 > `deploy/cargar-base.sh` y `deploy/instalar-backend.sh` no usan `set -x` a
