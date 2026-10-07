@@ -18,3 +18,12 @@
 
 ## Usuarios de prueba
 - La base debe traer un usuario semilla por cada actor del negocio (`docs/ACTORES_DEL_NEGOCIO.md`) para poder probar RBAC sin crear usuarios manualmente. Ver `docs/seed_usuarios_prueba.sql`.
+
+## Pruebas de permisos (RBAC): sin conteos fijos
+- Las pruebas **no cuentan permisos** (`== 33`, `== 22`…). Un total fijo se rompe con cada HU que agrega permisos (la HU-10 sumó cuatro `herramientas.*` y tumbó tres pruebas y el despliegue), y el administrador puede cambiar la matriz desde "Roles y permisos", así que ningún número es estable.
+- Las reglas viven en un solo lugar, `tests/permisos_core.py`:
+  1. **ADMINISTRADOR** tiene *todos* los permisos de la tabla `permisos`, sean cuantos sean.
+  2. Cada otro rol conserva sus **permisos núcleo** (`PERMISOS_CORE`), los mínimos para cumplir su función. Tener de más no rompe la prueba.
+  3. Cada otro rol **no** tiene los permisos **vetados** (`VETADOS`): los de seguridad (`usuarios.`, `roles.`, `auditoria.`) y los que son de otro rol por regla de negocio.
+- Al agregar permisos en una HU nueva **no hay que tocar las pruebas**: ADMIN los recibe solo. Solo se edita `permisos_core.py` si un rol gana una función que debe conservar siempre (núcleo) o una prohibición nueva (vetado).
+- Los permisos que cada rol recibe de inicio los fija `docs/seed_permisos_prueba.sql`; las pruebas defienden el mínimo, no el seed completo.
