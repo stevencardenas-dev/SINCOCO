@@ -94,7 +94,7 @@ El esquema modela **33 tablas**; el backend expone hoy 3 recursos (`auth`,
 `ordenes_compra`, `detalles_orden_compra`, `solicitudes_materiales`,
 `detalles_solicitud_materiales`, `solicitudes_herramientas`) no tienen
 endpoints ni pantallas todavía. CU-30 / HU-30 están documentados en
-`docs/CASOS_DE_USO.md`, pero no existen en el código.
+`docs/reglas-de-negocio/CASOS_DE_USO.md`, pero no existen en el código.
 
 Reglas de negocio aplicadas hoy en la base de datos: RN01, RN02, RN05, RN06,
 RN07, RN11 y RN14 (RN06 en los 4 triggers de inventario; RN01 en el CHECK
@@ -107,7 +107,7 @@ los servicios de indicadores y de proyectos.
 SINCOCO/
 ├── backend/     # Express + JWT (ESM, en capas): auth, usuarios, proyectos
 ├── frontend/    # React + Vite: interfaz por rol
-├── docs/        # casos de uso, HU, esquema, seeds
+├── docs/        # esquema, seeds y reglas-de-negocio/ (HU, casos de uso, directrices)
 ├── specs/       # handoff y decisiones de sesión
 └── tests/       # pruebas de API: login/RBAC, usuarios (CU-01), proyectos (CU-02)
 ```
@@ -120,10 +120,10 @@ SINCOCO/
 
 | Archivo | Contenido |
 |---|---|
-| `docs/CASOS_DE_USO.md` | los 30 casos de uso (uno por HU: CU-NN ↔ HU-NN) |
-| `docs/HU_CRITERIOS_ACEPTACION.md` | las 30 HU con épica, prioridad, estimación y sprint |
-| `docs/SEGUIMIENTO_HU.md` | espejo rápido del estado en Jira (Jira es la fuente de verdad) |
-| `docs/ACTORES_DEL_NEGOCIO.md` | los actores del sistema y del negocio |
+| `docs/reglas-de-negocio/CASOS_DE_USO.md` | los 30 casos de uso (uno por HU: CU-NN ↔ HU-NN) |
+| `docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md` | las 30 HU con épica, prioridad, estimación y sprint |
+| `docs/reglas-de-negocio/SEGUIMIENTO_HU.md` | espejo rápido del estado en Jira (Jira es la fuente de verdad) |
+| `docs/reglas-de-negocio/ACTORES_DEL_NEGOCIO.md` | los actores del sistema y del negocio |
 | `docs/DOCUMENTACION_SQL.md` | qué guarda cada tabla del esquema |
 | `docs/schema.sql` | dump de la entrega: 33 tablas, 4 triggers, 10 CHECK |
 | `docs/seed_usuarios_prueba.sql` | usuarios de prueba por actor |
