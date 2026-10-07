@@ -99,6 +99,10 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
   if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
+  // HU-34 · criterio 5: lo ya completado no se reprograma.
+  if (etapa.estado === 'COMPLETADA') {
+    throw new AppError('No se puede reprogramar una etapa ya completada', 409, 'estado')
+  }
 
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
   const inicio = dto.fecha_inicio_programada
@@ -219,6 +223,10 @@ export async function reprogramarActividad(id, dto, ctx = {}) {
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, actividad.proyecto_id)
   if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+  // HU-34 · criterio 5: lo ya completado no se reprograma.
+  if (actividad.estado === 'COMPLETADA') {
+    throw new AppError('No se puede reprogramar una actividad ya completada', 409, 'estado')
+  }
 
   const etapa = await etapaRepository.findById(actividad.etapa_id)
   const proyecto = await proyectoRepository.findById(actividad.proyecto_id)

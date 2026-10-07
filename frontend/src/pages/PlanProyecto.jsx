@@ -219,11 +219,18 @@ export default function PlanProyecto() {
   const actividadEn = nuevaActividad.registro
 
   // Edición en ventana: `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  // HU-34 · criterio 5: las fechas ya definidas no se editan aquí, se reprograman.
+  const fechasFijas = (dato) => Boolean(dato?.fecha_inicio_programada && dato?.fecha_fin_programada)
+  const sinFechas = (f, dato) => {
+    if (!fechasFijas(dato)) return f
+    const { fecha_inicio_programada: _i, fecha_fin_programada: _f, ...resto } = f
+    return resto
+  }
   const edicion = useFormulario(ETAPA_VACIA, {
     enviar: (f, { tipo, dato }) =>
       tipo === 'etapa'
-        ? etapasApi.actualizar(dato.id, f)
-        : actividadesApi.actualizar(dato.id, { ...f, responsable_id: f.responsable_id || null }),
+        ? etapasApi.actualizar(dato.id, sinFechas(f, dato))
+        : actividadesApi.actualizar(dato.id, { ...sinFechas(f, dato), responsable_id: f.responsable_id || null }),
     alGuardar: (_, { registro }) => {
       setAviso(registro.tipo === 'etapa' ? 'Etapa actualizada.' : 'Actividad actualizada.')
       return recargar()
@@ -479,7 +486,7 @@ export default function PlanProyecto() {
                     <PencilSquareIcon className="h-4 w-4" /> Editar
                   </button>
                 )}
-                {puedeReprogramarEtapas && (
+                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
                   <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
                     <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                   </button>
@@ -584,7 +591,7 @@ export default function PlanProyecto() {
                               Editar
                             </button>
                           )}
-                          {puedeReprogramarActividades && (
+                          {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
                             <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
                               <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                             </button>
@@ -939,21 +946,25 @@ export default function PlanProyecto() {
               )}
               <div>
                 <label htmlFor="ed-inicio" className="label">Inicio programado</label>
-                <input id="ed-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
+                <input id="ed-inicio" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_inicio_programada')}`}
                   value={edicion.valores.fecha_inicio_programada} min={lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_inicio_programada', e.target.value)} />
               </div>
               <div>
                 <label htmlFor="ed-fin" className="label">Fin programado</label>
-                <input id="ed-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
+                <input id="ed-fin" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_fin_programada')}`}
                   value={edicion.valores.fecha_fin_programada}
                   min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
               <p className="text-xs text-slate-500 sm:col-span-2">
-                {editandoEtapa
-                  ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
-                  : 'Las fechas deben quedar dentro de las de la etapa.'}
+                {fechasFijas(edicion.registro?.dato)
+                  ? 'Para cambiar las fechas use «Reprogramar»: conserva las originales y registra el motivo.'
+                  : editandoEtapa
+                    ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
+                    : 'Las fechas deben quedar dentro de las de la etapa.'}
               </p>
             </div>
           )

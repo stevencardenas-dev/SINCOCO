@@ -9,6 +9,7 @@
 #  2. cada reprogramación registra motivo obligatorio, usuario, fecha y fechas anterior/nueva.
 #  3. al reprogramar una etapa se recalculan las posteriores, en orden y sin solapes.
 #  4. si el recálculo excede el fin del proyecto: advertencia, confirmación y fin reprogramado.
+#  5. las etapas y actividades completadas no se reprograman; PATCH ya no cambia fechas definidas.
 from api_helper import http, login, limpiar, crear_proyecto, scalar, sql
 
 limpiar()
@@ -169,5 +170,36 @@ filas = scalar(f"SELECT COUNT(*) FROM reprogramaciones_plan WHERE entidad_tipo =
 assert filas == '1', 'el cambio del fin del proyecto queda en el historial'
 print('criterio 4 ok')
 
+# Criterio 5: lo completado no se reprograma.
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad completada',
+    'fecha_inicio_programada': '2026-11-01', 'fecha_fin_programada': '2026-11-10',
+}, token=admin)
+assert estado == 201, f'actividad a completar: {estado} {r}'
+completada = r['actividad']['id']
+assert http('PATCH', f'/api/actividades/{completada}/iniciar', token=admin)[0] == 200
+assert http('PATCH', f'/api/actividades/{completada}/finalizar', token=admin)[0] == 200
+estado, r = http('PATCH', f'/api/actividades/{completada}/reprogramar', {
+    'motivo': 'Intento', 'fecha_inicio_programada': '2026-11-02', 'fecha_fin_programada': '2026-11-12',
+}, token=admin)
+assert estado == 409, f'una actividad completada no se reprograma: {estado} {r}'
+sql(f"UPDATE etapas_proyecto SET estado = 'COMPLETADA' WHERE id = {etapa_c}")
+estado, r = http('PATCH', f'/api/etapas/{etapa_c}/reprogramar', {
+    'motivo': 'Intento', 'fecha_inicio_programada': '2027-04-20', 'fecha_fin_programada': '2027-04-30',
+}, token=admin)
+assert estado == 409, f'una etapa completada no se reprograma: {estado} {r}'
+assert scalar(f"SELECT fecha_fin_programada FROM etapas_proyecto WHERE id = {etapa_c}") != '2027-04-30'
+
+# Las rutas de edición directa ya no cambian fechas definidas.
+estado, r = http('PATCH', f'/api/etapas/{etapa_b}', {'fecha_fin_programada': '2027-02-27'}, token=admin)
+assert estado == 409 and r.get('codigo') == 'USAR_REPROGRAMACION', f'etapa: {estado} {r}'
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}', {'fecha_fin_programada': '2027-02-22'}, token=admin)
+assert estado == 409, f'actividad: {estado} {r}'
+estado, r = http('PATCH', f'/api/proyectos/{proyecto_id}', {'fecha_fin_programada': '2028-01-01'}, token=admin)
+assert estado == 409, f'proyecto con plan: {estado} {r}'
+estado, r = http('PATCH', f'/api/etapas/{etapa_b}', {'nombre': 'TEST-Etapa B editada'}, token=admin)
+assert estado == 200, f'editar otras propiedades sigue permitido: {estado} {r}'
+print('criterio 5 ok')
+
 limpiar()
-print('HU-34 criterios 1 a 4: OK')
+print('HU-34 criterios 1 a 5: OK')

@@ -4,7 +4,7 @@ import * as actividadRepository from '../repositories/actividadRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
 import { AppError } from '../utils/AppError.js'
-import { aFechaDia, rangosSeSolapan, validarFechasEnRango } from '../utils/fechas.js'
+import { aFechaDia, rangosSeSolapan, rechazarCambioDeFechas, validarFechasEnRango } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
 
 // La regla de fechas vive en utils/fechas.js (la comparten etapas, actividades
@@ -88,6 +88,8 @@ export async function actualizarEtapa(id, dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
 
   const campos = { ...dto.campos }
+  // HU-34 · criterio 5: las fechas ya definidas se cambian solo reprogramando.
+  rechazarCambioDeFechas(etapa, campos, 'la etapa')
   const inicio = aFechaDia(campos.fecha_inicio_programada ?? etapa.fecha_inicio_programada)
   const fin = aFechaDia(campos.fecha_fin_programada ?? etapa.fecha_fin_programada)
   if (!inicio || !fin) {

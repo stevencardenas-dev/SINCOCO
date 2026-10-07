@@ -3,7 +3,7 @@ import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import { validarFechasEnRango } from './etapaService.js'
-import { aFechaDia, validarDentroDeEtapa } from '../utils/fechas.js'
+import { aFechaDia, rechazarCambioDeFechas, validarDentroDeEtapa } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan, verificarOperarActividad } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
@@ -88,6 +88,8 @@ export async function actualizarActividad(id, dto, ctx = {}) {
   if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
 
   const campos = { ...dto.campos }
+  // HU-34 · criterio 5: las fechas ya definidas se cambian solo reprogramando.
+  rechazarCambioDeFechas(actividad, campos, 'la actividad')
   const inicio = aFechaDia(campos.fecha_inicio_programada ?? actividad.fecha_inicio_programada)
   const fin = aFechaDia(campos.fecha_fin_programada ?? actividad.fecha_fin_programada)
 
