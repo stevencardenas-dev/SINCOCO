@@ -1,4 +1,4 @@
--- Usuarios de prueba: uno por actor DEL SISTEMA (docs/ACTORES_DEL_NEGOCIO.md).
+-- Usuarios de prueba: uno por actor DEL SISTEMA (docs/reglas-de-negocio/ACTORES_DEL_NEGOCIO.md).
 -- El trabajador operativo NO inicia sesión: es actor del negocio, no del sistema.
 -- Se conserva su ficha en `trabajadores` porque las entregas y devoluciones de
 -- herramientas lo referencian (entregado_a_trabajador_id), pero sin usuario ni rol.

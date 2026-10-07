@@ -3,7 +3,7 @@
 # Requiere el backend corriendo (puerto 3005). No usa navegador.
 # Uso: python tests/test_hu18_baja_logica.py
 #
-# Verifica los criterios de docs/HU_CRITERIOS_ACEPTACION.md (HU-18):
+# Verifica los criterios de docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md (HU-18):
 #  1. ninguna eliminación ejecuta borrado físico: se marca inactivo, con fecha
 #     de baja y usuario que la ejecuta.
 #  2. los registros inactivos no aparecen por defecto en los listados.

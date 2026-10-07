@@ -8,7 +8,7 @@
 -- disparadores en InnoDB; los usuarios nunca se borran (baja lógica, HU-18).
 --
 -- Idempotente: se puede relanzar.
---   mysql -u root -p sincoco < docs/migracion_bitacora_inmutable.sql
+--   mysql -u root -p sincoco < docs/migraciones/pendientes/migracion_bitacora_inmutable.sql
 
 DROP TRIGGER IF EXISTS `trg_bitacora_no_update`;
 DROP TRIGGER IF EXISTS `trg_bitacora_no_delete`;
