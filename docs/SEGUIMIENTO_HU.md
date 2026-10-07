@@ -34,3 +34,14 @@ Estado real vive en Jira. Esta tabla es un espejo rápido — actualizar el camp
 | HU-28 | Detalle de servicio externo | | Pendiente |
 | HU-29 | Traslado de materiales entre almacenes | | Pendiente |
 | HU-30 | Solicitud de herramientas | | Pendiente |
+| HU-31 | Extensión de asignación de personal | | Pendiente |
+| HU-32 | Autorización de sobrecosto de servicio externo | | Pendiente |
+| HU-33 | Disponibilidad de personal por especialidad | | Pendiente |
+| HU-34 | Reprogramación de fechas del plan | | Pendiente |
+| HU-35 | Reemplazo de herramienta averiada | | Pendiente |
+| HU-36 | Aprobación parcial de materiales | | Pendiente |
+| HU-37 | Mantenimiento y estado de herramientas | | Pendiente |
+| HU-38 | Congelar o finalizar proyecto | | Pendiente |
+| HU-39 | Desviaciones presupuestales | | Pendiente |
+| HU-40 | Acta de recepción de materiales | | Pendiente |
+| HU-41 | Calificación de proveedores | | Pendiente |

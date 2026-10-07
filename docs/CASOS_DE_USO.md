@@ -6,7 +6,8 @@ al cual se evalúa el proyecto: los 30 casos de uso con su actor, flujo
 principal y flujos alternativos.
 
 > **Fuente de verdad.** Ante cualquier discrepancia entre este archivo y otros
-> documentos del repositorio, prevalece la Primera Entrega.
+> documentos del repositorio, prevalece la Primera Entrega. Los CU-31 a CU-41,
+> al final, son posteriores a ella y no forman parte del anexo oficial.
 
 Un caso de uso por historia de usuario, mismo número (CU-NN ↔ HU-NN) según la
 *Matriz de Articulación HU-CU*. Las épicas corresponden a
@@ -257,3 +258,108 @@ Un caso de uso por historia de usuario, mismo número (CU-NN ↔ HU-NN) según l
 - **Flujos alternativos:**
   - *Alt 1 (Rechazo de solicitud):* Dado que existe un motivo justificado, como incumplimientos previos del trabajador con devoluciones, cuando bodega rechaza la solicitud, entonces el sistema exige una observación obligatoria y notifica al solicitante.
   - *Alt 2 (Solicitud programada):* Dado que la fecha requerida es posterior a la fecha actual, cuando se registra la solicitud, entonces esta permanece pendiente hasta esa fecha sin bloquear otras operaciones del solicitante.
+
+
+# Ampliación posterior a la Primera Entrega (CU-31 a CU-41)
+
+Casos de uso de las HU-31 a HU-41, agregadas después de la Primera Entrega.
+Mantienen la correspondencia CU-NN ↔ HU-NN. Los criterios de aceptación están
+en `HU_CRITERIOS_ACEPTACION.md`.
+
+## EP-03: Personal y asignaciones
+
+### CU-31 (HU-31): Extender asignación de personal
+- **Actor(es):** Administrador
+- **Flujo principal (Extensión de asignación):** Dada una asignación vigente de un trabajador en una actividad, cuando el administrador indica una nueva fecha fin programada y el motivo, entonces el sistema registra la extensión conservando la fecha original, actualiza la vigencia de la asignación y deja constancia en el historial.
+- **Flujos alternativos:**
+  - *Alt 1 (Solapamiento):* Dado que el trabajador tiene otra asignación activa que se cruza con el periodo extendido, cuando se intenta confirmar la extensión, entonces el sistema advierte la sobreasignación y no la guarda.
+  - *Alt 2 (Fecha inválida):* Dado que la nueva fecha no es posterior a la vigente o excede el rango de la actividad o del proyecto, cuando se intenta guardar, entonces el sistema rechaza la extensión e indica el límite permitido.
+  - *Alt 3 (Asignación cerrada):* Dado que la asignación ya fue finalizada o cancelada, cuando se intenta extenderla, entonces el sistema impide la operación y sugiere registrar una nueva asignación.
+
+### CU-33 (HU-33): Consultar disponibilidad de personal por especialidad
+- **Actor(es):** Administrador
+- **Flujo principal (Búsqueda de personal):** Dado el módulo de personal, cuando el administrador filtra por especialidad y estado de disponibilidad, entonces el sistema lista los trabajadores activos que cumplen el filtro según sus asignaciones vigentes en ese momento.
+- **Flujos alternativos:**
+  - *Alt 1 (Consulta por periodo):* Dado que el administrador indica un rango de fechas, cuando se ejecuta la consulta, entonces el sistema lista solo a los trabajadores sin asignaciones solapadas en ese periodo.
+  - *Alt 2 (Sin resultados):* Dado que ningún trabajador cumple los filtros, cuando se ejecuta la consulta, entonces el sistema indica que no hay personal disponible para ese criterio.
+  - *Alt 3 (Asignación directa):* Dado un trabajador del resultado, cuando el administrador lo selecciona para asignarlo, entonces el sistema inicia el flujo de asignación de CU-05.
+
+## EP-06: Proveedores y servicios externos
+
+### CU-32 (HU-32): Autorizar sobrecosto de servicio externo
+- **Actor(es):** Gerente, Sistema
+- **Flujo principal (Autorización de sobrecosto):** Dado que el administrador registra un servicio externo cuyo valor contratado supera el presupuesto de la actividad, cuando el sistema detecta el exceso, entonces deja el servicio pendiente de autorización y notifica al gerente con el detalle del exceso; el gerente lo autoriza y el servicio se confirma y se suma a los costos del proyecto.
+- **Flujos alternativos:**
+  - *Alt 1 (Rechazo para reajuste):* Dado un servicio pendiente de autorización, cuando el gerente lo rechaza con una observación, entonces el sistema devuelve el servicio al administrador para que reajuste el monto y lo evalúa de nuevo.
+  - *Alt 2 (Reajuste dentro del presupuesto):* Dado que el monto reajustado ya no excede el presupuesto de la actividad, cuando se guarda, entonces el servicio se confirma sin requerir autorización.
+
+### CU-41 (HU-41): Calificar desempeño de proveedores
+- **Actor(es):** Administrador
+- **Flujo principal (Calificación):** Dado un servicio externo finalizado o una entrega recibida, cuando el administrador califica la puntualidad y la calidad, entonces el sistema guarda la calificación y actualiza el promedio histórico del proveedor.
+- **Flujos alternativos:**
+  - *Alt 1 (Puntaje bajo):* Dado que algún puntaje es 2 o menor, cuando se intenta guardar sin comentario, entonces el sistema exige el comentario antes de continuar.
+  - *Alt 2 (Ya calificado):* Dado que el servicio o la entrega ya tiene calificación, cuando se intenta calificar de nuevo, entonces el sistema impide el duplicado y muestra la calificación existente.
+  - *Alt 3 (No finalizado):* Dado un servicio aún en curso o una entrega no recibida, cuando se intenta calificar, entonces el sistema no lo permite.
+
+## EP-02: Gestión de proyectos y planificación
+
+### CU-34 (HU-34): Reprogramar fechas del plan de trabajo
+- **Actor(es):** Administrador
+- **Flujo principal (Reprogramación):** Dada una etapa o actividad no completada, cuando el administrador indica las nuevas fechas y el motivo, entonces el sistema conserva las fechas originales, aplica las nuevas, recalcula las etapas posteriores sin solapamientos y actualiza el cronograma total del proyecto.
+- **Flujos alternativos:**
+  - *Alt 1 (Excede el fin del proyecto):* Dado que el recálculo supera la fecha fin programada del proyecto, cuando se intenta confirmar, entonces el sistema advierte y, si el administrador acepta, reprograma también el fin del proyecto conservando el original.
+  - *Alt 2 (Elemento completado):* Dado que la etapa o actividad ya está completada, cuando se intenta reprogramar, entonces el sistema impide la operación.
+  - *Alt 3 (Asignaciones afectadas):* Dado que hay asignaciones de personal fuera de las nuevas fechas, cuando se confirma la reprogramación, entonces el sistema las lista para que el administrador las extienda o ajuste, sin modificarlas automáticamente.
+
+### CU-38 (HU-38): Congelar o finalizar proyecto
+- **Actor(es):** Gerente
+- **Flujo principal (Cambio de estado del proyecto):** Dado un proyecto en ejecución, cuando el gerente lo congela o lo finaliza indicando el motivo, entonces el sistema cambia su estado y bloquea nuevas asignaciones de personal, salidas de inventario y nuevos costos asociados.
+- **Flujos alternativos:**
+  - *Alt 1 (Reanudación):* Dado un proyecto congelado, cuando el gerente lo reanuda, entonces el sistema lo devuelve a en ejecución y habilita de nuevo las operaciones.
+  - *Alt 2 (Pendientes al finalizar):* Dado que existen préstamos de herramientas vigentes o solicitudes pendientes, cuando se intenta finalizar el proyecto, entonces el sistema lo impide y lista los pendientes por resolver.
+  - *Alt 3 (Avance incompleto):* Dado que el avance total es menor a 100%, cuando se intenta finalizar, entonces el sistema advierte y exige confirmación.
+  - *Alt 4 (Operación bloqueada):* Dado un proyecto congelado o finalizado, cuando un usuario intenta registrar una asignación, salida, solicitud o servicio, entonces el sistema rechaza la operación e indica el estado del proyecto.
+
+## EP-05: Inventario de herramientas
+
+### CU-35 (HU-35): Reemplazar herramienta averiada
+- **Actor(es):** Encargado de bodega
+- **Flujo principal (Reemplazo):** Dado un préstamo vigente cuya herramienta presentó una avería, cuando bodega registra la novedad y selecciona una herramienta operativa, entonces el sistema cierra el préstamo averiado, envía esa herramienta a reparación, genera la incidencia y entrega el reemplazo al mismo trabajador con la misma fecha estimada de devolución.
+- **Flujos alternativos:**
+  - *Alt 1 (Sin reemplazo disponible):* Dado que no hay una herramienta equivalente disponible, cuando bodega intenta registrar el reemplazo, entonces el sistema cierra solo el préstamo averiado y sugiere registrar una solicitud de herramienta (CU-30).
+  - *Alt 2 (Novedad omitida):* Dado que no se describe la avería, cuando se intenta confirmar, entonces el sistema exige la novedad.
+
+### CU-37 (HU-37): Cambiar estado operativo de herramienta
+- **Actor(es):** Encargado de bodega
+- **Flujo principal (Mantenimiento):** Dada una herramienta disponible, cuando bodega la cambia a en reparación o de baja indicando el motivo, entonces el sistema actualiza su estado, la excluye de los préstamos y deja constancia en su historial.
+- **Flujos alternativos:**
+  - *Alt 1 (Préstamo vigente):* Dado que la herramienta tiene un préstamo vigente, cuando se intenta cambiar su estado, entonces el sistema exige registrar primero su devolución.
+  - *Alt 2 (Fin de reparación):* Dada una herramienta en reparación, cuando bodega registra la salida de reparación con su fecha y costo opcional, entonces la herramienta vuelve a estado disponible.
+  - *Alt 3 (Herramienta dada de baja):* Dada una herramienta de baja, cuando se intenta cambiar su estado, entonces el sistema rechaza la operación porque la baja es definitiva.
+
+## EP-04: Inventario de materiales
+
+### CU-36 (HU-36): Ajustar aprobación de solicitud de materiales
+- **Actor(es):** Encargado de bodega
+- **Flujo principal (Aprobación parcial con saldo):** Dada una solicitud de materiales pendiente, cuando bodega revisa el stock real y ajusta la cantidad aprobada de cada línea, entonces el sistema aprueba lo existente, deja la diferencia como saldo pendiente y notifica al solicitante.
+- **Flujos alternativos:**
+  - *Alt 1 (Despacho del saldo):* Dado un saldo pendiente y existencia nueva en el almacén, cuando bodega registra una salida contra la misma solicitud, entonces el sistema descuenta del saldo y cierra la solicitud al llegar a cero.
+  - *Alt 2 (Cancelación del saldo):* Dado un saldo que no se va a atender, cuando bodega lo cancela con una observación, entonces la solicitud se cierra con lo despachado.
+  - *Alt 3 (Cantidad inválida):* Dado que la cantidad aprobada excede lo solicitado o la existencia disponible, cuando se intenta guardar, entonces el sistema rechaza la aprobación.
+
+### CU-40 (HU-40): Firmar acta de recepción de materiales
+- **Actor(es):** Maestro de obra
+- **Flujo principal (Recepción en obra):** Dada una salida de materiales con acta pendiente de recepción, cuando el maestro de obra valida las cantidades recibidas y confirma con su sesión, entonces el sistema registra la conformidad con usuario, fecha y hora y bloquea el acta contra modificaciones.
+- **Flujos alternativos:**
+  - *Alt 1 (Diferencia de cantidades):* Dado que la cantidad recibida difiere de la despachada, cuando el maestro confirma, entonces el sistema exige una observación y genera una alerta a bodega.
+  - *Alt 2 (Usuario no autorizado):* Dado un usuario que no es destinatario ni responsable del proyecto o actividad, cuando intenta firmar, entonces el sistema rechaza la operación.
+  - *Alt 3 (Acta ya firmada):* Dada un acta firmada, cuando se intenta modificarla, entonces el sistema lo impide.
+
+## EP-08: Costos e indicadores
+
+### CU-39 (HU-39): Visualizar desviaciones presupuestales
+- **Actor(es):** Gerente
+- **Flujo principal (Seguimiento financiero):** Dado que el gerente ingresa a los indicadores de costos, cuando el sistema carga sus proyectos, entonces muestra gráficamente la desviación porcentual entre costo real y presupuesto inicial, con su desglose y la fecha de la última consolidación.
+- **Flujos alternativos:**
+  - *Alt 1 (Desviación crítica):* Dado que la desviación supera el umbral configurado, cuando se carga el indicador, entonces el sistema lo resalta con el color de mayor gravedad.
+  - *Alt 2 (Sin costos consolidados):* Dado un proyecto sin costos consolidados, cuando se carga el indicador, entonces se muestra vacío con una advertencia, sin afectar los demás proyectos.

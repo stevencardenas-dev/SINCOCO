@@ -8,7 +8,8 @@ lang: es
 Transcripción del anexo **«Historias Usuario Refinadas»** de la
 *Primera Entrega*, que es el documento oficial frente al cual se evalúa
 el proyecto. Cubre las **30 HU** con su épica, narrativa, prioridad,
-estimación, sprint planificado y criterios de aceptación.
+estimación, sprint planificado y criterios de aceptación. Al final se agregan
+las **HU-31 a HU-41**, posteriores a la Primera Entrega.
 
 > **Fuente de verdad.** Ante cualquier discrepancia entre este archivo y otros
 > documentos del repositorio, prevalece la Primera Entrega. Las columnas de
@@ -441,5 +442,194 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
   * Debe soportar la exportación a formatos estándar como Excel y PDF.
   * El reporte generado debe incluir un encabezado con los filtros aplicados y la fecha de generación.
   * La información del reporte debe ser consistente con los datos consolidados en el sistema al momento de generarse.
+
+---
+
+# Ampliación posterior a la Primera Entrega (HU-31 a HU-41)
+
+Historias agregadas al backlog **después** de la Primera Entrega. No forman
+parte del anexo oficial; amplían o completan funcionalidad de las HU-01 a HU-30.
+Prioridad, estimación y sprint son **propuestos** y están pendientes de
+validación del equipo; el reparto por sprint y responsable está en
+`ASIGNACIONES_SPRINTS.md`. Las HU-35 y HU-36 se documentan como extensión de
+HU-12 y HU-08: sus criterios cubren solo lo nuevo.
+
+---
+
+## EP-03: Personal y asignaciones
+
+### HU-31
+
+* **Historia de Usuario:** Como administrador, quiero extender la fecha fin de asignación de un trabajador en una actividad, para mantenerlo vinculado cuando el trabajo requiera más tiempo sin romper el historial.
+* **Prioridad:** Intermedia
+* **Estimación:** 3
+* **Sprint:** 2
+* **Criterios de Aceptación:**
+  * Solo se puede extender una asignación vigente; las asignaciones finalizadas o canceladas no admiten extensión (se debe crear una nueva asignación, HU-05).
+  * La nueva fecha_fin_programada debe ser posterior a la vigente y quedar dentro del rango de fechas de la actividad y del proyecto.
+  * La extensión se registra como un evento propio (fecha fin anterior, fecha fin nueva, motivo obligatorio, usuario y fecha de registro) sin sobrescribir ni eliminar la asignación original.
+  * El sistema valida el solapamiento con otras asignaciones activas del trabajador para el periodo extendido, con la misma regla de HU-05.
+  * El historial de asignaciones (HU-06) debe mostrar la fecha fin original y cada extensión aplicada.
+  * Toda extensión queda registrada en la bitácora de trazabilidad.
+
+### HU-33
+
+* **Historia de Usuario:** Como administrador, quiero filtrar trabajadores por especialidad y estado de disponibilidad en tiempo real, para asignar rápidamente al personal calificado que esté libre.
+* **Prioridad:** Alta
+* **Estimación:** 3
+* **Sprint:** 2
+* **Criterios de Aceptación:**
+  * La consulta debe permitir filtrar por especialidad y por estado de disponibilidad (disponible o asignado).
+  * La disponibilidad se calcula en el momento de la consulta a partir de las asignaciones vigentes, no de un valor almacenado desactualizado.
+  * Opcionalmente se puede indicar un rango de fechas para listar solo a los trabajadores sin asignaciones solapadas en ese periodo.
+  * Los trabajadores dados de baja lógica no aparecen en el resultado.
+  * Los trabajadores sin especialidad definida no aparecen al filtrar por especialidad, según la advertencia de CU-04.
+  * Desde el resultado se puede iniciar la asignación del trabajador seleccionado (HU-05).
+
+---
+
+## EP-06: Proveedores y servicios externos
+
+### HU-32
+
+* **Historia de Usuario:** Como gerente, quiero recibir una notificación cuando la contratación de un servicio externo exceda el presupuesto de la actividad, para autorizar o reajustar el monto antes de confirmar.
+* **Prioridad:** Alta
+* **Estimación:** 3
+* **Sprint:** 3
+* **Criterios de Aceptación:**
+  * Cuando el valor_contratado de un servicio externo (HU-28) supera el presupuesto de la actividad, el servicio queda en estado pendiente de autorización y no se suma a la consolidación de costos (HU-15) hasta ser autorizado.
+  * El sistema genera una notificación al gerente con el servicio, el proveedor, la actividad, el presupuesto disponible, el valor contratado y el exceso.
+  * El gerente puede autorizar el servicio o rechazarlo para que se reajuste el monto; la decisión registra usuario, fecha y observación, obligatoria en caso de rechazo.
+  * Al reajustarse el monto, el sistema vuelve a evaluarlo contra el presupuesto de la actividad.
+  * Este criterio sustituye la simple advertencia de HU-28 cuando existe exceso.
+
+### HU-41
+
+* **Historia de Usuario:** Como administrador, quiero calificar la puntualidad y calidad de cada servicio o entrega contratada, para generar una métrica histórica que ayude a elegir mejores proveedores en futuros proyectos.
+* **Prioridad:** Muy baja
+* **Estimación:** 3
+* **Sprint:** 3
+* **Criterios de Aceptación:**
+  * Solo se puede calificar un servicio externo finalizado (HU-28) o una entrega recibida de una orden de compra (HU-19); cada uno admite una única calificación.
+  * La calificación incluye puntualidad y calidad en una escala de 1 a 5, y un comentario opcional que es obligatorio cuando algún puntaje es 2 o menor.
+  * Las calificaciones no se eliminan; una corrección queda registrada en la bitácora de trazabilidad.
+  * El proveedor debe mostrar su promedio histórico por criterio y el número de calificaciones en el catálogo de proveedores (HU-13) y al seleccionarlo para nuevas órdenes o servicios.
+  * La calificación de puntualidad muestra como referencia la fecha pactada y la fecha real de cumplimiento.
+
+---
+
+## EP-02: Gestión de proyectos y planificación
+
+### HU-34
+
+* **Historia de Usuario:** Como administrador, quiero reajustar las fechas programadas de una etapa o actividad ante imprevistos, para recalcular el cronograma total del proyecto sin perder las fechas originales.
+* **Prioridad:** Alta
+* **Estimación:** 5
+* **Sprint:** 2
+* **Criterios de Aceptación:**
+  * Las fechas programadas originales se conservan de forma inmutable desde la primera reprogramación; el cronograma vigente usa las fechas reprogramadas.
+  * Cada reprogramación registra motivo obligatorio, usuario, fecha de registro, fechas anteriores y fechas nuevas.
+  * Al reprogramar una etapa, el sistema recalcula las etapas posteriores manteniendo su orden y sin solapamientos, según las reglas de HU-03.
+  * Si el recálculo excede la fecha fin programada del proyecto, el sistema advierte y exige confirmación explícita; al confirmar, la fecha fin del proyecto también se reprograma conservando la original.
+  * No se pueden reprogramar etapas o actividades ya completadas.
+  * El sistema lista las asignaciones de personal que quedan fuera de las nuevas fechas de la actividad sin modificarlas automáticamente (la extensión se gestiona con HU-31).
+  * Las alertas de atraso (HU-24) se evalúan contra las fechas vigentes.
+
+### HU-38
+
+* **Historia de Usuario:** Como gerente, quiero congelar un proyecto pausado o finalizar uno concluido, para restringir la asignación de personal, salidas de inventario y nuevos costos asociados.
+* **Prioridad:** Intermedia
+* **Estimación:** 5
+* **Sprint:** 4
+* **Criterios de Aceptación:**
+  * El proyecto transita entre los estados planificación, en ejecución, congelado y finalizado. Se puede congelar desde en ejecución, reanudar desde congelado y finalizar desde en ejecución o congelado.
+  * Todo cambio de estado exige motivo y registra usuario y fecha en la bitácora de trazabilidad.
+  * Un proyecto congelado o finalizado no admite nuevas asignaciones de personal, solicitudes ni salidas de materiales, préstamos de herramientas, servicios externos ni consumos; sí admite consulta.
+  * Finalizar es irreversible y exige que no existan préstamos de herramientas vigentes ni solicitudes pendientes.
+  * Si el avance total es menor a 100%, el sistema advierte y exige confirmación antes de finalizar.
+  * Al finalizar, el sistema cierra las asignaciones vigentes registrando su fecha_fin_real y ejecuta una consolidación final de costos (HU-15).
+
+---
+
+## EP-05: Inventario de herramientas
+
+### HU-35
+
+* **Historia de Usuario:** Como encargado de bodega, quiero reemplazar una herramienta prestada que sufrió una avería por otra operativa, para que el trabajador continúe la labor registrando la novedad.
+* **Prioridad:** Intermedia
+* **Estimación:** 3
+* **Sprint:** 3
+* **Criterios de Aceptación:**
+  * Extiende HU-12 y HU-11. Solo aplica a un préstamo vigente.
+  * La herramienta de reemplazo debe estar activa y con disponibilidad real en el catálogo.
+  * La novedad es obligatoria (descripción de la avería) y genera una incidencia asociada, como en HU-12.
+  * La herramienta averiada cierra su préstamo con condición dañada y pasa a estado en reparación (HU-37).
+  * El reemplazo queda prestado al mismo trabajador y proyecto, hereda la fecha estimada de devolución y se vincula al préstamo original.
+  * El historial de la herramienta (HU-27) muestra el vínculo entre ambos préstamos.
+  * Debe registrarse quién entrega el reemplazo y quién recibe la herramienta averiada.
+
+### HU-37
+
+* **Historia de Usuario:** Como encargado de bodega, quiero cambiar el estado operativo de una herramienta a "En reparación" o "De baja", para evitar que sea prestada mientras no esté en condiciones óptimas.
+* **Prioridad:** Alta
+* **Estimación:** 3
+* **Sprint:** 3
+* **Criterios de Aceptación:**
+  * Los cambios permitidos son disponible → en reparación, en reparación → disponible, y cualquiera → de baja. Todo cambio exige un motivo.
+  * No se puede cambiar el estado de una herramienta con préstamo vigente; primero debe registrarse su devolución (HU-12).
+  * Una herramienta en reparación o de baja no aparece como disponible en la entrega ni en la solicitud de herramientas (HU-11, HU-30).
+  * Cada ingreso a reparación registra fecha de ingreso, descripción y, al salir, fecha de salida y costo opcional.
+  * De baja es definitivo y se aplica como baja lógica (fecha de baja y usuario), conforme a HU-18.
+  * Cada cambio de estado queda en el historial de la herramienta (HU-27) y en la bitácora de trazabilidad.
+
+---
+
+## EP-04: Inventario de materiales
+
+### HU-36
+
+* **Historia de Usuario:** Como encargado de bodega, quiero modificar las cantidades aprobadas en una solicitud de materiales según el stock real disponible, para despachar solo lo existente y dejar el saldo pendiente.
+* **Prioridad:** Alta
+* **Estimación:** 5
+* **Sprint:** 4
+* **Criterios de Aceptación:**
+  * Extiende HU-08. La cantidad_aprobada de cada línea no puede superar la cantidad_solicitada ni la existencia disponible al momento de la revisión.
+  * La diferencia entre lo solicitado y lo despachado queda como saldo pendiente, visible en la solicitud, que queda en estado aprobada parcial.
+  * El saldo pendiente puede despacharse después mediante nuevas salidas (HU-26) sin crear otra solicitud, o cancelarse con una observación obligatoria.
+  * Una línea con cantidad aprobada igual a cero exige observación.
+  * La solicitud no pasa a despachada hasta que el saldo sea cero o esté cancelado.
+  * El sistema notifica al solicitante las cantidades aprobadas y el saldo pendiente.
+
+### HU-40
+
+* **Historia de Usuario:** Como maestro de obra, quiero firmar o validar digitalmente la recepción del material entregado en el frente de trabajo, para dejar constancia de conformidad e impedir reclamos por insumos no entregados.
+* **Prioridad:** Baja
+* **Estimación:** 3
+* **Sprint:** 4
+* **Criterios de Aceptación:**
+  * Toda salida de materiales (HU-26) genera un acta de recepción en estado pendiente de recepción.
+  * Solo el destinatario de la salida o el maestro responsable del proyecto o actividad puede firmar el acta.
+  * El maestro valida cada línea indicando cantidad recibida; si difiere de la despachada, la observación es obligatoria.
+  * La firma es una confirmación autenticada con la sesión del usuario y registra usuario, fecha y hora; no incluye imagen de firma.
+  * Una vez firmada, el acta es inmutable y queda consultable por bodega.
+  * Las diferencias entre lo despachado y lo recibido generan una alerta a bodega.
+
+---
+
+## EP-08: Costos e indicadores
+
+### HU-39
+
+* **Historia de Usuario:** Como gerente, quiero ver indicadores gráficos de desviación porcentual entre costo real y presupuesto inicial, para tomar decisiones financieras preventivas antes del cierre.
+* **Prioridad:** Baja
+* **Estimación:** 5
+* **Sprint:** 4
+* **Criterios de Aceptación:**
+  * Complementa HU-16 y depende de HU-15. La desviación se calcula como (costo real − presupuesto inicial) / presupuesto inicial × 100 por proyecto.
+  * Debe mostrarse el desglose del costo real por materiales, servicios externos y órdenes de compra.
+  * Un indicador de semáforo con umbrales configurables señala la gravedad de la desviación.
+  * Los datos se actualizan en cada consolidación de costos (HU-15) y se muestra la fecha y hora de la última consolidación.
+  * Debe permitir filtrar por proyecto y estado, y solo muestra los proyectos del gerente que consulta.
+  * Un proyecto sin costos consolidados muestra el indicador vacío con una advertencia, sin afectar el resto.
 
 ---
