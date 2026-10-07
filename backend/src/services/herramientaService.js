@@ -89,7 +89,7 @@ export async function actualizarHerramienta(id, cambios = {}, ctx = {}) {
     }
   }
   if (cambios.almacen_id !== undefined) {
-    const almacenId = numeroOpcional(cambios.almacen_id)
+    const almacenId = numeroOpcional(cambios.almacen_id, 'almacen_id')
     if (!almacenId) throw new AppError('Debe asignar la herramienta a un almacén', 400, 'almacen_id')
     await exigirAlmacen(almacenId)
     campos.almacen_id = almacenId

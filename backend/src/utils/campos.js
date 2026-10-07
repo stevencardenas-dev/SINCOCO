@@ -104,11 +104,11 @@ export function textoOpcional(v) {
 }
 
 /** Los ids del catálogo llegan como número o como texto desde un <select>. */
-export function numeroOpcional(v) {
+export function numeroOpcional(v, campo) {
   if (estaVacio(v)) return null
   const n = Number(v)
   if (!Number.isInteger(n) || n <= 0) {
-    throw new AppError('El identificador del catálogo no es válido', 400)
+    throw new AppError('El identificador del catálogo no es válido', 400, campo)
   }
   return n
 }

@@ -61,7 +61,7 @@ export class RegistrarHerramientaDto {
       nombre,
       marca,
       modelo,
-      almacen_id: numeroOpcional(body.almacen_id),
+      almacen_id: numeroOpcional(body.almacen_id, 'almacen_id'),
       estado_operativo: revisarEstadoOperativo(body.estado_operativo),
       observaciones,
     })
