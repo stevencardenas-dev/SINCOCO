@@ -17,7 +17,7 @@
 -- Es idempotente y solo AGREGA permisos; no quita ninguno ya asignado.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_permisos_gerente_maestro.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_permisos_gerente_maestro.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`)
 VALUES ('proyectos.editar', 'Editar la información de un proyecto', 'proyectos')

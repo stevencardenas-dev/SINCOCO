@@ -3,7 +3,7 @@
 # Requiere el backend corriendo (puerto 3005). No usa navegador.
 # Uso: python tests/test_hu04_personal.py
 #
-# Verifica los criterios de aceptación de docs/HU_CRITERIOS_ACEPTACION.md (HU-04):
+# Verifica los criterios de aceptación de docs/reglas-de-negocio/HU_CRITERIOS_ACEPTACION.md (HU-04):
 #  1. numero_documento único.
 #  2. cargo obligatorio; especialidad obligatoria para cargos operativos.
 #  3. al crearse: disponible = verdadero y estado ACTIVO.
