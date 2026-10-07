@@ -4,7 +4,7 @@
 -- una cuenta; la ruta PATCH /api/usuarios/:id exige este permiso. Es idempotente.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_usuarios_editar.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_usuarios_editar.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`)
 VALUES ('usuarios.editar',

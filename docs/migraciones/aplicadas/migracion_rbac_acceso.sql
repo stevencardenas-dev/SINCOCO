@@ -12,7 +12,7 @@
 -- idempotente.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_rbac_acceso.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_rbac_acceso.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('proyectos.gestionar_acceso', 'Asignar personal a proyectos y actividades', 'proyectos'),
