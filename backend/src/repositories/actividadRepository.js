@@ -5,6 +5,9 @@ import { Actividad } from '../entities/Actividad.js'
  * Repositorio de la tabla `actividades` (HU-03).
  */
 
+// HU-34 · criterio 7 (y HU-24): `atrasada` se evalúa contra `fecha_fin_programada`,
+// que tras una reprogramación es la fecha VIGENTE; la original queda aparte en
+// `fecha_fin_original` y no interviene.
 const SELECT_BASE = `
   SELECT a.id, a.etapa_id, a.responsable_id, a.nombre, a.descripcion,
          a.fecha_inicio_programada, a.fecha_fin_programada,

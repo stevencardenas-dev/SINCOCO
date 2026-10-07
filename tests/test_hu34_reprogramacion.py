@@ -11,6 +11,7 @@
 #  4. si el recálculo excede el fin del proyecto: advertencia, confirmación y fin reprogramado.
 #  5. las etapas y actividades completadas no se reprograman; PATCH ya no cambia fechas definidas.
 #  6. se listan, sin modificarlas, las asignaciones que quedan fuera de las nuevas fechas.
+#  7. las alertas de atraso (HU-24) se evalúan contra las fechas vigentes.
 from api_helper import http, login, limpiar, crear_proyecto, crear_trabajador, scalar, sql
 
 limpiar()
@@ -226,5 +227,22 @@ estado, r = http('PATCH', f'/api/actividades/{actividad_b}/reprogramar', {
 assert estado == 200 and r['asignaciones_afectadas'] == [], f'ya cabe: {r}'
 print('criterio 6 ok')
 
+# Criterio 7: el atraso (HU-24) se evalúa contra las fechas vigentes.
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vencida',
+    'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-10-02',
+}, token=admin)
+assert estado == 201, f'actividad vencida: {estado} {r}'
+vencida = r['actividad']
+assert vencida['atrasada'] is True, 'fin programado pasado y sin finalizar: atrasada'
+estado, r = http('PATCH', f'/api/actividades/{vencida["id"]}/reprogramar', {
+    'motivo': 'Nueva fecha acordada', 'fecha_inicio_programada': '2026-10-01',
+    'fecha_fin_programada': '2026-12-15',
+}, token=admin)
+assert estado == 200, f'reprogramar vencida: {estado} {r}'
+assert r['actividad']['atrasada'] is False, 'con la fecha vigente en el futuro ya no esta atrasada'
+assert r['actividad']['fecha_fin_original'] == '2026-10-02', 'la original sigue siendo la vencida'
+print('criterio 7 ok')
+
 limpiar()
-print('HU-34 criterios 1 a 6: OK')
+print('HU-34 criterios 1 a 7: OK')
