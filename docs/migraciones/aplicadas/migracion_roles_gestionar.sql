@@ -5,7 +5,7 @@
 -- y esas rutas exigen este permiso. Es idempotente.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_roles_gestionar.sql
+--   mysql -u root -p sincoco < docs/migraciones/aplicadas/migracion_roles_gestionar.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`)
 VALUES ('roles.gestionar',
