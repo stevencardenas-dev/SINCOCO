@@ -52,7 +52,12 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('herramientas.listar',      'Consultar el catálogo de herramientas',    'herramientas'),
   ('herramientas.crear',       'Registrar herramientas en el catálogo',    'herramientas'),
   ('herramientas.editar',      'Editar los datos y el estado de una herramienta', 'herramientas'),
-  ('herramientas.dar_baja',    'Dar de baja lógica una herramienta',       'herramientas')
+  ('herramientas.dar_baja',    'Dar de baja lógica una herramienta',       'herramientas'),
+  -- HU-07: catálogo de materiales (administrador y encargado de bodega).
+  ('materiales.listar',        'Consultar el catálogo de materiales',      'materiales'),
+  ('materiales.crear',         'Registrar materiales en el catálogo',      'materiales'),
+  ('materiales.editar',        'Editar los datos de un material',          'materiales'),
+  ('materiales.dar_baja',      'Dar de baja lógica un material',           'materiales')
 ON DUPLICATE KEY UPDATE
   `descripcion` = VALUES(`descripcion`),
   `modulo` = VALUES(`modulo`);
@@ -100,12 +105,12 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
     'clientes.listar', 'trabajadores.listar'
   );
 
--- ENCARGADO_BODEGA: catálogo de herramientas (HU-10).
+-- ENCARGADO_BODEGA: catálogo de herramientas (HU-10) y de materiales (HU-07).
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'ENCARGADO_BODEGA'
-  AND p.`modulo` = 'herramientas';
+  AND p.`modulo` IN ('herramientas', 'materiales');
 
 -- TRABAJADOR: sin permisos sobre estos módulos.
 --
