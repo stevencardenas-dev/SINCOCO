@@ -33,6 +33,7 @@ export const LARGO = {
   marca: 50,
   modelo: 50,
   rol_en_proyecto: 100,
+  motivo_reprogramacion: 500,
   // Las columnas TEXT no tienen tope en la base; este es un límite de cordura
   // para que nadie meta un libro por la API.
   texto_largo: 5000,
