@@ -27,6 +27,7 @@ import { etapasApi } from '../services/etapas'
 import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
+import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -172,6 +173,7 @@ export default function PlanProyecto() {
   const actividades = datos?.actividades ?? []
   const responsables = datos?.responsables ?? []
   const asignaciones = datos?.asignaciones ?? []
+  const [porExtender, setPorExtender] = useState(null) // HU-31
   const miAcceso = datos?.miAcceso ?? SIN_ACCESO
 
   const gestionaPlan = miAcceso.gestiona_plan
@@ -794,9 +796,14 @@ export default function PlanProyecto() {
                             >
                               Finalizar acceso
                             </button>
+                            <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                              Extender
+                            </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">Sin acciones</span>
+                          <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                            Historial
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -807,6 +814,12 @@ export default function PlanProyecto() {
           )}
         </div>
       )}
+
+      <ExtenderAsignacion
+        asignacion={porExtender}
+        onCerrar={() => setPorExtender(null)}
+        onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
+      />
 
       {proximamente && (
         <div
