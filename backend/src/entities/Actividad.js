@@ -17,6 +17,7 @@ export class Actividad {
     fecha_inicio_real,
     fecha_fin_real,
     porcentaje_avance,
+    peso,
     estado,
     activo,
     etapa_nombre,
@@ -37,6 +38,8 @@ export class Actividad {
     this.fecha_inicio_real = fecha_inicio_real ?? null
     this.fecha_fin_real = fecha_fin_real ?? null
     this.porcentaje_avance = porcentaje_avance
+    // HU-21 · criterio 4: peso de la actividad en el promedio ponderado de etapa y proyecto.
+    this.peso = peso === undefined || peso === null ? 1 : Number(peso)
     this.estado = estado
     this.activo = activo
     this.etapa_nombre = etapa_nombre ?? null

@@ -7,7 +7,10 @@ import { Etapa } from '../entities/Etapa.js'
 
 const CAMPOS = `id, proyecto_id, nombre, descripcion, orden,
                 fecha_inicio_programada, fecha_fin_programada,
-                fecha_inicio_original, fecha_fin_original, estado, activo`
+                fecha_inicio_original, fecha_fin_original, estado, activo,
+                (SELECT COALESCE(ROUND(SUM(a.peso * a.porcentaje_avance) / NULLIF(SUM(a.peso), 0), 2), 0)
+                   FROM actividades a
+                  WHERE a.etapa_id = etapas_proyecto.id AND a.activo = 1) AS porcentaje_avance`
 
 export async function findById(id) {
   const [rows] = await pool.query(
