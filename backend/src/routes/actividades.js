@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import { listar, registrar, actualizar, baja, reactivarCtrl, iniciar, finalizar } from '../controllers/actividadController.js'
+import { reprogramarActividadCtrl, historialActividad } from '../controllers/reprogramacionController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -15,6 +16,10 @@ router.patch('/:id', requirePermiso('actividades.editar'), actualizar)
 // limita quién puede: el líder, gerente y administrador, o quien tenga la actividad.
 router.patch('/:id/iniciar', requirePermiso('actividades.editar'), iniciar)
 router.patch('/:id/finalizar', requirePermiso('actividades.editar'), finalizar)
+
+// HU-34: reprogramación de fechas (solo administrador) e historial de cambios.
+router.patch('/:id/reprogramar', requirePermiso('actividades.reprogramar'), reprogramarActividadCtrl)
+router.get('/:id/reprogramaciones', requirePermiso('actividades.listar'), historialActividad)
 
 // HU-18: baja lógica y reactivación (nunca borrado físico)
 router.patch('/:id/baja', requirePermiso('actividades.dar_baja'), baja)
