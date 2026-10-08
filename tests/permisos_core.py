@@ -50,9 +50,10 @@ PERMISOS_CORE = {
         'actividades.listar', 'actividades.crear',
         'clientes.listar', 'trabajadores.listar',
     },
-    # Inventario de herramientas (HU-10).
+    # Inventario de herramientas (HU-10) y catálogo de materiales (HU-07).
     'ENCARGADO_BODEGA': {
         'herramientas.listar', 'herramientas.crear', 'herramientas.editar',
+        'materiales.listar', 'materiales.crear', 'materiales.editar',
     },
 }
 
