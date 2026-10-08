@@ -39,6 +39,8 @@ CREATE TABLE `actividades` (
   `descripcion` text COLLATE utf8mb4_unicode_ci,
   `fecha_inicio_programada` date NOT NULL,
   `fecha_fin_programada` date NOT NULL,
+  `fecha_inicio_original` date DEFAULT NULL,
+  `fecha_fin_original` date DEFAULT NULL,
   `fecha_inicio_real` date DEFAULT NULL,
   `fecha_fin_real` date DEFAULT NULL,
   `porcentaje_avance` decimal(5,2) NOT NULL DEFAULT '0.00',
@@ -537,6 +539,8 @@ CREATE TABLE `etapas_proyecto` (
   `orden` int DEFAULT '1',
   `fecha_inicio_programada` date DEFAULT NULL,
   `fecha_fin_programada` date DEFAULT NULL,
+  `fecha_inicio_original` date DEFAULT NULL,
+  `fecha_fin_original` date DEFAULT NULL,
   `estado` enum('PENDIENTE','EN_PROCESO','COMPLETADA') COLLATE utf8mb4_unicode_ci DEFAULT 'PENDIENTE',
   `activo` tinyint(1) NOT NULL DEFAULT '1',
   `fecha_baja` datetime DEFAULT NULL,
@@ -791,6 +795,8 @@ CREATE TABLE `proyectos` (
   `ubicacion` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `fecha_inicio_programada` date NOT NULL,
   `fecha_fin_programada` date NOT NULL,
+  `fecha_inicio_original` date DEFAULT NULL,
+  `fecha_fin_original` date DEFAULT NULL,
   `fecha_inicio_real` date DEFAULT NULL,
   `fecha_fin_real` date DEFAULT NULL,
   `responsable_id` bigint NOT NULL,
@@ -816,6 +822,34 @@ CREATE TABLE `proyectos` (
   CONSTRAINT `chk_proyecto_avance` CHECK ((`porcentaje_avance_total` between 0 and 100))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `reprogramaciones_plan`
+--
+-- HU-34: historial inmutable de reprogramaciones de fechas del plan de trabajo.
+--
+
+DROP TABLE IF EXISTS `reprogramaciones_plan`;
+CREATE TABLE `reprogramaciones_plan` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `proyecto_id` bigint NOT NULL,
+  `entidad_tipo` enum('ETAPA','ACTIVIDAD','PROYECTO') COLLATE utf8mb4_unicode_ci NOT NULL,
+  `entidad_id` bigint NOT NULL,
+  `origen` enum('DIRECTA','CASCADA','FIN_PROYECTO') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'DIRECTA',
+  `motivo` varchar(500) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `usuario_id` bigint NOT NULL,
+  `fecha_registro` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `fecha_inicio_anterior` date DEFAULT NULL,
+  `fecha_fin_anterior` date DEFAULT NULL,
+  `fecha_inicio_nueva` date DEFAULT NULL,
+  `fecha_fin_nueva` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_reprogramaciones_entidad` (`entidad_tipo`,`entidad_id`),
+  KEY `fk_reprogramacion_proyecto` (`proyecto_id`),
+  KEY `fk_reprogramacion_usuario` (`usuario_id`),
+  CONSTRAINT `fk_reprogramacion_proyecto` FOREIGN KEY (`proyecto_id`) REFERENCES `proyectos` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_reprogramacion_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Table structure for table `restablecimientos_password`

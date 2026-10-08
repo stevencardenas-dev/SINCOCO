@@ -90,6 +90,11 @@ def limpiar():
     # Las asignaciones de personal (acceso a proyectos y actividades) van primero:
     # la FK del proyecto es RESTRICT y sin borrarlas el proyecto no se puede eliminar.
     sql(
+        "DELETE FROM extensiones_asignacion WHERE asignacion_id IN (SELECT id FROM asignaciones_personal "
+        "WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%') "
+        "OR trabajador_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%'))"
+    )
+    sql(
         "DELETE FROM asignaciones_personal "
         "WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%') "
         "OR trabajador_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%')"
