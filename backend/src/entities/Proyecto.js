@@ -12,6 +12,8 @@ export class Proyecto {
     ubicacion,
     fecha_inicio_programada,
     fecha_fin_programada,
+    fecha_inicio_original,
+    fecha_fin_original,
     fecha_inicio_real,
     fecha_fin_real,
     responsable_id,
@@ -35,6 +37,9 @@ export class Proyecto {
     this.ubicacion = ubicacion
     this.fecha_inicio_programada = fecha_inicio_programada
     this.fecha_fin_programada = fecha_fin_programada
+    // HU-34 · criterio 1: fechas de la primera programación (NULL si nunca se reprogramó).
+    this.fecha_inicio_original = fecha_inicio_original ?? null
+    this.fecha_fin_original = fecha_fin_original ?? null
     this.fecha_inicio_real = fecha_inicio_real
     this.fecha_fin_real = fecha_fin_real
     this.responsable_id = responsable_id
