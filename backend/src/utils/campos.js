@@ -30,6 +30,8 @@ export const LARGO = {
   nombre_actividad: 150,
   codigo_serial: 50,
   nombre_herramienta: 100,
+  codigo_material: 30,
+  descripcion_material: 255,
   marca: 50,
   modelo: 50,
   rol_en_proyecto: 100,
