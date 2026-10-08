@@ -11,7 +11,7 @@
 --     con acceso directo a MySQL (mismo criterio que la bitácora, HU-17).
 --
 -- Es idempotente: se puede relanzar.
---   mysql -u root -p sincoco < docs/migracion_reprogramacion_plan.sql
+--   mysql -u root -p sincoco < docs/migraciones/pendientes/migracion_reprogramacion_plan.sql
 --
 -- Las bases nuevas ya la traen en docs/schema.sql (los disparadores no).
 
