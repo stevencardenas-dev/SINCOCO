@@ -9,7 +9,7 @@ const SELECT_BASE = `
   SELECT a.id, a.etapa_id, a.responsable_id, a.nombre, a.descripcion,
          a.fecha_inicio_programada, a.fecha_fin_programada,
          a.fecha_inicio_original, a.fecha_fin_original,
-         a.fecha_inicio_real, a.fecha_fin_real, a.porcentaje_avance,
+         a.fecha_inicio_real, a.fecha_fin_real, a.porcentaje_avance, a.peso,
          a.estado, a.activo,
          e.nombre AS etapa_nombre, e.proyecto_id AS proyecto_id,
          TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS responsable_nombre,
@@ -47,12 +47,12 @@ export async function create(actividad) {
   const [result] = await pool.query(
     `INSERT INTO actividades
        (etapa_id, responsable_id, nombre, descripcion,
-        fecha_inicio_programada, fecha_fin_programada, porcentaje_avance, estado)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        fecha_inicio_programada, fecha_fin_programada, porcentaje_avance, peso, estado)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       actividad.etapa_id, actividad.responsable_id, actividad.nombre,
       actividad.descripcion, actividad.fecha_inicio_programada,
-      actividad.fecha_fin_programada, actividad.porcentaje_avance, actividad.estado,
+      actividad.fecha_fin_programada, actividad.porcentaje_avance, actividad.peso ?? 1, actividad.estado,
     ],
   )
   return result.insertId
