@@ -8,6 +8,7 @@ import { Actividad } from '../entities/Actividad.js'
 const SELECT_BASE = `
   SELECT a.id, a.etapa_id, a.responsable_id, a.nombre, a.descripcion,
          a.fecha_inicio_programada, a.fecha_fin_programada,
+         a.fecha_inicio_original, a.fecha_fin_original,
          a.fecha_inicio_real, a.fecha_fin_real, a.porcentaje_avance,
          a.estado, a.activo,
          e.nombre AS etapa_nombre, e.proyecto_id AS proyecto_id,

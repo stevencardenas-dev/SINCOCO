@@ -6,7 +6,8 @@ import { Etapa } from '../entities/Etapa.js'
  */
 
 const CAMPOS = `id, proyecto_id, nombre, descripcion, orden,
-                fecha_inicio_programada, fecha_fin_programada, estado, activo`
+                fecha_inicio_programada, fecha_fin_programada,
+                fecha_inicio_original, fecha_fin_original, estado, activo`
 
 export async function findById(id) {
   const [rows] = await pool.query(
