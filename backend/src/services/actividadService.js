@@ -7,7 +7,7 @@ import { aFechaDia, validarDentroDeEtapa } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan, verificarOperarActividad } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
-import { aplicarAvance } from './avanceService.js'
+import { aplicarAvance, recalcularAvanceProyecto } from './avanceService.js'
 import { AppError } from '../utils/AppError.js'
 
 // RBAC: las actividades de un proyecto solo se listan si el usuario tiene
@@ -76,6 +76,9 @@ export async function registrarActividad(dto, ctx = {}) {
     ip: ctx.ip,
   })
 
+  // HU-21 · criterio 4: una actividad nueva (al 0 %) entra en el promedio ponderado.
+  await recalcularAvanceProyecto(proyecto.id)
+
   return actividadRepository.findById(id)
 }
 
@@ -104,6 +107,8 @@ export async function actualizarActividad(id, dto, ctx = {}) {
   }
 
   await actividadRepository.update(id, campos)
+  // HU-21 · criterio 4: cambiar el peso cambia el promedio ponderado del proyecto.
+  if (campos.peso !== undefined) await recalcularAvanceProyecto(actividad.proyecto_id)
 
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',
@@ -173,6 +178,11 @@ const bajaReactivar = crearBajaReactivar({
       actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id,
     ),
   detallesBaja: (actividad) => ({ nombre: actividad.nombre }),
+  // HU-21 · criterio 4: solo las actividades activas cuentan en el avance.
+  despues: async (actividad) =>
+    recalcularAvanceProyecto(
+      actividad.proyecto_id ?? (await etapaRepository.findById(actividad.etapa_id))?.proyecto_id,
+    ),
 })
 
 export const darDeBajaActividad = bajaReactivar.darDeBaja

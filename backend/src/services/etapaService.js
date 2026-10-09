@@ -3,6 +3,7 @@ import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as actividadRepository from '../repositories/actividadRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
+import { recalcularAvanceProyecto } from './avanceService.js'
 import { AppError } from '../utils/AppError.js'
 import { aFechaDia, rangosSeSolapan, validarFechasEnRango } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
@@ -143,7 +144,11 @@ const bajaReactivar = crearBajaReactivar({
     const fin = aFechaDia(etapa.fecha_fin_programada)
     if (inicio && fin) await validarSinSolape(etapa.proyecto_id, inicio, fin, { excluirId: id })
   },
-  despues: (etapa) => etapaRepository.renumerar(etapa.proyecto_id),
+  despues: async (etapa) => {
+    await etapaRepository.renumerar(etapa.proyecto_id)
+    // HU-21 · criterio 4: las actividades de una etapa de baja no cuentan en el avance.
+    await recalcularAvanceProyecto(etapa.proyecto_id)
+  },
 })
 
 export const darDeBajaEtapa = bajaReactivar.darDeBaja
