@@ -55,6 +55,15 @@ export async function aplicarAvance(
     if (!ESTADOS_CON_AVANCE.includes(actividad.estado)) {
       throw new AppError(mensajeEstado(actividad.estado), 409, 'estado')
     }
+    // HU-21 · escenario alternativo 2: el avance no puede retroceder. Se compara
+    // con la fila ya bloqueada para que dos registros simultáneos no se crucen.
+    if (porcentaje < actividad.anterior) {
+      throw new AppError(
+        `El porcentaje no puede ser inferior al último registrado (${actividad.anterior} %)`,
+        400,
+        'porcentaje',
+      )
+    }
     if (!permitirIgual && porcentaje === actividad.anterior) {
       throw new AppError(`La actividad ya está en ${actividad.anterior} % de avance`, 400, 'porcentaje')
     }
