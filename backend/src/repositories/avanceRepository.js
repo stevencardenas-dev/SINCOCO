@@ -27,6 +27,18 @@ export async function avanceDeProyecto(conn, proyectoId) {
 }
 
 /**
+ * Recalcula y guarda `proyectos.porcentaje_avance_total` (HU-21 · criterio 4).
+ * Se usa cuando cambia la composición del plan sin registrar avance: una
+ * actividad nueva, un peso editado o una actividad o etapa dada de baja o
+ * reactivada. Devuelve el avance guardado.
+ */
+export async function recalcularAvanceProyecto(proyectoId, conn = pool) {
+  const avance = await avanceDeProyecto(conn, proyectoId)
+  await conn.query('UPDATE proyectos SET porcentaje_avance_total = ? WHERE id = ?', [avance, proyectoId])
+  return avance
+}
+
+/**
  * Registra un avance de forma atómica: bloquea la actividad, inserta el
  * seguimiento con el porcentaje anterior y el nuevo, actualiza la actividad y
  * recalcula el avance del proyecto. `decidir(actividad)` corre con la fila ya
@@ -73,11 +85,7 @@ export async function registrarAvance(actividadId, decidir) {
     )
 
     const avanceEtapa = await avanceDeEtapa(conn, actividad.etapa_id)
-    const avanceProyecto = await avanceDeProyecto(conn, actividad.proyecto_id)
-    await conn.query('UPDATE proyectos SET porcentaje_avance_total = ? WHERE id = ?', [
-      avanceProyecto,
-      actividad.proyecto_id,
-    ])
+    const avanceProyecto = await recalcularAvanceProyecto(actividad.proyecto_id, conn)
 
     await conn.commit()
     return {

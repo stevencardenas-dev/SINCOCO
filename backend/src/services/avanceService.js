@@ -105,6 +105,16 @@ export async function registrarAvanceActividad(actividadId, body = {}, ctx = {})
   return { ...resultado, actividad: await actividadRepository.findById(actividadId) }
 }
 
+/**
+ * HU-21 · criterio 4: deja al día el avance guardado del proyecto cuando cambia
+ * el plan (actividades o etapas nuevas, pesos, bajas y reactivaciones). El de
+ * la etapa no se guarda: se calcula al consultarla.
+ */
+export async function recalcularAvanceProyecto(proyectoId) {
+  if (!proyectoId) return null
+  return avanceRepository.recalcularAvanceProyecto(proyectoId)
+}
+
 /** Historial de avance de una actividad (trazabilidad de HU-21 · criterio 2). */
 export async function listarAvanceActividad(actividadId, usuario = null) {
   const actividad = await actividadRepository.findById(actividadId)
