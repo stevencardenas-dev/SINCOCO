@@ -7,7 +7,7 @@ const router = Router()
 router.use(requireAuth)
 
 // HU-13: catálogo y alta de proveedores. Por ahora solo el administrador tiene
-// estos permisos (docs/migracion_proveedores.sql).
+// estos permisos (docs/migraciones/pendientes/migracion_proveedores.sql).
 router.get('/', requirePermiso('proveedores.listar'), listar)
 router.post('/', requirePermiso('proveedores.crear'), registrar)
 

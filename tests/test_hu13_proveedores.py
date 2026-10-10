@@ -1,7 +1,7 @@
 # Prueba de API del alta y el listado de proveedores (HU-13 · AYD-25).
 #
 # Requiere el backend corriendo (puerto 3005) y haber aplicado
-# docs/migracion_proveedores.sql. No usa navegador.
+# docs/migraciones/pendientes/migracion_proveedores.sql. No usa navegador.
 # Uso: python tests/test_hu13_proveedores.py
 #
 # Comprueba:
