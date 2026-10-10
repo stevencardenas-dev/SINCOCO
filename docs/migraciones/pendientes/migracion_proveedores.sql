@@ -7,7 +7,7 @@
 -- Es idempotente: se puede relanzar sin duplicar filas ni quitar permisos.
 --
 -- Uso:
---   mysql -u root -p sincoco < docs/migracion_proveedores.sql
+--   mysql -u root -p sincoco < docs/migraciones/pendientes/migracion_proveedores.sql
 
 INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('proveedores.listar', 'Consultar el catálogo de proveedores', 'proveedores'),
