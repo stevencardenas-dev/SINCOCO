@@ -55,6 +55,15 @@ export async function aplicarAvance(
     if (!ESTADOS_CON_AVANCE.includes(actividad.estado)) {
       throw new AppError(mensajeEstado(actividad.estado), 409, 'estado')
     }
+    // HU-21 · escenario alternativo 2: el avance no puede retroceder. Se compara
+    // con la fila ya bloqueada para que dos registros simultáneos no se crucen.
+    if (porcentaje < actividad.anterior) {
+      throw new AppError(
+        `El porcentaje no puede ser inferior al último registrado (${actividad.anterior} %)`,
+        400,
+        'porcentaje',
+      )
+    }
     if (!permitirIgual && porcentaje === actividad.anterior) {
       throw new AppError(`La actividad ya está en ${actividad.anterior} % de avance`, 400, 'porcentaje')
     }
@@ -94,6 +103,16 @@ export async function registrarAvanceActividad(actividadId, body = {}, ctx = {})
 
   const resultado = await aplicarAvance(actividadId, { porcentaje, observaciones }, ctx)
   return { ...resultado, actividad: await actividadRepository.findById(actividadId) }
+}
+
+/**
+ * HU-21 · criterio 4: deja al día el avance guardado del proyecto cuando cambia
+ * el plan (actividades o etapas nuevas, pesos, bajas y reactivaciones). El de
+ * la etapa no se guarda: se calcula al consultarla.
+ */
+export async function recalcularAvanceProyecto(proyectoId) {
+  if (!proyectoId) return null
+  return avanceRepository.recalcularAvanceProyecto(proyectoId)
 }
 
 /** Historial de avance de una actividad (trazabilidad de HU-21 · criterio 2). */
