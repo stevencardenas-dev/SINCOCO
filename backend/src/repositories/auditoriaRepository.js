@@ -18,15 +18,19 @@ const NOMBRE_ENTIDAD = {
   roles: 'nombre',
   cargos: 'nombre',
   especialidades: 'nombre',
+  materiales: "CONCAT(codigo, ' · ', descripcion)",
+  herramientas: "CONCAT(codigo_serial, ' · ', nombre)",
 }
 
 export const tieneNombreEntidad = (tabla) => Boolean(NOMBRE_ENTIDAD[tabla])
 
 export async function contar(where, parametros) {
+  // El JOIN con usuarios solo hace falta si el filtro consulta por username.
+  const unirUsuarios = where.includes('u.username') ? 'LEFT JOIN usuarios u ON u.id = b.usuario_id' : ''
   const [[{ total }]] = await pool.query(
     `SELECT COUNT(*) AS total
        FROM bitacora_trazabilidad b
-       LEFT JOIN usuarios u ON u.id = b.usuario_id
+       ${unirUsuarios}
        ${where}`,
     parametros,
   )
