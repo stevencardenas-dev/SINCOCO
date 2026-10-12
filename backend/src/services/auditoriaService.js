@@ -18,6 +18,14 @@ const LIMITE_POR_DEFECTO = 50
 const LIMITE_MAXIMO = 200
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
 
+/** ¿Es una fecha real del calendario? (la regex sola deja pasar 2026-02-31). */
+export function esFechaReal(texto) {
+  if (!FECHA.test(String(texto))) return false
+  const [anio, mes, dia] = String(texto).split('-').map(Number)
+  const fecha = new Date(Date.UTC(anio, mes - 1, dia))
+  return fecha.getUTCFullYear() === anio && fecha.getUTCMonth() === mes - 1 && fecha.getUTCDate() === dia
+}
+
 /**
  * Añade `entidad` (nombre del registro afectado) a cada fila. Si el registro ya
  * no existe queda en null y la pantalla muestra solo el identificador.
@@ -84,6 +92,9 @@ export async function consultarBitacora(query = {}) {
   for (const [campo, valor] of [['desde', desde], ['hasta', hasta]]) {
     if (valor && !FECHA.test(String(valor))) {
       throw new AppError(`${campo} debe tener el formato AAAA-MM-DD`, 400)
+    }
+    if (valor && !esFechaReal(valor)) {
+      throw new AppError(`${campo} no es una fecha válida del calendario`, 400)
     }
   }
   if (desde && hasta && String(desde) > String(hasta)) {
