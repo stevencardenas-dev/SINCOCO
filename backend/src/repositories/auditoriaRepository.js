@@ -20,6 +20,11 @@ const NOMBRE_ENTIDAD = {
   especialidades: 'nombre',
   materiales: "CONCAT(codigo, ' · ', descripcion)",
   herramientas: "CONCAT(codigo_serial, ' · ', nombre)",
+  // Tablas que no tienen un nombre propio: se describen por lo que enlazan.
+  asignaciones_personal:
+    "(SELECT TRIM(CONCAT(t.nombres, ' ', t.apellidos)) FROM trabajadores t WHERE t.id = asignaciones_personal.trabajador_id)",
+  seguimiento_avance:
+    '(SELECT a.nombre FROM actividades a WHERE a.id = seguimiento_avance.actividad_id)',
 }
 
 export const tieneNombreEntidad = (tabla) => Boolean(NOMBRE_ENTIDAD[tabla])
