@@ -26,7 +26,10 @@ import { AppError } from '../utils/AppError.js'
 export const PERMISO_ACCESO_TOTAL = 'proyectos.acceso_total'
 export const PERMISO_GESTIONAR_ACCESO = 'proyectos.gestionar_acceso'
 
-export const ESTADOS_ASIGNACION = ['ACTIVO', 'FINALIZADO', 'REASIGNADO']
+export const ESTADOS_ASIGNACION = ['ACTIVO', 'FINALIZADO', 'REASIGNADO', 'CANCELADO']
+
+/** Estados a los que puede pasar una asignación vigente; los demás son definitivos. */
+const ESTADOS_DE_CIERRE = ['FINALIZADO', 'REASIGNADO', 'CANCELADO']
 
 /**
  * Alcance del usuario autenticado: `total` si su rol ve todos los proyectos y,
@@ -211,8 +214,15 @@ export async function registrarAsignacion(dto, ctx = {}) {
 }
 
 /**
- * Actualiza una asignación: rol en el proyecto, fechas, observaciones o estado
- * (finalizar o reasignar). Al finalizar se completa la fecha real de fin.
+ * Actualiza una asignación: rol en el proyecto, fechas, observaciones o estado.
+ *
+ * HU-05 · criterio 3: una asignación vigente (ACTIVO) puede finalizarse,
+ * reasignarse o cancelarse; esos estados son definitivos (para volver a asignar
+ * al trabajador se registra una asignación nueva, que pasa la validación de
+ * solapamiento).
+ * HU-05 · criterio 4: al registrarse la fecha real de fin la asignación queda
+ * FINALIZADA y el trabajador vuelve a estar disponible. Finalizar sin fecha
+ * real usa la de hoy.
  */
 export async function actualizarAsignacion(id, cambios = {}, ctx = {}) {
   const actual = await asignacionRepository.findById(id)
@@ -223,15 +233,49 @@ export async function actualizarAsignacion(id, cambios = {}, ctx = {}) {
     if (cambios[campo] !== undefined) campos[campo] = cambios[campo] === '' ? null : cambios[campo]
   }
 
-  if (cambios.estado !== undefined) {
-    const estado = String(cambios.estado).toUpperCase()
-    if (!ESTADOS_ASIGNACION.includes(estado)) {
-      throw new AppError(`estado debe ser uno de: ${ESTADOS_ASIGNACION.join(', ')}`, 400, 'estado')
+  if (campos.fecha_fin_real) {
+    const fin = aFechaDia(campos.fecha_fin_real)
+    if (!fin || Number.isNaN(Date.parse(fin))) {
+      throw new AppError('fecha_fin_real debe ser una fecha válida', 400, 'fecha_fin_real')
+    }
+    if (fin < aFechaDia(actual.fecha_inicio)) {
+      throw new AppError('La fecha fin real no puede ser anterior al inicio de la asignación', 400, 'fecha_fin_real')
+    }
+    if (fin > new Date().toISOString().slice(0, 10)) {
+      throw new AppError('La fecha fin real no puede ser futura', 400, 'fecha_fin_real')
+    }
+    campos.fecha_fin_real = fin
+  }
+
+  let estado = cambios.estado === undefined ? undefined : String(cambios.estado).toUpperCase()
+  if (estado !== undefined && !ESTADOS_ASIGNACION.includes(estado)) {
+    throw new AppError(`estado debe ser uno de: ${ESTADOS_ASIGNACION.join(', ')}`, 400, 'estado')
+  }
+  // Registrar la fecha real de fin cierra la asignación.
+  if (campos.fecha_fin_real && (estado === undefined || estado === 'ACTIVO')) {
+    if (estado === 'ACTIVO') {
+      throw new AppError('Una asignación con fecha fin real no puede quedar activa', 400, 'estado')
+    }
+    estado = 'FINALIZADO'
+  }
+  if (estado !== undefined && estado !== actual.estado) {
+    if (actual.estado !== 'ACTIVO') {
+      throw new AppError(
+        `La asignación está ${actual.estado.toLowerCase()} y no admite cambiar de estado: registre una asignación nueva`,
+        409,
+        'estado',
+      )
+    }
+    if (!ESTADOS_DE_CIERRE.includes(estado)) {
+      throw new AppError(`Una asignación vigente solo puede pasar a: ${ESTADOS_DE_CIERRE.join(', ')}`, 400, 'estado')
     }
     campos.estado = estado
     if (estado === 'FINALIZADO' && !campos.fecha_fin_real) {
       campos.fecha_fin_real = new Date().toISOString().slice(0, 10)
     }
+  }
+  if (campos.fecha_fin_real && actual.estado !== 'ACTIVO' && actual.estado !== 'FINALIZADO') {
+    throw new AppError('Solo una asignación vigente o finalizada tiene fecha fin real', 409, 'fecha_fin_real')
   }
 
   if (Object.keys(campos).length === 0) {
