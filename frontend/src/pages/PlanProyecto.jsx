@@ -249,10 +249,17 @@ export default function PlanProyecto() {
     alGuardar: (data, { registro }) => {
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
+      // Criterio 6: las asignaciones que ya no encajan solo se informan; no se modifican.
+      const fuera = data.asignaciones_fuera_de_fechas ?? []
+      const avisoAsignaciones = fuera.length
+        ? ` Atención: ${fuera.length} asignación(es) quedan fuera de las nuevas fechas (${[
+            ...new Set(fuera.map((a) => `${a.trabajador_nombre} en ${a.actividad_nombre}`)),
+          ].join('; ')}). No se modificaron: ajústelas con «Extender» o reasigne al personal.`
+        : ''
       setAviso(
-        registro.tipo === 'etapa'
+        (registro.tipo === 'etapa'
           ? `Etapa reprogramada.${movidas ? ` Se recalcularon ${movidas} etapa(s) posterior(es).` : ''}`
-          : 'Actividad reprogramada.',
+          : 'Actividad reprogramada.') + avisoAsignaciones,
       )
       return recargar()
     },
@@ -495,7 +502,7 @@ export default function PlanProyecto() {
                     <PencilSquareIcon className="h-4 w-4" /> Editar
                   </button>
                 )}
-                {puedeReprogramarEtapas && (
+                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
                   <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
                     <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                   </button>
@@ -609,7 +616,7 @@ export default function PlanProyecto() {
                               Editar
                             </button>
                           )}
-                          {puedeReprogramarActividades && (
+                          {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
                             <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
                               <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                             </button>
