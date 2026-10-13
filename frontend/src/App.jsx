@@ -16,6 +16,7 @@ const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
+const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -83,7 +84,15 @@ export default function App() {
           {/* RF06–RF07 · HU-04 */}
           <Route path="personal" element={<RutaPorRol roles={[ADMIN, GERENTE]}><Personal /></RutaPorRol>} />
           {/* Inventario de materiales */}
-          <Route path="materiales" element={<RutaPorRol roles={[ADMIN, BODEGA, MAESTRO]}><ModulePlaceholder title="Materiales" descripcion="Catálogo de materiales con existencias y nivel mínimo, y el registro de entradas, salidas y consumos de inventario." /></RutaPorRol>} />
+          {/* HU-07: catálogo de materiales; la matriz de permisos decide quién entra. */}
+          <Route
+            path="materiales"
+            element={
+              <RutaPorPermiso permisos={['materiales.listar']}>
+                <Materiales />
+              </RutaPorPermiso>
+            }
+          />
           {/* Inventario de herramientas */}
           {/* HU-10: catálogo de herramientas; la matriz de permisos decide quién entra. */}
           <Route
