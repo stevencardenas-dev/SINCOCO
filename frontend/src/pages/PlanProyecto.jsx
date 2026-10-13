@@ -64,6 +64,7 @@ const ESTADO_ASIGNACION = {
   ACTIVO: 'bg-emerald-50 text-emerald-700',
   FINALIZADO: 'bg-slate-100 text-slate-600',
   REASIGNADO: 'bg-amber-50 text-amber-700',
+  CANCELADO: 'bg-red-50 text-red-700',
 }
 
 const ESTADO_BADGE = {
@@ -327,18 +328,28 @@ export default function PlanProyecto() {
     max: soloDia(et.fecha_fin_programada) || soloDia(proyecto?.fecha_fin_programada),
   })
 
-  /** Retira el acceso vigente sin borrar la asignación (queda el historial). */
-  const finalizarAsignacion = async (a) => {
+  /**
+   * Cierra la asignación vigente sin borrarla (queda el historial).
+   * HU-05 · criterio 3: FINALIZADO (se cumplió; registra la fecha fin real y el
+   * trabajador vuelve a estar disponible) o CANCELADO (se anuló antes de cumplirse).
+   */
+  const cerrarAsignacion = async (a, estado) => {
     acceso.setError('')
     setAviso('')
     try {
-      await asignacionesApi.actualizar(a.id, { estado: 'FINALIZADO' })
-      setAviso(`${a.trabajador_nombre}: acceso finalizado.`)
+      await asignacionesApi.actualizar(a.id, { estado })
+      setAviso(
+        estado === 'CANCELADO'
+          ? `${a.trabajador_nombre}: asignación cancelada.`
+          : `${a.trabajador_nombre}: asignación finalizada; el trabajador queda disponible.`,
+      )
       recargar()
     } catch (err) {
-      acceso.setError(mensajeError(err, 'No se pudo finalizar la asignación.'))
+      acceso.setError(mensajeError(err, 'No se pudo actualizar la asignación.'))
     }
   }
+  const finalizarAsignacion = (a) => cerrarAsignacion(a, 'FINALIZADO')
+  const cancelarAsignacion = (a) => cerrarAsignacion(a, 'CANCELADO')
 
   const abrirEdicionEtapa = (et) =>
     edicion.abrir(
@@ -758,6 +769,7 @@ export default function PlanProyecto() {
                   <option value="ACTIVO">Vigente</option>
                   <option value="FINALIZADO">Finalizado</option>
                   <option value="REASIGNADO">Reasignado</option>
+                  <option value="CANCELADO">Cancelado</option>
                 </select>
               </div>
               <div>
@@ -832,6 +844,9 @@ export default function PlanProyecto() {
                       <td className="px-5 py-3 text-xs text-slate-500">
                         {fmtFecha(a.fecha_inicio)}
                         {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
+                        {a.fecha_fin_real && (
+                          <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <span
@@ -851,6 +866,9 @@ export default function PlanProyecto() {
                               onClick={() => finalizarAsignacion(a)}
                             >
                               Finalizar acceso
+                            </button>
+                            <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
+                              Cancelar
                             </button>
                             <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
                               Extender
