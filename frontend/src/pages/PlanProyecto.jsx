@@ -28,6 +28,7 @@ import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
+import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -43,7 +44,7 @@ import { fmtFecha } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', peso: '1' }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -189,12 +190,7 @@ export default function PlanProyecto() {
   // «Registrar avance»: en cualquier actividad para quien gestiona el plan; si no, solo en las suyas.
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
-  // «Registrar avance» aún no existe (HU-21): avisa con un mensaje flotante breve.
-  const [proximamente, setProximamente] = useState(false)
-  const avisarProximamente = () => {
-    setProximamente(true)
-    setTimeout(() => setProximamente(false), 1800)
-  }
+  const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
 
@@ -253,10 +249,17 @@ export default function PlanProyecto() {
     alGuardar: (data, { registro }) => {
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
+      // Criterio 6: las asignaciones que ya no encajan solo se informan; no se modifican.
+      const fuera = data.asignaciones_fuera_de_fechas ?? []
+      const avisoAsignaciones = fuera.length
+        ? ` Atención: ${fuera.length} asignación(es) quedan fuera de las nuevas fechas (${[
+            ...new Set(fuera.map((a) => `${a.trabajador_nombre} en ${a.actividad_nombre}`)),
+          ].join('; ')}). No se modificaron: ajústelas con «Extender» o reasigne al personal.`
+        : ''
       setAviso(
-        registro.tipo === 'etapa'
+        (registro.tipo === 'etapa'
           ? `Etapa reprogramada.${movidas ? ` Se recalcularon ${movidas} etapa(s) posterior(es).` : ''}`
-          : 'Actividad reprogramada.',
+          : 'Actividad reprogramada.') + avisoAsignaciones,
       )
       return recargar()
     },
@@ -383,6 +386,7 @@ export default function PlanProyecto() {
         responsable_id: a.responsable_id ?? '',
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
+        peso: String(a.peso ?? 1),
       },
       { tipo: 'actividad', dato: a },
     )
@@ -481,6 +485,12 @@ export default function PlanProyecto() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <span
+                  className="text-xs font-semibold tabular-nums text-slate-600"
+                  title="Promedio ponderado por el peso de cada actividad"
+                >
+                  Avance {Number(et.porcentaje_avance ?? 0)}%
+                </span>
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                   {ESTADO_ETIQUETA[et.estado] ?? et.estado}
                 </span>
@@ -492,7 +502,7 @@ export default function PlanProyecto() {
                     <PencilSquareIcon className="h-4 w-4" /> Editar
                   </button>
                 )}
-                {puedeReprogramarEtapas && (
+                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
                   <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
                     <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                   </button>
@@ -544,6 +554,15 @@ export default function PlanProyecto() {
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_fin_programada}
                     min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(et).min || undefined} max={limiteEtapa(et).max || undefined}
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
+                </div>
+                <div>
+                  <label htmlFor={`a-peso-${et.id}`} className="label">Peso en el avance</label>
+                  <input id={`a-peso-${et.id}`} type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
+                    className="input" value={nuevaActividad.valores.peso}
+                    onChange={(e) => nuevaActividad.cambiar('peso', e.target.value)} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Pondera la actividad en el avance de la etapa y del proyecto (1 = peso normal).
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <AlertaFormulario mensaje={nuevaActividad.error} />
@@ -597,7 +616,7 @@ export default function PlanProyecto() {
                               Editar
                             </button>
                           )}
-                          {puedeReprogramarActividades && (
+                          {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
                             <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
                               <ArrowPathIcon className="h-4 w-4" /> Reprogramar
                             </button>
@@ -612,7 +631,7 @@ export default function PlanProyecto() {
                             </button>
                           )}
                           {puedeAvance(a) && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={avisarProximamente}>
+                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => setPorAvanzar(a)}>
                               <ClipboardDocumentCheckIcon className="h-4 w-4" /> Registrar avance
                             </button>
                           )}
@@ -895,13 +914,17 @@ export default function PlanProyecto() {
         onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
       />
 
-      {proximamente && (
-        <div
-          role="status"
-          className="pointer-events-none fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg"
-        >
-          <ClipboardDocumentCheckIcon className="h-5 w-5 text-accent-400" /> Próximamente
-        </div>
+      {/* HU-21: registro del porcentaje de avance e historial de la actividad. */}
+      {porAvanzar && (
+        <RegistrarAvance
+          actividad={porAvanzar}
+          onCerrar={() => setPorAvanzar(null)}
+          onRegistrado={(mensaje) => {
+            setAviso(mensaje)
+            setPorAvanzar(null)
+            return recargar()
+          }}
+        />
       )}
 
       {/* Ficha de solo lectura: todos los atributos de la etapa o actividad. */}
@@ -919,6 +942,7 @@ export default function PlanProyecto() {
             ['Fin real', fichaVer.dato.fecha_fin_real ? fmtFecha(fichaVer.dato.fecha_fin_real) : null],
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
+            ['Peso en el avance', fichaVer.tipo === 'actividad' && fichaVer.dato.peso != null ? Number(fichaVer.dato.peso) : null],
           ]}
         />
       )}
@@ -981,6 +1005,17 @@ export default function PlanProyecto() {
                   min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
+              {editandoActividad && (
+                <div>
+                  <label htmlFor="ed-peso" className="label">Peso en el avance</label>
+                  <input id="ed-peso" type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
+                    className={`input${marca('peso')}`} value={edicion.valores.peso ?? '1'}
+                    onChange={(e) => edicion.cambiar('peso', e.target.value)} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-slate-500 sm:col-span-2">
                 {editandoEtapa
                   ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
