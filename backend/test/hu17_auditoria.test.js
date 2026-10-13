@@ -110,7 +110,7 @@ describe('HU-17 · validación de fechas', () => {
 
 describe('HU-17 · criterio 1: nombre legible del registro afectado', () => {
   test('conoce las tablas de los módulos de inventario', () => {
-    for (const tabla of ['materiales', 'herramientas', 'usuarios', 'proyectos', 'actividades']) {
+    for (const tabla of ['materiales', 'herramientas', 'asignaciones_personal', 'seguimiento_avance', 'usuarios', 'proyectos', 'actividades']) {
       assert.equal(tieneNombreEntidad(tabla), true, tabla)
     }
     assert.equal(tieneNombreEntidad('tabla_inexistente'), false)
@@ -126,6 +126,18 @@ describe('HU-17 · criterio 1: nombre legible del registro afectado', () => {
     assert.equal(r.filas.find((f) => f.id === 1).entidad, 'MAT-001 · Cemento')
     assert.ok(consultas.some((c) => /FROM materiales WHERE id IN/.test(c.sql)))
     assert.ok(consultas.some((c) => /FROM herramientas WHERE id IN/.test(c.sql)))
+  })
+
+  test('describe las asignaciones por el trabajador y los avances por la actividad', async () => {
+    filasBitacora = [
+      { id: 1, accion: 'CREAR', tabla_afectada: 'asignaciones_personal', registro_id: 3 },
+      { id: 2, accion: 'CREAR', tabla_afectada: 'seguimiento_avance', registro_id: 8 },
+    ]
+    await consultarBitacora({})
+    const asignaciones = consultas.find((c) => /FROM asignaciones_personal WHERE id IN/.test(c.sql))
+    const avances = consultas.find((c) => /FROM seguimiento_avance WHERE id IN/.test(c.sql))
+    assert.match(asignaciones.sql, /FROM trabajadores t WHERE t\.id = asignaciones_personal\.trabajador_id/)
+    assert.match(avances.sql, /FROM actividades a WHERE a\.id = seguimiento_avance\.actividad_id/)
   })
 
   test('una tabla sin nombre conocido se consulta sin interpolarla en el SQL', async () => {
