@@ -4,9 +4,22 @@ import { AppError } from '../utils/AppError.js'
 import { LARGO, revisarLargo, textoOpcional, numeroOpcional } from '../utils/campos.js'
 import { revisarEstadoOperativo } from '../dtos/herramienta/RegistrarHerramientaDto.js'
 
+export const DISPONIBILIDADES = ['DISPONIBLE', 'PRESTADA', 'EN_TRASLADO', 'BAJA']
+
 /** HU-10: catálogo de herramientas (activas por defecto; filtros en el repositorio). */
 export async function listarHerramientas(filtros = {}) {
-  return herramientaRepository.listar(filtros)
+  // Un filtro con un valor que no existe es un error del cliente, no una lista vacía.
+  const estadoOperativo = filtros.estadoOperativo
+    ? revisarEstadoOperativo(filtros.estadoOperativo)
+    : ''
+  const disponibilidad = filtros.disponibilidad ? String(filtros.disponibilidad).trim().toUpperCase() : ''
+  if (disponibilidad && !DISPONIBILIDADES.includes(disponibilidad)) {
+    throw new AppError(`disponibilidad debe ser una de: ${DISPONIBILIDADES.join(', ')}`, 400, 'disponibilidad')
+  }
+  if (filtros.almacenId && Number.isNaN(Number(filtros.almacenId))) {
+    throw new AppError('almacen_id debe ser numérico', 400, 'almacen_id')
+  }
+  return herramientaRepository.listar({ ...filtros, estadoOperativo, disponibilidad })
 }
 
 export async function listarAlmacenes() {
