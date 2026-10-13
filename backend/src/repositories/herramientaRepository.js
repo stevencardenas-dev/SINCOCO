@@ -46,7 +46,8 @@ export async function listar({
     condiciones.push(
       '(h.codigo_serial LIKE ? OR h.nombre LIKE ? OR h.marca LIKE ? OR h.modelo LIKE ?)',
     )
-    const patron = `%${texto}%`
+    // Los comodines que escribe el usuario (% y _) se buscan como texto literal.
+    const patron = `%${texto.replace(/[\\%_]/g, '\\$&')}%`
     params.push(patron, patron, patron, patron)
   }
   if (almacenId) {
