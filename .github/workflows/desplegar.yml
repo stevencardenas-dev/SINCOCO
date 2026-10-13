@@ -117,6 +117,8 @@ jobs:
           DB_NAME: sincoco
           MYSQL_PWD: raiz
         run: |
+          # Sin migraciones pendientes la carpeta puede no existir: que el glob quede vacío.
+          shopt -s nullglob
           for migracion in docs/migraciones/aplicadas/*.sql docs/migraciones/pendientes/*.sql; do
             echo "::group::$migracion"
             mysql -h 127.0.0.1 -u root "$DB_NAME" < "$migracion"

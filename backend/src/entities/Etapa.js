@@ -14,6 +14,7 @@ export class Etapa {
     fecha_fin_original,
     estado,
     activo,
+    porcentaje_avance,
   }) {
     this.id = id
     this.proyecto_id = proyecto_id
@@ -27,6 +28,8 @@ export class Etapa {
     this.fecha_fin_original = fecha_fin_original ?? null
     this.estado = estado
     this.activo = activo
+    // HU-21 · criterio 4: promedio ponderado por peso de sus actividades activas.
+    this.porcentaje_avance = Number(porcentaje_avance ?? 0)
   }
 
   static fromRow(row) {
