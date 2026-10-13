@@ -44,7 +44,7 @@ const NAV = [
   {
     group: 'Inventario',
     items: [
-      { to: '/materiales', label: 'Materiales', icon: CubeIcon, roles: [ADMIN, BODEGA, MAESTRO], proximamente: true },
+      { to: '/materiales', label: 'Materiales', icon: CubeIcon, permiso: ['materiales.listar'] },
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA], proximamente: true },
     ],
