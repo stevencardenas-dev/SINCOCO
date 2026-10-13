@@ -11,10 +11,17 @@ import { Trabajador } from '../entities/Trabajador.js'
  * (contrato que ya usan la interfaz y las pruebas) y se añaden los ids para que
  * el formulario los seleccione en un combo.
  */
-// Actividades vigentes a cargo del trabajador: distinguen «Asignado» de «Disponible».
-const VIGENTES = `SELECT COUNT(*) FROM actividades av
-                   WHERE av.responsable_id = t.id AND av.activo = 1
-                     AND av.estado IN ('PENDIENTE', 'EN_PROCESO')`
+// Compromisos vigentes del trabajador: distinguen «Asignado» de «Disponible».
+// Cuentan las actividades a su cargo y sus asignaciones ACTIVAS sin fecha fin
+// real (HU-05 · criterio 4): al registrar la fecha fin real la asignación se
+// finaliza y el trabajador vuelve a quedar disponible.
+const VIGENTES = `SELECT
+                    (SELECT COUNT(*) FROM actividades av
+                      WHERE av.responsable_id = t.id AND av.activo = 1
+                        AND av.estado IN ('PENDIENTE', 'EN_PROCESO'))
+                  + (SELECT COUNT(*) FROM asignaciones_personal ap
+                      WHERE ap.trabajador_id = t.id AND ap.estado = 'ACTIVO'
+                        AND ap.fecha_fin_real IS NULL)`
 
 const CAMPOS = `t.id, t.numero_documento, t.tipo_documento, t.nombres, t.apellidos,
                 t.email, t.telefono, t.direccion,
