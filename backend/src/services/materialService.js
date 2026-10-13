@@ -37,6 +37,17 @@ async function exigirCategoria(categoriaId) {
 }
 
 /**
+ * Dos altas simultáneas pueden pasar la consulta de `exigirCodigoLibre`; la
+ * segunda la frena el UNIQUE de MySQL y se traduce al mismo 409 en vez de 500.
+ */
+function traducirCodigoDuplicado(err) {
+  if (err?.code === 'ER_DUP_ENTRY') {
+    return new AppError('Ya existe un material con ese código', 409, 'codigo')
+  }
+  return err
+}
+
+/**
  * HU-07 · criterio 1 / CU-07 Alt 1: el código no puede repetirse; se sugiere
  * editar el material existente en lugar de crear un duplicado.
  */
@@ -55,7 +66,12 @@ export async function registrarMaterial(dto, ctx = {}) {
   await exigirCodigoLibre(dto.codigo)
   const categoria = await exigirCategoria(dto.categoria_id)
 
-  const id = await materialRepository.create(dto)
+  let id
+  try {
+    id = await materialRepository.create(dto)
+  } catch (err) {
+    throw traducirCodigoDuplicado(err)
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,
@@ -110,7 +126,11 @@ export async function actualizarMaterial(id, cambios = {}, ctx = {}) {
     throw new AppError('No hay campos que actualizar', 400)
   }
 
-  await materialRepository.update(id, campos)
+  try {
+    await materialRepository.update(id, campos)
+  } catch (err) {
+    throw traducirCodigoDuplicado(err)
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,
