@@ -37,10 +37,12 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('etapas.crear',             'Definir etapas del plan de trabajo',       'planificacion'),
   ('etapas.editar',           'Editar las propiedades de una etapa',      'planificacion'),
   ('etapas.dar_baja',          'Dar de baja lógica una etapa',             'planificacion'),
+  ('etapas.reprogramar',      'Reprogramar las fechas de una etapa y de las posteriores', 'planificacion'),
   ('actividades.listar',       'Consultar las actividades del plan',       'planificacion'),
   ('actividades.crear',        'Definir actividades del plan de trabajo',  'planificacion'),
   ('actividades.editar',      'Editar las propiedades de una actividad',  'planificacion'),
   ('actividades.dar_baja',     'Dar de baja lógica una actividad',         'planificacion'),
+  ('actividades.reprogramar', 'Reprogramar las fechas de una actividad', 'planificacion'),
   -- HU-17: la bitácora se consulta con un permiso propio, no con el de usuarios.
   ('auditoria.listar',         'Consultar la bitácora de trazabilidad',    'auditoria'),
   -- Catálogos del personal (cargos y especialidades) y de clientes.
@@ -50,7 +52,15 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('herramientas.listar',      'Consultar el catálogo de herramientas',    'herramientas'),
   ('herramientas.crear',       'Registrar herramientas en el catálogo',    'herramientas'),
   ('herramientas.editar',      'Editar los datos y el estado de una herramienta', 'herramientas'),
-  ('herramientas.dar_baja',    'Dar de baja lógica una herramienta',       'herramientas')
+  ('herramientas.dar_baja',    'Dar de baja lógica una herramienta',       'herramientas'),
+  -- HU-07: catálogo de materiales (administrador y encargado de bodega).
+  ('materiales.listar',        'Consultar el catálogo de materiales',      'materiales'),
+  ('materiales.crear',         'Registrar materiales en el catálogo',      'materiales'),
+  ('materiales.editar',        'Editar los datos de un material',          'materiales'),
+  ('materiales.dar_baja',      'Dar de baja lógica un material',           'materiales'),
+  -- HU-21: porcentaje de avance de las actividades (administrador, gerente y maestro de obra).
+  ('avance.registrar',         'Registrar el porcentaje de avance de una actividad', 'seguimiento'),
+  ('avance.listar',            'Consultar el historial de avance de una actividad',  'seguimiento')
 ON DUPLICATE KEY UPDATE
   `descripcion` = VALUES(`descripcion`),
   `modulo` = VALUES(`modulo`);
@@ -80,6 +90,7 @@ WHERE r.`nombre` = 'GERENTE'
     'trabajadores.listar', 'trabajadores.crear', 'trabajadores.editar', 'trabajadores.dar_baja',
     'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
     'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
+    'avance.registrar', 'avance.listar',
     'catalogos.listar', 'catalogos.gestionar'
   );
 
@@ -95,15 +106,16 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
     'proyectos.listar', 'proyectos.editar',
     'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
     'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
+    'avance.registrar', 'avance.listar',
     'clientes.listar', 'trabajadores.listar'
   );
 
--- ENCARGADO_BODEGA: catálogo de herramientas (HU-10).
+-- ENCARGADO_BODEGA: catálogo de herramientas (HU-10) y de materiales (HU-07).
 INSERT INTO `roles_permisos` (`rol_id`, `permiso_id`)
 SELECT r.`id`, p.`id`
 FROM `roles` r JOIN `permisos` p
 WHERE r.`nombre` = 'ENCARGADO_BODEGA'
-  AND p.`modulo` = 'herramientas';
+  AND p.`modulo` IN ('herramientas', 'materiales');
 
 -- TRABAJADOR: sin permisos sobre estos módulos.
 --

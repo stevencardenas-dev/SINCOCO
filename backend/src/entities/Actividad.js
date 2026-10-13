@@ -12,9 +12,12 @@ export class Actividad {
     descripcion,
     fecha_inicio_programada,
     fecha_fin_programada,
+    fecha_inicio_original,
+    fecha_fin_original,
     fecha_inicio_real,
     fecha_fin_real,
     porcentaje_avance,
+    peso,
     estado,
     activo,
     etapa_nombre,
@@ -29,9 +32,14 @@ export class Actividad {
     this.descripcion = descripcion ?? null
     this.fecha_inicio_programada = fecha_inicio_programada
     this.fecha_fin_programada = fecha_fin_programada
+    // HU-34 · criterio 1: fechas de la primera programación (NULL si nunca se reprogramó).
+    this.fecha_inicio_original = fecha_inicio_original ?? null
+    this.fecha_fin_original = fecha_fin_original ?? null
     this.fecha_inicio_real = fecha_inicio_real ?? null
     this.fecha_fin_real = fecha_fin_real ?? null
     this.porcentaje_avance = porcentaje_avance
+    // HU-21 · criterio 4: peso de la actividad en el promedio ponderado de etapa y proyecto.
+    this.peso = peso === undefined || peso === null ? 1 : Number(peso)
     this.estado = estado
     this.activo = activo
     this.etapa_nombre = etapa_nombre ?? null

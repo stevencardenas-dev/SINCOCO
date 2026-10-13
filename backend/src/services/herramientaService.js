@@ -4,9 +4,22 @@ import { AppError } from '../utils/AppError.js'
 import { LARGO, revisarLargo, textoOpcional, numeroOpcional } from '../utils/campos.js'
 import { revisarEstadoOperativo } from '../dtos/herramienta/RegistrarHerramientaDto.js'
 
+export const DISPONIBILIDADES = ['DISPONIBLE', 'PRESTADA', 'EN_TRASLADO', 'BAJA']
+
 /** HU-10: catálogo de herramientas (activas por defecto; filtros en el repositorio). */
 export async function listarHerramientas(filtros = {}) {
-  return herramientaRepository.listar(filtros)
+  // Un filtro con un valor que no existe es un error del cliente, no una lista vacía.
+  const estadoOperativo = filtros.estadoOperativo
+    ? revisarEstadoOperativo(filtros.estadoOperativo)
+    : ''
+  const disponibilidad = filtros.disponibilidad ? String(filtros.disponibilidad).trim().toUpperCase() : ''
+  if (disponibilidad && !DISPONIBILIDADES.includes(disponibilidad)) {
+    throw new AppError(`disponibilidad debe ser una de: ${DISPONIBILIDADES.join(', ')}`, 400, 'disponibilidad')
+  }
+  if (filtros.almacenId && Number.isNaN(Number(filtros.almacenId))) {
+    throw new AppError('almacen_id debe ser numérico', 400, 'almacen_id')
+  }
+  return herramientaRepository.listar({ ...filtros, estadoOperativo, disponibilidad })
 }
 
 export async function listarAlmacenes() {
@@ -28,6 +41,17 @@ async function exigirAlmacen(almacenId) {
   return almacen
 }
 
+/**
+ * Dos altas simultáneas pueden pasar la consulta de `exigirSerialLibre`; la
+ * segunda la frena el UNIQUE de MySQL y se traduce al mismo 409 en vez de 500.
+ */
+function traducirSerialDuplicado(err) {
+  if (err?.code === 'ER_DUP_ENTRY') {
+    return new AppError('Ya existe una herramienta con ese código serial', 409, 'codigo_serial')
+  }
+  return err
+}
+
 /** HU-10 · criterio 1 / CU-10 Alt: el código serial no puede repetirse. */
 async function exigirSerialLibre(serial, idActual = null) {
   const existente = await herramientaRepository.findBySerial(serial)
@@ -40,7 +64,12 @@ export async function registrarHerramienta(dto, ctx = {}) {
   await exigirSerialLibre(dto.codigo_serial)
   const almacen = await exigirAlmacen(dto.almacen_id)
 
-  const id = await herramientaRepository.create(dto)
+  let id
+  try {
+    id = await herramientaRepository.create(dto)
+  } catch (err) {
+    throw traducirSerialDuplicado(err)
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,
@@ -102,7 +131,11 @@ export async function actualizarHerramienta(id, cambios = {}, ctx = {}) {
     throw new AppError('No hay campos que actualizar', 400)
   }
 
-  await herramientaRepository.update(id, campos)
+  try {
+    await herramientaRepository.update(id, campos)
+  } catch (err) {
+    throw traducirSerialDuplicado(err)
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,
@@ -132,7 +165,18 @@ export async function darDeBajaHerramienta(id, ctx = {}) {
   }
 
   const afectadas = await herramientaRepository.darDeBaja(id, ctx.usuarioId)
-  if (!afectadas) throw new AppError('La herramienta ya estaba dada de baja', 409)
+  if (!afectadas) {
+    // La baja filtra también por disponibilidad: si entre la lectura y el UPDATE
+    // salió a préstamo o a traslado, no se da de baja una herramienta en uso.
+    const actual = await herramientaRepository.findById(id)
+    if (actual?.activo && ['PRESTADA', 'EN_TRASLADO'].includes(actual.disponibilidad)) {
+      throw new AppError(
+        'No se puede dar de baja: la herramienta salió a préstamo o traslado. Registre primero su devolución.',
+        409,
+      )
+    }
+    throw new AppError('La herramienta ya estaba dada de baja', 409)
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,

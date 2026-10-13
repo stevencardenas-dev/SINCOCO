@@ -10,8 +10,11 @@ export class Etapa {
     orden,
     fecha_inicio_programada,
     fecha_fin_programada,
+    fecha_inicio_original,
+    fecha_fin_original,
     estado,
     activo,
+    porcentaje_avance,
   }) {
     this.id = id
     this.proyecto_id = proyecto_id
@@ -20,8 +23,13 @@ export class Etapa {
     this.orden = orden
     this.fecha_inicio_programada = fecha_inicio_programada ?? null
     this.fecha_fin_programada = fecha_fin_programada ?? null
+    // HU-34 · criterio 1: fechas de la primera programación (NULL si nunca se reprogramó).
+    this.fecha_inicio_original = fecha_inicio_original ?? null
+    this.fecha_fin_original = fecha_fin_original ?? null
     this.estado = estado
     this.activo = activo
+    // HU-21 · criterio 4: promedio ponderado por peso de sus actividades activas.
+    this.porcentaje_avance = Number(porcentaje_avance ?? 0)
   }
 
   static fromRow(row) {

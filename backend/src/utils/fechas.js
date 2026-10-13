@@ -78,3 +78,17 @@ export function validarDentroDeEtapa(inicio, fin, etapa) {
 export function rangosSeSolapan(inicioA, finA, inicioB, finB) {
   return inicioA <= finB && inicioB <= finA
 }
+
+/** Suma `dias` (puede ser negativo) a una fecha 'YYYY-MM-DD' sin depender de la zona horaria. */
+export function sumarDias(fecha, dias) {
+  const [a, m, d] = fecha.split('-').map(Number)
+  const resultado = new Date(Date.UTC(a, m - 1, d + dias))
+  return resultado.toISOString().slice(0, 10)
+}
+
+/** Días de diferencia entre dos fechas 'YYYY-MM-DD' (positivo si `hasta` es posterior). */
+export function diasEntre(desde, hasta) {
+  const [a1, m1, d1] = desde.split('-').map(Number)
+  const [a2, m2, d2] = hasta.split('-').map(Number)
+  return Math.round((Date.UTC(a2, m2 - 1, d2) - Date.UTC(a1, m1 - 1, d1)) / 86400000)
+}
