@@ -10,6 +10,33 @@ import {
 import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
 
 /**
+ * HU-34 · criterio 6: clasifica las asignaciones vigentes que no encajan con las
+ * nuevas fechas de una actividad. No las modifica: solo las informa para que el
+ * administrador decida (la prórroga se gestiona con HU-31).
+ */
+async function asignacionesFuera(actividadId, inicio, fin) {
+  const filas = await reprogramacionRepository.asignacionesFueraDeFechas(actividadId, inicio, fin)
+  return filas.map((a) => {
+    const desde = aFechaDia(a.fecha_inicio)
+    const hasta = aFechaDia(a.fecha_fin_programada)
+    const razon = desde < inicio
+      ? 'COMIENZA_ANTES_DE_LA_ACTIVIDAD'
+      : hasta > fin
+        ? 'TERMINA_DESPUES_DE_LA_ACTIVIDAD'
+        : 'TERMINA_ANTES_DEL_FIN_DE_LA_ACTIVIDAD'
+    return {
+      id: a.id,
+      actividad_id: a.actividad_id,
+      actividad_nombre: a.actividad_nombre,
+      trabajador_nombre: a.trabajador_nombre,
+      fecha_inicio: desde,
+      fecha_fin_programada: hasta,
+      razon,
+    }
+  })
+}
+
+/**
  * HU-34: reprogramación de fechas del plan de trabajo.
  *
  * La fecha programada de cada elemento pasa a ser la vigente (la que usan el
@@ -99,6 +126,10 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
   if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
+  // HU-34 · criterio 5: lo ya completado no se reprograma.
+  if (etapa.estado === 'COMPLETADA') {
+    throw new AppError('La etapa ya está completada y no se puede reprogramar', 409, 'estado')
+  }
 
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
   const inicio = dto.fecha_inicio_programada
@@ -150,6 +181,13 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   const actividadesMovidas = []
   for (const m of movidas) {
     for (const a of await actividadRepository.listarPorEtapa(m.etapa.id)) {
+      if (a.estado === 'COMPLETADA') {
+        throw new AppError(
+          `La actividad «${a.nombre}» de la etapa posterior «${m.etapa.nombre}» ya está completada y no puede desplazarse`,
+          409,
+          'estado',
+        )
+      }
       actividadesMovidas.push({
         actividad: a,
         inicio: sumarDias(aFechaDia(a.fecha_inicio_programada), m.desplazamiento),
@@ -187,6 +225,12 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   })
   await etapaRepository.renumerar(etapa.proyecto_id)
 
+  // Criterio 6: las actividades desplazadas pueden dejar fuera a su personal asignado.
+  const fueraDeFechas = []
+  for (const m of actividadesMovidas) {
+    fueraDeFechas.push(...(await asignacionesFuera(m.actividad.id, m.inicio, m.fin)))
+  }
+
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'REPROGRAMAR', tabla: 'etapas_proyecto',
     registroId: Number(id),
@@ -209,6 +253,7 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
       fecha_fin_nueva: m.fin,
     })),
     actividades_desplazadas: actividadesMovidas.length,
+    asignaciones_fuera_de_fechas: fueraDeFechas,
     proyecto: await proyectoRepository.findById(etapa.proyecto_id),
   }
 }
@@ -219,6 +264,10 @@ export async function reprogramarActividad(id, dto, ctx = {}) {
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, actividad.proyecto_id)
   if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+  // HU-34 · criterio 5: lo ya completado no se reprograma.
+  if (actividad.estado === 'COMPLETADA') {
+    throw new AppError('La actividad ya está completada y no se puede reprogramar', 409, 'estado')
+  }
 
   const etapa = await etapaRepository.findById(actividad.etapa_id)
   const proyecto = await proyectoRepository.findById(actividad.proyecto_id)
@@ -240,7 +289,10 @@ export async function reprogramarActividad(id, dto, ctx = {}) {
     detalles: { nombre: actividad.nombre, motivo: dto.motivo, fecha_inicio_programada: inicio, fecha_fin_programada: fin },
     ip: ctx.ip,
   })
-  return { actividad: await actividadRepository.findById(id) }
+  return {
+    actividad: await actividadRepository.findById(id),
+    asignaciones_fuera_de_fechas: await asignacionesFuera(Number(id), inicio, fin),
+  }
 }
 
 /** Historial de reprogramaciones de una etapa o actividad, para quien tenga acceso al proyecto. */
