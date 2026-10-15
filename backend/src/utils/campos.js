@@ -30,6 +30,8 @@ export const LARGO = {
   nombre_actividad: 150,
   codigo_serial: 50,
   nombre_herramienta: 100,
+  codigo_material: 30,
+  descripcion_material: 255,
   marca: 50,
   modelo: 50,
   rol_en_proyecto: 100,
@@ -110,6 +112,22 @@ export function numeroOpcional(v, campo) {
   const n = Number(v)
   if (!Number.isInteger(n) || n <= 0) {
     throw new AppError('El identificador del catálogo no es válido', 400, campo)
+  }
+  return n
+}
+
+/**
+ * HU-21 · criterio 4: peso de una actividad en el promedio ponderado del
+ * avance. Número mayor que cero (hasta 2 decimales); sin valor vale 1.
+ */
+export function revisarPeso(v) {
+  if (estaVacio(v)) return 1
+  const n = Number(v)
+  if (!Number.isFinite(n) || n <= 0 || n >= 10000) {
+    throw new AppError('El peso debe ser un número mayor que cero y menor que 10000', 400, 'peso')
+  }
+  if (Math.round(n * 100) / 100 !== n) {
+    throw new AppError('El peso admite como máximo 2 decimales', 400, 'peso')
   }
   return n
 }

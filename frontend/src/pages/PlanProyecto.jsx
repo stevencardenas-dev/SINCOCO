@@ -27,6 +27,8 @@ import { etapasApi } from '../services/etapas'
 import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
+import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
+import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -42,7 +44,7 @@ import { fmtFecha } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', peso: '1' }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -63,6 +65,7 @@ const ESTADO_ASIGNACION = {
   ACTIVO: 'bg-emerald-50 text-emerald-700',
   FINALIZADO: 'bg-slate-100 text-slate-600',
   REASIGNADO: 'bg-amber-50 text-amber-700',
+  CANCELADO: 'bg-red-50 text-red-700',
 }
 
 const ESTADO_BADGE = {
@@ -173,6 +176,7 @@ export default function PlanProyecto() {
   const actividades = datos?.actividades ?? []
   const responsables = datos?.responsables ?? []
   const asignaciones = datos?.asignaciones ?? []
+  const [porExtender, setPorExtender] = useState(null) // HU-31
   const miAcceso = datos?.miAcceso ?? SIN_ACCESO
 
   const gestionaPlan = miAcceso.gestiona_plan
@@ -186,12 +190,7 @@ export default function PlanProyecto() {
   // «Registrar avance»: en cualquier actividad para quien gestiona el plan; si no, solo en las suyas.
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
-  // «Registrar avance» aún no existe (HU-21): avisa con un mensaje flotante breve.
-  const [proximamente, setProximamente] = useState(false)
-  const avisarProximamente = () => {
-    setProximamente(true)
-    setTimeout(() => setProximamente(false), 1800)
-  }
+  const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
 
@@ -260,10 +259,17 @@ export default function PlanProyecto() {
       setAfectadas(data.asignaciones_afectadas ?? [])
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
+      // Criterio 6: las asignaciones que ya no encajan solo se informan; no se modifican.
+      const fuera = data.asignaciones_fuera_de_fechas ?? []
+      const avisoAsignaciones = fuera.length
+        ? ` Atención: ${fuera.length} asignación(es) quedan fuera de las nuevas fechas (${[
+            ...new Set(fuera.map((a) => `${a.trabajador_nombre} en ${a.actividad_nombre}`)),
+          ].join('; ')}). No se modificaron: ajústelas con «Extender» o reasigne al personal.`
+        : ''
       setAviso(
-        registro.tipo === 'etapa'
+        (registro.tipo === 'etapa'
           ? `Etapa reprogramada.${movidas ? ` Se recalcularon ${movidas} etapa(s) posterior(es).` : ''}`
-          : 'Actividad reprogramada.',
+          : 'Actividad reprogramada.') + avisoAsignaciones,
       )
       return recargar()
     },
@@ -335,18 +341,28 @@ export default function PlanProyecto() {
     max: soloDia(et.fecha_fin_programada) || soloDia(proyecto?.fecha_fin_programada),
   })
 
-  /** Retira el acceso vigente sin borrar la asignación (queda el historial). */
-  const finalizarAsignacion = async (a) => {
+  /**
+   * Cierra la asignación vigente sin borrarla (queda el historial).
+   * HU-05 · criterio 3: FINALIZADO (se cumplió; registra la fecha fin real y el
+   * trabajador vuelve a estar disponible) o CANCELADO (se anuló antes de cumplirse).
+   */
+  const cerrarAsignacion = async (a, estado) => {
     acceso.setError('')
     setAviso('')
     try {
-      await asignacionesApi.actualizar(a.id, { estado: 'FINALIZADO' })
-      setAviso(`${a.trabajador_nombre}: acceso finalizado.`)
+      await asignacionesApi.actualizar(a.id, { estado })
+      setAviso(
+        estado === 'CANCELADO'
+          ? `${a.trabajador_nombre}: asignación cancelada.`
+          : `${a.trabajador_nombre}: asignación finalizada; el trabajador queda disponible.`,
+      )
       recargar()
     } catch (err) {
-      acceso.setError(mensajeError(err, 'No se pudo finalizar la asignación.'))
+      acceso.setError(mensajeError(err, 'No se pudo actualizar la asignación.'))
     }
   }
+  const finalizarAsignacion = (a) => cerrarAsignacion(a, 'FINALIZADO')
+  const cancelarAsignacion = (a) => cerrarAsignacion(a, 'CANCELADO')
 
   const abrirEdicionEtapa = (et) =>
     edicion.abrir(
@@ -381,6 +397,7 @@ export default function PlanProyecto() {
         responsable_id: a.responsable_id ?? '',
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
+        peso: String(a.peso ?? 1),
       },
       { tipo: 'actividad', dato: a },
     )
@@ -499,6 +516,12 @@ export default function PlanProyecto() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
+                <span
+                  className="text-xs font-semibold tabular-nums text-slate-600"
+                  title="Promedio ponderado por el peso de cada actividad"
+                >
+                  Avance {Number(et.porcentaje_avance ?? 0)}%
+                </span>
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                   {ESTADO_ETIQUETA[et.estado] ?? et.estado}
                 </span>
@@ -562,6 +585,15 @@ export default function PlanProyecto() {
                   <input id={`a-fin-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_fin_programada}
                     min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(et).min || undefined} max={limiteEtapa(et).max || undefined}
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
+                </div>
+                <div>
+                  <label htmlFor={`a-peso-${et.id}`} className="label">Peso en el avance</label>
+                  <input id={`a-peso-${et.id}`} type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
+                    className="input" value={nuevaActividad.valores.peso}
+                    onChange={(e) => nuevaActividad.cambiar('peso', e.target.value)} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Pondera la actividad en el avance de la etapa y del proyecto (1 = peso normal).
+                  </p>
                 </div>
                 <div className="sm:col-span-2">
                   <AlertaFormulario mensaje={nuevaActividad.error} />
@@ -630,7 +662,7 @@ export default function PlanProyecto() {
                             </button>
                           )}
                           {puedeAvance(a) && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={avisarProximamente}>
+                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => setPorAvanzar(a)}>
                               <ClipboardDocumentCheckIcon className="h-4 w-4" /> Registrar avance
                             </button>
                           )}
@@ -787,6 +819,7 @@ export default function PlanProyecto() {
                   <option value="ACTIVO">Vigente</option>
                   <option value="FINALIZADO">Finalizado</option>
                   <option value="REASIGNADO">Reasignado</option>
+                  <option value="CANCELADO">Cancelado</option>
                 </select>
               </div>
               <div>
@@ -861,6 +894,9 @@ export default function PlanProyecto() {
                       <td className="px-5 py-3 text-xs text-slate-500">
                         {fmtFecha(a.fecha_inicio)}
                         {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
+                        {a.fecha_fin_real && (
+                          <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
+                        )}
                       </td>
                       <td className="px-5 py-3">
                         <span
@@ -881,9 +917,17 @@ export default function PlanProyecto() {
                             >
                               Finalizar acceso
                             </button>
+                            <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
+                              Cancelar
+                            </button>
+                            <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                              Extender
+                            </button>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400">Sin acciones</span>
+                          <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                            Historial
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -895,13 +939,23 @@ export default function PlanProyecto() {
         </div>
       )}
 
-      {proximamente && (
-        <div
-          role="status"
-          className="pointer-events-none fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-xl bg-brand-900 px-4 py-2.5 text-sm font-medium text-white shadow-lg"
-        >
-          <ClipboardDocumentCheckIcon className="h-5 w-5 text-accent-400" /> Próximamente
-        </div>
+      <ExtenderAsignacion
+        asignacion={porExtender}
+        onCerrar={() => setPorExtender(null)}
+        onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
+      />
+
+      {/* HU-21: registro del porcentaje de avance e historial de la actividad. */}
+      {porAvanzar && (
+        <RegistrarAvance
+          actividad={porAvanzar}
+          onCerrar={() => setPorAvanzar(null)}
+          onRegistrado={(mensaje) => {
+            setAviso(mensaje)
+            setPorAvanzar(null)
+            return recargar()
+          }}
+        />
       )}
 
       {/* Ficha de solo lectura: todos los atributos de la etapa o actividad. */}
@@ -919,6 +973,7 @@ export default function PlanProyecto() {
             ['Fin real', fichaVer.dato.fecha_fin_real ? fmtFecha(fichaVer.dato.fecha_fin_real) : null],
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
+            ['Peso en el avance', fichaVer.tipo === 'actividad' && fichaVer.dato.peso != null ? Number(fichaVer.dato.peso) : null],
           ]}
         />
       )}
@@ -983,6 +1038,17 @@ export default function PlanProyecto() {
                   min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
+              {editandoActividad && (
+                <div>
+                  <label htmlFor="ed-peso" className="label">Peso en el avance</label>
+                  <input id="ed-peso" type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
+                    className={`input${marca('peso')}`} value={edicion.valores.peso ?? '1'}
+                    onChange={(e) => edicion.cambiar('peso', e.target.value)} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+              )}
               <p className="text-xs text-slate-500 sm:col-span-2">
                 {fechasFijas(edicion.registro?.dato)
                   ? 'Para cambiar las fechas use «Reprogramar»: conserva las originales y registra el motivo.'

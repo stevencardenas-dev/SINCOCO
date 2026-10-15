@@ -46,7 +46,8 @@ export async function listar({
     condiciones.push(
       '(h.codigo_serial LIKE ? OR h.nombre LIKE ? OR h.marca LIKE ? OR h.modelo LIKE ?)',
     )
-    const patron = `%${texto}%`
+    // Los comodines que escribe el usuario (% y _) se buscan como texto literal.
+    const patron = `%${texto.replace(/[\\%_]/g, '\\$&')}%`
     params.push(patron, patron, patron, patron)
   }
   if (almacenId) {
@@ -103,12 +104,15 @@ export async function update(id, campos) {
   return result.affectedRows
 }
 
-/** HU-18 · HU-10 criterio 4: baja lógica; la herramienta queda en disponibilidad BAJA. */
+/**
+ * HU-18 · HU-10 criterio 4: baja lógica; la herramienta queda en disponibilidad BAJA.
+ * No actúa sobre una herramienta prestada o en traslado (evita la carrera con HU-11).
+ */
 export async function darDeBaja(id, usuarioId) {
   const [result] = await pool.query(
     `UPDATE herramientas
         SET activo = 0, fecha_baja = NOW(), baja_por_usuario_id = ?, disponibilidad = 'BAJA'
-      WHERE id = ? AND activo = 1`,
+      WHERE id = ? AND activo = 1 AND disponibilidad NOT IN ('PRESTADA', 'EN_TRASLADO')`,
     [usuarioId ?? null, id],
   )
   return result.affectedRows

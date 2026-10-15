@@ -27,7 +27,7 @@ const TODOS = [ADMIN, GERENTE, MAESTRO, BODEGA]
 
 /**
  * RNF05 · RBAC: cada opción declara qué roles la ven. Los roles salen del JWT
- * y corresponden a los casos de uso de cada actor (ver docs/CASOS_DE_USO.md).
+ * y corresponden a los casos de uso de cada actor (ver docs/reglas-de-negocio/CASOS_DE_USO.md).
  * Esto es control de acceso en la interfaz; el backend valida aparte con
  * requireRole() — la interfaz oculta, el servidor decide.
  */
@@ -44,7 +44,7 @@ const NAV = [
   {
     group: 'Inventario',
     items: [
-      { to: '/materiales', label: 'Materiales', icon: CubeIcon, roles: [ADMIN, BODEGA, MAESTRO], proximamente: true },
+      { to: '/materiales', label: 'Materiales', icon: CubeIcon, permiso: ['materiales.listar'] },
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA], proximamente: true },
     ],
