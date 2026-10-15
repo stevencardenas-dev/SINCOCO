@@ -35,7 +35,7 @@ for metodo in ('POST', 'PATCH', 'DELETE'):
     assert estado == 404, f'{metodo} {RUTA}: se esperaba 404 (no hay ruta de escritura), llego {estado}'
     print(f'{metodo:6} {RUTA} -> 404 (inmutable)')
 
-# ...y también en la base (docs/migracion_bitacora_inmutable.sql): ni UPDATE ni DELETE
+# ...y también en la base (docs/migraciones/pendientes/migracion_bitacora_inmutable.sql): ni UPDATE ni DELETE
 # sobre una fila existente, aunque se llegue directo a MySQL.
 fila_id = scalar('SELECT id FROM bitacora_trazabilidad ORDER BY id LIMIT 1')
 assert fila_id, 'la bitácora debería tener al menos el ingreso de esta prueba'

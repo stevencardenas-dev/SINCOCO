@@ -85,3 +85,26 @@ export async function listarPorEntidad(tipo, id) {
   )
   return rows
 }
+
+/**
+ * HU-34 · criterio 6: asignaciones vigentes de una actividad cuyas fechas no
+ * encajan con las nuevas fechas de la actividad. Solo las lista: no las
+ * modifica (la extensión se gestiona con HU-31).
+ */
+export async function asignacionesFueraDeFechas(actividadId, inicio, fin) {
+  const [rows] = await pool.query(
+    `SELECT ap.id, ap.actividad_id, act.nombre AS actividad_nombre,
+            TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS trabajador_nombre,
+            ap.fecha_inicio, ap.fecha_fin_programada
+       FROM asignaciones_personal ap
+       JOIN trabajadores t ON t.id = ap.trabajador_id
+       JOIN actividades act ON act.id = ap.actividad_id
+      WHERE ap.actividad_id = ? AND ap.estado = 'ACTIVO'
+        AND (ap.fecha_inicio < ?
+             OR ap.fecha_fin_programada > ?
+             OR ap.fecha_fin_programada < ?)
+      ORDER BY ap.fecha_inicio, ap.id`,
+    [actividadId, inicio, fin, fin],
+  )
+  return rows
+}
