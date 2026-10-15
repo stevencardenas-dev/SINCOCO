@@ -104,12 +104,12 @@ estado, r = http('PATCH', f'/api/actividades/{a["id"]}', {'nombre': 'TEST-Activi
                                                            'descripcion': 'Nueva descripcion'}, token=admin)
 assert estado == 200 and r['actividad']['nombre'] == 'TEST-Actividad editada', f'editar actividad: {estado} {r}'
 estado, r = http('PATCH', f'/api/actividades/{a["id"]}', {'fecha_fin_programada': '2026-12-20'}, token=admin)
-assert estado == 400, f'editar actividad fuera de su etapa debia dar 400: {estado} {r}'
+# HU-34: con las fechas ya definidas, PATCH no las cambia (hay que reprogramar).
+assert estado == 409 and r.get('codigo') == 'USAR_REPROGRAMACION', f'editar fechas debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'fecha_fin_programada': '2026-10-20'}, token=admin)
-assert estado == 400 and 'actividad' in r['error'].lower(), \
-    f'acortar la etapa dejaria la actividad fuera: {estado} {r}'
+assert estado == 409, f'cambiar fechas de la etapa por PATCH debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'fecha_fin_programada': '2026-12-20'}, token=admin)
-assert estado == 400, f'la etapa se solaparia con la intermedia: {estado} {r}'
+assert estado == 409, f'cambiar fechas de la etapa por PATCH debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'nombre': 'TEST-Etapa cimentacion editada'}, token=admin)
 assert estado == 200 and r['etapa']['nombre'] == 'TEST-Etapa cimentacion editada', f'editar etapa: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {}, token=admin)

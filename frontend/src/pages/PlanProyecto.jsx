@@ -218,11 +218,18 @@ export default function PlanProyecto() {
   const actividadEn = nuevaActividad.registro
 
   // Edición en ventana: `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  // HU-34 · criterio 5: las fechas ya definidas no se editan aquí, se reprograman.
+  const fechasFijas = (dato) => Boolean(dato?.fecha_inicio_programada && dato?.fecha_fin_programada)
+  const sinFechas = (f, dato) => {
+    if (!fechasFijas(dato)) return f
+    const { fecha_inicio_programada: _i, fecha_fin_programada: _f, ...resto } = f
+    return resto
+  }
   const edicion = useFormulario(ETAPA_VACIA, {
     enviar: (f, { tipo, dato }) =>
       tipo === 'etapa'
-        ? etapasApi.actualizar(dato.id, f)
-        : actividadesApi.actualizar(dato.id, { ...f, responsable_id: f.responsable_id || null }),
+        ? etapasApi.actualizar(dato.id, sinFechas(f, dato))
+        : actividadesApi.actualizar(dato.id, { ...sinFechas(f, dato), responsable_id: f.responsable_id || null }),
     alGuardar: (_, { registro }) => {
       setAviso(registro.tipo === 'etapa' ? 'Etapa actualizada.' : 'Actividad actualizada.')
       return recargar()
@@ -237,6 +244,7 @@ export default function PlanProyecto() {
   // Criterio 4: si el recálculo excede el fin del proyecto la API advierte (409);
   // el formulario pide entonces la confirmación explícita antes de reenviar.
   const [requiereConfirmacion, setRequiereConfirmacion] = useState(false)
+  const [afectadas, setAfectadas] = useState([])
   const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
     enviar: async (f, { tipo, dato }) => {
       try {
@@ -247,6 +255,8 @@ export default function PlanProyecto() {
       }
     },
     alGuardar: (data, { registro }) => {
+      // Criterio 6: asignaciones que quedan fuera de las nuevas fechas (no se modifican).
+      setAfectadas(data.asignaciones_afectadas ?? [])
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
       // Criterio 6: las asignaciones que ya no encajan solo se informan; no se modifican.
@@ -367,6 +377,7 @@ export default function PlanProyecto() {
 
   const abrirReprogramacion = (tipo, dato) => {
     setRequiereConfirmacion(false)
+    setAfectadas([])
     reprogramacion.abrir(
       {
         motivo: '',
@@ -426,6 +437,26 @@ export default function PlanProyecto() {
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+
+      {/* HU-34 · criterio 6: asignaciones fuera de las nuevas fechas; se listan, no se modifican. */}
+      {afectadas.length > 0 && (
+        <div className="card space-y-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">
+            {afectadas.length} asignación(es) de personal quedan fuera de las nuevas fechas de la actividad.
+            No se modificaron: extiéndalas o ajústelas desde «Gestión de acceso».
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-xs">
+            {afectadas.map((a) => (
+              <li key={a.id}>
+                {a.trabajador_nombre} · {a.actividad_nombre}: asignado {fmtFecha(a.fecha_inicio)}
+                {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ' (sin fin)'}; actividad
+                {' '}{fmtFecha(a.actividad_inicio_nuevo)} — {fmtFecha(a.actividad_fin_nuevo)}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn-ghost text-xs" onClick={() => setAfectadas([])}>Entendido</button>
+        </div>
+      )}
 
       {puedeEtapas && nuevaEtapa.abierto && (
         <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
@@ -994,13 +1025,15 @@ export default function PlanProyecto() {
               )}
               <div>
                 <label htmlFor="ed-inicio" className="label">Inicio programado</label>
-                <input id="ed-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
+                <input id="ed-inicio" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_inicio_programada')}`}
                   value={edicion.valores.fecha_inicio_programada} min={lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_inicio_programada', e.target.value)} />
               </div>
               <div>
                 <label htmlFor="ed-fin" className="label">Fin programado</label>
-                <input id="ed-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
+                <input id="ed-fin" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_fin_programada')}`}
                   value={edicion.valores.fecha_fin_programada}
                   min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
@@ -1017,9 +1050,11 @@ export default function PlanProyecto() {
                 </div>
               )}
               <p className="text-xs text-slate-500 sm:col-span-2">
-                {editandoEtapa
-                  ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
-                  : 'Las fechas deben quedar dentro de las de la etapa.'}
+                {fechasFijas(edicion.registro?.dato)
+                  ? 'Para cambiar las fechas use «Reprogramar»: conserva las originales y registra el motivo.'
+                  : editandoEtapa
+                    ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
+                    : 'Las fechas deben quedar dentro de las de la etapa.'}
               </p>
             </div>
           )
