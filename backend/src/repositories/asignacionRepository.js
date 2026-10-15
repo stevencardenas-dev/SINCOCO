@@ -51,6 +51,23 @@ export async function listar({ proyectoId = null, trabajadorId = null } = {}) {
   return rows
 }
 
+/**
+ * HU-34 · criterio 6: asignaciones ACTIVAS de una actividad que no caben en
+ * [inicio, fin]: empiezan antes del nuevo inicio o terminan después del nuevo
+ * fin. Una asignación sin fin programado (abierta) solo se compara por su inicio.
+ * Solo consulta: la extensión o el ajuste los hace el administrador (HU-31).
+ */
+export async function activasFueraDeRango(actividadId, inicio, fin) {
+  const [rows] = await pool.query(
+    `${SELECT_BASE}
+      WHERE a.actividad_id = ? AND a.estado = 'ACTIVO'
+        AND (a.fecha_inicio < ? OR a.fecha_fin_programada > ?)
+      ORDER BY a.fecha_inicio, a.id`,
+    [actividadId, inicio, fin],
+  )
+  return rows
+}
+
 /** ¿Ya existe una asignación activa para ese trabajador en ese destino? */
 export async function existeActiva(trabajadorId, proyectoId, actividadId) {
   const [rows] = await pool.query(
