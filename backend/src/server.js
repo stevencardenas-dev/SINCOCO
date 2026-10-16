@@ -18,6 +18,7 @@ import etapasRoutes from './routes/etapas.js'
 import actividadesRoutes from './routes/actividades.js'
 import asignacionesRoutes from './routes/asignaciones.js'
 import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
+import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
 
@@ -57,6 +58,7 @@ app.use('/api/etapas', rutasSeguras(etapasRoutes))
 app.use('/api/actividades', rutasSeguras(actividadesRoutes))
 app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
 app.use('/api/solicitudes-herramientas', rutasSeguras(solicitudesHerramientasRoutes))
+app.use('/api/prestamos-herramientas', rutasSeguras(prestamosHerramientasRoutes))
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Recurso no encontrado' })
