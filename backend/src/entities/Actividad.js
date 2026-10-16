@@ -18,6 +18,9 @@ export class Actividad {
     fecha_fin_real,
     porcentaje_avance,
     peso,
+    esfuerzo,
+    total_criterios,
+    criterios_cumplidos,
     estado,
     activo,
     etapa_nombre,
@@ -39,7 +42,12 @@ export class Actividad {
     this.fecha_fin_real = fecha_fin_real ?? null
     this.porcentaje_avance = porcentaje_avance
     // HU-21 · criterio 4: peso de la actividad en el promedio ponderado de etapa y proyecto.
-    this.peso = peso === undefined || peso === null ? 1 : Number(peso)
+    this.peso = peso === undefined || peso === null ? 3 : Number(peso)
+    // Esfuerzo cualitativo que determina el peso (Muy alto 8, Alto 5, Medio 3, Bajo 2, Muy bajo 1).
+    this.esfuerzo = esfuerzo ?? 'MEDIO'
+    // Criterios de aceptación: el avance es cumplidos / total.
+    this.total_criterios = Number(total_criterios ?? 0)
+    this.criterios_cumplidos = Number(criterios_cumplidos ?? 0)
     this.estado = estado
     this.activo = activo
     this.etapa_nombre = etapa_nombre ?? null

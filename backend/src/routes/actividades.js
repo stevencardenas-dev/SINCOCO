@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import { listar, registrar, actualizar, baja, reactivarCtrl, iniciar, finalizar } from '../controllers/actividadController.js'
 import { reprogramarActividadCtrl, historialActividad } from '../controllers/reprogramacionController.js'
-import { registrar as registrarAvance, historial as historialAvance } from '../controllers/avanceController.js'
+import { registrar as registrarAvance, historial as historialAvance, criterios as criteriosActividad } from '../controllers/avanceController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -21,6 +21,7 @@ router.patch('/:id/finalizar', requirePermiso('actividades.editar'), finalizar)
 // HU-21: porcentaje de avance (el servicio limita quién puede avanzar cada actividad).
 router.post('/:id/avance', requirePermiso('avance.registrar'), registrarAvance)
 router.get('/:id/avance', requirePermiso('avance.listar'), historialAvance)
+router.get('/:id/criterios', requirePermiso('avance.listar'), criteriosActividad)
 
 // HU-34: reprogramación de fechas (solo administrador) e historial de cambios.
 router.patch('/:id/reprogramar', requirePermiso('actividades.reprogramar'), reprogramarActividadCtrl)

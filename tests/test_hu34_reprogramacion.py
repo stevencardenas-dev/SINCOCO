@@ -29,7 +29,7 @@ etapa_id = r['etapa']['id']
 assert r['etapa']['fecha_inicio_original'] is None, 'sin reprogramar no hay fecha original'
 
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad reprogramable',
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad reprogramable', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-10-20',
 }, token=admin)
 assert estado == 201, f'actividad: {estado} {r}'
@@ -110,7 +110,7 @@ def crear_etapa(nombre, inicio, fin):
 etapa_b = crear_etapa('TEST-Etapa B', '2027-01-15', '2027-02-15')
 etapa_c = crear_etapa('TEST-Etapa C', '2027-03-01', '2027-03-31')
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_b, 'nombre': 'TEST-Actividad de B',
+    'etapa_id': etapa_b, 'nombre': 'TEST-Actividad de B', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2027-01-20', 'fecha_fin_programada': '2027-02-10',
 }, token=admin)
 assert estado == 201, f'actividad de B: {estado} {r}'
