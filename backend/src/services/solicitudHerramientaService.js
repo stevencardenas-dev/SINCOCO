@@ -54,6 +54,13 @@ export async function crearSolicitud(body = {}, ctx) {
   }
   // Alt 2: una fecha futura es válida (queda pendiente hasta entonces); una pasada no.
   if (fechaRequerida < hoy()) throw new AppError('La fecha requerida no puede ser anterior a hoy', 400, 'fecha_requerida')
+  const fechaDevolucion = aFechaDia(body.fecha_estimada_devolucion)
+  if (!fechaDevolucion || !/^\d{4}-\d{2}-\d{2}$/.test(fechaDevolucion)) {
+    throw new AppError('La fecha de devolución esperada es obligatoria', 400, 'fecha_estimada_devolucion')
+  }
+  if (fechaDevolucion < fechaRequerida) {
+    throw new AppError('La devolución esperada no puede ser anterior a la fecha requerida', 400, 'fecha_estimada_devolucion')
+  }
   const observaciones = textoOpcional(body.observaciones)
   revisarLargo(observaciones, 500, 'observaciones')
 
@@ -65,7 +72,7 @@ export async function crearSolicitud(body = {}, ctx) {
   if (!(await proyectoRepository.findById(proyectoId))) throw new AppError('Proyecto no encontrado', 404, 'proyecto_id')
   await verificarAccesoProyecto(ctx.usuario, proyectoId)
 
-  const id = await repo.crear({ herramientaId, proyectoId, usuarioId: ctx.usuarioId, trabajadorId, fechaRequerida, observaciones })
+  const id = await repo.crear({ herramientaId, proyectoId, usuarioId: ctx.usuarioId, trabajadorId, fechaRequerida, fechaDevolucion, observaciones })
   const solicitud = await repo.findById(id)
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'SOLICITAR_HERRAMIENTA', tabla: 'solicitudes_herramientas', registroId: id,

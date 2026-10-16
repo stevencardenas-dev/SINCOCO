@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { ArrowPathIcon, ClipboardDocumentListIcon, PlusIcon } from '@heroicons/react/24/outline'
+import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
@@ -30,10 +31,10 @@ const ESTADOS = {
   CANCELADA: { texto: 'Cancelada', clase: 'bg-slate-100 text-slate-500 ring-slate-200' },
 }
 
-const VACIO = { herramienta_id: '', para_trabajador_id: '', proyecto_id: '', fecha_requerida: '', observaciones: '' }
+const VACIO = { herramienta_id: '', para_trabajador_id: '', proyecto_id: '', fecha_requerida: '', fecha_estimada_devolucion: '', observaciones: '' }
 const hoy = () => new Date().toLocaleDateString('en-CA')
 
-export default function SolicitudesHerramientas() {
+export default function SolicitudesHerramientas({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('solicitudes_herramientas.crear')
   const puedeResolver = puede('solicitudes_herramientas.resolver')
@@ -100,6 +101,8 @@ export default function SolicitudesHerramientas() {
         </select>
       </PageHeader>
 
+      {pestanas}
+
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
@@ -130,6 +133,7 @@ export default function SolicitudesHerramientas() {
               { titulo: 'Solicitante', tdClase: 'text-slate-600', celda: (s) => s.solicitante },
               { titulo: 'Solicitada', tdClase: 'text-slate-600', celda: (s) => fmtFecha(s.fecha_solicitud), orden: (s) => s.fecha_solicitud },
               { titulo: 'Requerida', tdClase: 'text-slate-600', celda: (s) => fmtFecha(s.fecha_requerida), orden: (s) => s.fecha_requerida },
+              { titulo: 'Devolución esperada', tdClase: 'text-slate-600', celda: (s) => (s.fecha_estimada_devolucion ? fmtFecha(s.fecha_estimada_devolucion) : '—'), orden: (s) => s.fecha_estimada_devolucion ?? '' },
               {
                 titulo: 'Estado',
                 movil: true,
@@ -179,34 +183,39 @@ export default function SolicitudesHerramientas() {
       >
         <div>
           <label htmlFor="sh-herramienta" className="label">Herramienta (solo disponibles)</label>
-          <select id="sh-herramienta" className={campo('herramienta_id')} required value={form.herramienta_id}
-            onChange={(e) => formulario.cambiar('herramienta_id', e.target.value)}>
-            <option value="">Seleccione…</option>
-            {opciones.herramientas.map((h) => <option key={h.id} value={h.id}>{h.nombre} · {h.codigo_serial}</option>)}
-          </select>
+          <BuscadorSelect id="sh-herramienta" requerido error={Boolean(formulario.campo === 'herramienta_id')}
+            value={form.herramienta_id} onChange={(v) => formulario.cambiar('herramienta_id', v)}
+            opciones={opciones.herramientas.map((h) => ({ value: h.id, label: h.nombre, sublabel: `${h.codigo_serial}${h.marca ? ` · ${h.marca}` : ''}` }))}
+            placeholder="Escriba el nombre o el serial…" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="sh-trabajador" className="label">Trabajador destinatario</label>
-            <select id="sh-trabajador" className={campo('para_trabajador_id')} required value={form.para_trabajador_id}
-              onChange={(e) => formulario.cambiar('para_trabajador_id', e.target.value)}>
-              <option value="">Seleccione…</option>
-              {opciones.trabajadores.filter((t) => t.activo).map((t) => <option key={t.id} value={t.id}>{t.nombres} {t.apellidos}</option>)}
-            </select>
+            <BuscadorSelect id="sh-trabajador" requerido error={formulario.campo === 'para_trabajador_id'}
+              value={form.para_trabajador_id} onChange={(v) => formulario.cambiar('para_trabajador_id', v)}
+              opciones={opciones.trabajadores.filter((t) => t.activo).map((t) => ({ value: t.id, label: `${t.nombres} ${t.apellidos}`, sublabel: t.numero_documento }))}
+              placeholder="Escriba el nombre o el documento…" />
           </div>
           <div>
             <label htmlFor="sh-proyecto" className="label">Proyecto</label>
-            <select id="sh-proyecto" className={campo('proyecto_id')} required value={form.proyecto_id}
-              onChange={(e) => formulario.cambiar('proyecto_id', e.target.value)}>
-              <option value="">Seleccione…</option>
-              {opciones.proyectos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+            <BuscadorSelect id="sh-proyecto" requerido error={formulario.campo === 'proyecto_id'}
+              value={form.proyecto_id} onChange={(v) => formulario.cambiar('proyecto_id', v)}
+              opciones={opciones.proyectos.map((p) => ({ value: p.id, label: p.nombre, sublabel: p.codigo }))}
+              placeholder="Escriba el nombre o el código…" />
           </div>
         </div>
-        <div>
-          <label htmlFor="sh-fecha" className="label">Fecha requerida</label>
-          <input id="sh-fecha" type="date" className={campo('fecha_requerida')} required min={hoy()} value={form.fecha_requerida}
-            onChange={(e) => formulario.cambiar('fecha_requerida', e.target.value)} />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <label htmlFor="sh-fecha" className="label">Fecha requerida</label>
+            <input id="sh-fecha" type="date" className={campo('fecha_requerida')} required min={hoy()} value={form.fecha_requerida}
+              onChange={(e) => formulario.cambiar('fecha_requerida', e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="sh-devolucion" className="label">Devolución esperada</label>
+            <input id="sh-devolucion" type="date" className={campo('fecha_estimada_devolucion')} required
+              min={form.fecha_requerida || hoy()} value={form.fecha_estimada_devolucion}
+              onChange={(e) => formulario.cambiar('fecha_estimada_devolucion', e.target.value)} />
+          </div>
         </div>
         <div>
           <label htmlFor="sh-obs" className="label">Observaciones (opcional)</label>
