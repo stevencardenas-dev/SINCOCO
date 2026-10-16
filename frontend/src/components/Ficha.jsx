@@ -1,6 +1,7 @@
-import { Fragment, useState } from 'react'
-import { EyeIcon } from '@heroicons/react/24/outline'
+import { Fragment, useMemo, useState } from 'react'
+import { ChevronDownIcon, ChevronUpIcon, ChevronUpDownIcon, EyeIcon } from '@heroicons/react/24/outline'
 import Modal from './Modal.jsx'
+import { alternarOrden, comparar } from '../lib/ordenarTabla.js'
 
 /**
  * Ficha de un registro (ventana): los datos de las columnas que el celular
@@ -40,6 +41,25 @@ export default function Ficha({ titulo, subtitulo, onCerrar, campos = [], accion
 
 const vacio = (v) => v === null || v === undefined || v === false || v === ''
 
+/** Texto visible de lo que devuelve `celda` (cadenas, números y elementos con hijos). */
+function textoDe(nodo) {
+  if (vacio(nodo) || nodo === true) return ''
+  if (typeof nodo === 'string' || typeof nodo === 'number') return String(nodo)
+  if (Array.isArray(nodo)) return nodo.map(textoDe).join(' ')
+  return textoDe(nodo.props?.children)
+}
+
+const MONTO = /^\$?\s?-?\d{1,3}(\.\d{3})*(,\d+)?$/
+
+/** Valor por el que se ordena una columna: número si parece un monto/cantidad, si no texto. */
+function claveOrden(columna, fila) {
+  if (columna.orden) return columna.orden(fila)
+  let texto = textoDe(columna.celda(fila, false)).replace(/\s+/g, ' ').trim()
+  if (!texto && columna.valor) texto = textoDe(columna.valor(fila)).trim()
+  if (MONTO.test(texto)) return Number(texto.replace(/[$\s.]/g, '').replace(',', '.'))
+  return texto === '—' ? '' : texto
+}
+
 /**
  * Tabla responsive dirigida por columnas.
  *
@@ -54,6 +74,10 @@ const vacio = (v) => v === null || v === undefined || v === false || v === ''
  * `ficha`: { titulo(fila), subtitulo?(fila), etiqueta?(fila), extras?(fila) }
  * donde `extras` añade campos que no tienen columna propia.
  * El botón «Ver ficha» solo aparece en el celular.
+ *
+ * Todas las columnas (menos las de `acciones`) se ordenan de menor a mayor y
+ * viceversa al pulsar su encabezado. La clave se toma del texto de la celda;
+ * `orden(fila)` la reemplaza cuando ese texto no ordena bien (fechas, estados).
  *
  * `alinearArriba`: las celdas se alinean al primer renglón (align-top) en vez
  * de al centro. Sirve cuando hay celdas de varias líneas: así el texto, los
@@ -73,7 +97,20 @@ export function TablaFicha({
   alinearArriba = false,
 }) {
   const [fichaId, setFichaId] = useState(null)
+  const [orden, setOrden] = useState(null) // { titulo, desc }
   const actual = fichaId === null ? null : (filas.find((f) => getId(f) === fichaId) ?? null)
+
+  const filasOrdenadas = useMemo(() => {
+    const col = orden && columnas.find((c) => c.titulo === orden.titulo && !c.acciones)
+    if (!col) return filas
+    const claves = new Map(filas.map((f) => [f, claveOrden(col, f)]))
+    const signo = orden.desc ? -1 : 1
+    return [...filas].sort((x, y) => signo * comparar(claves.get(x), claves.get(y)))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filas, orden])
+
+  // Ciclo: ascendente → descendente → sin orden.
+  const alternar = (titulo) => setOrden((o) => alternarOrden(o, titulo))
 
   const ocultas = columnas.filter((c) => !c.movil && !c.acciones)
   const accionesCols = columnas.filter((c) => c.acciones)
@@ -97,11 +134,32 @@ export function TablaFicha({
               {columnas.map((c) => (
                 <th
                   key={c.titulo}
+                  aria-sort={orden?.titulo === c.titulo ? (orden.desc ? 'descending' : 'ascending') : undefined}
                   className={`font-semibold ${c.derecha ? 'text-right' : ''} ${
                     c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : 'hidden px-5 py-3.5 md:table-cell'
                   } ${c.thClase ?? ''}`}
                 >
-                  {c.titulo}
+                  {c.acciones ? (
+                    c.titulo
+                  ) : (
+                    <button
+                      type="button"
+                      className={`inline-flex items-center gap-1 font-semibold uppercase tracking-wide hover:text-brand-800 ${
+                        c.derecha ? 'flex-row-reverse' : ''
+                      }`}
+                      onClick={() => alternar(c.titulo)}
+                      aria-label={`Ordenar por ${c.titulo}`}
+                    >
+                      {c.titulo}
+                      {orden?.titulo !== c.titulo ? (
+                        <ChevronUpDownIcon className="h-3.5 w-3.5 opacity-40" />
+                      ) : orden.desc ? (
+                        <ChevronDownIcon className="h-3.5 w-3.5 text-brand-700" />
+                      ) : (
+                        <ChevronUpIcon className="h-3.5 w-3.5 text-brand-700" />
+                      )}
+                    </button>
+                  )}
                 </th>
               ))}
               <th className="px-3 py-3 text-right font-semibold md:hidden">Ver ficha</th>
@@ -109,7 +167,7 @@ export function TablaFicha({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filas.length === 0 && vacia}
-            {filas.map((f) => (
+            {filasOrdenadas.map((f) => (
               <tr
                 key={getId(f)}
                 className={`${alinearArriba ? 'align-top' : ''} ${filaClase?.(f) ?? ''}`}

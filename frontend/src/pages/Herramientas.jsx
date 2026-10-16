@@ -19,6 +19,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha } from '../lib/format.js'
+import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
 
 /**
  * HU-10 (CU-10): catálogo de herramientas con su estado operativo y su
@@ -73,7 +74,7 @@ function Badge({ opcion, texto }) {
   )
 }
 
-export default function Herramientas() {
+function CatalogoHerramientas({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('herramientas.crear')
   const puedeEditar = puede('herramientas.editar')
@@ -189,6 +190,8 @@ export default function Herramientas() {
           {incluirInactivos ? 'Ocultar dadas de baja' : 'Incluir dadas de baja'}
         </button>
       </PageHeader>
+
+      {pestanas}
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
@@ -513,9 +516,11 @@ export default function Herramientas() {
                 titulo: 'Estado',
                 movil: true,
                 celda: (h) => <Badge opcion={buscarEn(ESTADOS, h.estado_operativo)} />,
+                orden: (h) => buscarEn(ESTADOS, h.estado_operativo)?.label,
               },
               {
                 titulo: 'Disponibilidad',
+                orden: (h) => buscarEn(DISPONIBILIDADES, h.disponibilidad)?.label,
                 celda: (h) => (
                   <>
                     <Badge opcion={buscarEn(DISPONIBILIDADES, h.disponibilidad)} />
@@ -527,6 +532,7 @@ export default function Herramientas() {
               },
               {
                 titulo: 'Préstamo',
+                orden: (h) => (h.prestable ? 0 : 1),
                 celda: (h) =>
                   h.prestable ? (
                     <Badge opcion={{ badge: 'bg-emerald-50 text-emerald-700' }} texto="Prestable" />
@@ -565,5 +571,37 @@ export default function Herramientas() {
         </div>
       )}
     </div>
+  )
+}
+
+const TABS = [
+  { id: 'herramientas', label: 'Herramientas' },
+  { id: 'almacenes', label: 'Almacenes' },
+]
+
+export default function Herramientas() {
+  const [tab, setTab] = useState('herramientas')
+
+  const pestanas = (
+    <div className="flex flex-wrap gap-2 border-b border-slate-200">
+      {TABS.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => setTab(t.id)}
+          className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
+            t.id === tab ? 'border-b-2 border-accent-400 text-brand-900' : 'text-slate-500 hover:text-brand-800'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  return tab === 'almacenes' ? (
+    <AlmacenesGestion pestanas={pestanas} />
+  ) : (
+    <CatalogoHerramientas pestanas={pestanas} />
   )
 }
