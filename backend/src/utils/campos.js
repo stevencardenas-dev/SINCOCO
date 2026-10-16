@@ -117,17 +117,33 @@ export function numeroOpcional(v, campo) {
 }
 
 /**
- * HU-21 · criterio 4: peso de una actividad en el promedio ponderado del
- * avance. Número mayor que cero (hasta 2 decimales); sin valor vale 1.
+ * HU-21 · criterio 4: el peso de una actividad en su etapa es cualitativo,
+ * según el esfuerzo que exige. Cada nivel tiene un peso interno.
  */
-export function revisarPeso(v) {
-  if (estaVacio(v)) return 1
-  const n = Number(v)
-  if (!Number.isFinite(n) || n <= 0 || n >= 10000) {
-    throw new AppError('El peso debe ser un número mayor que cero y menor que 10000', 400, 'peso')
+export const PESO_ESFUERZO = { MUY_ALTO: 8, ALTO: 5, MEDIO: 3, BAJO: 2, MUY_BAJO: 1 }
+
+/** Esfuerzo válido (sin valor vale MEDIO). */
+export function revisarEsfuerzo(v) {
+  if (estaVacio(v)) return 'MEDIO'
+  const esfuerzo = String(v).trim().toUpperCase()
+  if (!(esfuerzo in PESO_ESFUERZO)) {
+    throw new AppError('El esfuerzo debe ser Muy alto, Alto, Medio, Bajo o Muy bajo', 400, 'esfuerzo')
   }
-  if (Math.round(n * 100) / 100 !== n) {
-    throw new AppError('El peso admite como máximo 2 decimales', 400, 'peso')
+  return esfuerzo
+}
+
+/**
+ * HU-21: criterios de aceptación de una actividad. Lista de textos no vacíos
+ * (1 a 20, hasta 200 caracteres cada uno).
+ */
+export function revisarCriterios(v) {
+  const lista = Array.isArray(v) ? v.map((c) => String(c ?? '').trim()).filter(Boolean) : []
+  if (lista.length === 0) {
+    throw new AppError('Defina al menos un criterio de aceptación', 400, 'criterios')
   }
-  return n
+  if (lista.length > 20) {
+    throw new AppError('Una actividad admite como máximo 20 criterios de aceptación', 400, 'criterios')
+  }
+  for (const c of lista) revisarLargo(c, 200, 'criterios')
+  return lista
 }
