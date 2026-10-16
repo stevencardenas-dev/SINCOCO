@@ -33,7 +33,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { mensajeError } from '../lib/errores.js'
-import { fmtFecha } from '../lib/format.js'
+import { fmtFecha, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 /**
  * HU-03 (RF03 · RF04): plan de trabajo de un proyecto. Define etapas y, dentro
@@ -44,7 +44,7 @@ import { fmtFecha } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', peso: '1' }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', criterios: [''] }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -386,7 +386,7 @@ export default function PlanProyecto() {
         responsable_id: a.responsable_id ?? '',
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
-        peso: String(a.peso ?? 1),
+        esfuerzo: a.esfuerzo ?? 'MEDIO',
       },
       { tipo: 'actividad', dato: a },
     )
@@ -487,7 +487,7 @@ export default function PlanProyecto() {
               <div className="flex items-center gap-3">
                 <span
                   className="text-xs font-semibold tabular-nums text-slate-600"
-                  title="Promedio ponderado por el peso de cada actividad"
+                  title="Promedio ponderado por el esfuerzo de cada actividad"
                 >
                   Avance {Number(et.porcentaje_avance ?? 0)}%
                 </span>
@@ -556,12 +556,41 @@ export default function PlanProyecto() {
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
                 </div>
                 <div>
-                  <label htmlFor={`a-peso-${et.id}`} className="label">Peso en el avance</label>
-                  <input id={`a-peso-${et.id}`} type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
-                    className="input" value={nuevaActividad.valores.peso}
-                    onChange={(e) => nuevaActividad.cambiar('peso', e.target.value)} />
+                  <label htmlFor={`a-esfuerzo-${et.id}`} className="label">Esfuerzo</label>
+                  <select id={`a-esfuerzo-${et.id}`} className="input" value={nuevaActividad.valores.esfuerzo}
+                    onChange={(e) => nuevaActividad.cambiar('esfuerzo', e.target.value)}>
+                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                   <p className="mt-1 text-xs text-slate-500">
-                    Pondera la actividad en el avance de la etapa y del proyecto (1 = peso normal).
+                    Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="label">Criterios de aceptación</span>
+                  <div className="space-y-2">
+                    {nuevaActividad.valores.criterios.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input type="checkbox" disabled aria-hidden="true" className="h-4 w-4" />
+                        <input className="input" maxLength={200} placeholder={`Criterio ${i + 1}`} aria-label={`Criterio de aceptación ${i + 1}`}
+                          value={c}
+                          onChange={(e) => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.map((x, k) => (k === i ? e.target.value : x)))} />
+                        {nuevaActividad.valores.criterios.length > 1 && (
+                          <button type="button" className="btn-ghost" aria-label={`Quitar criterio ${i + 1}`}
+                            onClick={() => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.filter((_, k) => k !== i))}>
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {nuevaActividad.valores.criterios.length < 20 && (
+                    <button type="button" className="btn-ghost mt-2"
+                      onClick={() => nuevaActividad.cambiar('criterios', [...nuevaActividad.valores.criterios, ''])}>
+                      + Agregar criterio
+                    </button>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">
+                    El avance se calcula de forma equitativa según los criterios cumplidos.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -942,7 +971,8 @@ export default function PlanProyecto() {
             ['Fin real', fichaVer.dato.fecha_fin_real ? fmtFecha(fichaVer.dato.fecha_fin_real) : null],
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
-            ['Peso en el avance', fichaVer.tipo === 'actividad' && fichaVer.dato.peso != null ? Number(fichaVer.dato.peso) : null],
+            ['Esfuerzo', fichaVer.tipo === 'actividad' ? `${etiquetaEsfuerzo(fichaVer.dato.esfuerzo)} (peso ${Number(fichaVer.dato.peso)})` : null],
+            ['Criterios cumplidos', fichaVer.tipo === 'actividad' && fichaVer.dato.total_criterios ? `${fichaVer.dato.criterios_cumplidos} de ${fichaVer.dato.total_criterios}` : null],
           ]}
         />
       )}
@@ -1007,10 +1037,11 @@ export default function PlanProyecto() {
               </div>
               {editandoActividad && (
                 <div>
-                  <label htmlFor="ed-peso" className="label">Peso en el avance</label>
-                  <input id="ed-peso" type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
-                    className={`input${marca('peso')}`} value={edicion.valores.peso ?? '1'}
-                    onChange={(e) => edicion.cambiar('peso', e.target.value)} />
+                  <label htmlFor="ed-esfuerzo" className="label">Esfuerzo</label>
+                  <select id="ed-esfuerzo" className={`input${marca('esfuerzo')}`} value={edicion.valores.esfuerzo ?? 'MEDIO'}
+                    onChange={(e) => edicion.cambiar('esfuerzo', e.target.value)}>
+                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
                   </p>

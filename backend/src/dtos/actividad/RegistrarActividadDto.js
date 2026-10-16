@@ -1,5 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
-import { LARGO, revisarLargo, textoOpcional, revisarPeso } from '../../utils/campos.js'
+import { LARGO, revisarLargo, textoOpcional, revisarEsfuerzo, revisarCriterios } from '../../utils/campos.js'
 
 /** DTO para definir una actividad del plan de trabajo (HU-03). */
 export class RegistrarActividadDto {
@@ -10,7 +10,8 @@ export class RegistrarActividadDto {
     descripcion,
     fecha_inicio_programada,
     fecha_fin_programada,
-    peso,
+    esfuerzo,
+    criterios,
   }) {
     this.etapa_id = etapa_id
     this.responsable_id = responsable_id
@@ -18,7 +19,8 @@ export class RegistrarActividadDto {
     this.descripcion = descripcion
     this.fecha_inicio_programada = fecha_inicio_programada
     this.fecha_fin_programada = fecha_fin_programada
-    this.peso = peso
+    this.esfuerzo = esfuerzo
+    this.criterios = criterios
   }
 
   static fromRequestBody(body = {}) {
@@ -53,7 +55,8 @@ export class RegistrarActividadDto {
       descripcion: textoOpcional(body.descripcion),
       fecha_inicio_programada: body.fecha_inicio_programada,
       fecha_fin_programada: body.fecha_fin_programada,
-      peso: revisarPeso(body.peso),
+      esfuerzo: revisarEsfuerzo(body.esfuerzo),
+      criterios: revisarCriterios(body.criterios),
     })
   }
 }

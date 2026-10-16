@@ -9,6 +9,7 @@ import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
 import { aplicarAvance, recalcularAvanceProyecto } from './avanceService.js'
 import { AppError } from '../utils/AppError.js'
+import { PESO_ESFUERZO } from '../utils/campos.js'
 
 // RBAC: las actividades de un proyecto solo se listan si el usuario tiene
 // acceso al proyecto (asignación vigente o alcance total de su rol).
@@ -63,7 +64,9 @@ export async function registrarActividad(dto, ctx = {}) {
     fecha_inicio_programada: dto.fecha_inicio_programada,
     fecha_fin_programada: dto.fecha_fin_programada,
     porcentaje_avance: 0,
-    peso: dto.peso,
+    esfuerzo: dto.esfuerzo,
+    peso: PESO_ESFUERZO[dto.esfuerzo],
+    criterios: dto.criterios,
     estado: 'PENDIENTE',
   })
 
@@ -107,8 +110,8 @@ export async function actualizarActividad(id, dto, ctx = {}) {
   }
 
   await actividadRepository.update(id, campos)
-  // HU-21 · criterio 4: cambiar el peso cambia el promedio ponderado del proyecto.
-  if (campos.peso !== undefined) await recalcularAvanceProyecto(actividad.proyecto_id)
+  // HU-21 · criterio 4: cambiar el esfuerzo (peso) cambia el promedio ponderado del proyecto.
+  if (campos.esfuerzo !== undefined) await recalcularAvanceProyecto(actividad.proyecto_id)
 
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',
@@ -154,7 +157,7 @@ export async function finalizarActividad(id, ctx = {}) {
   }
 
   // Finalizar equivale a registrar el 100 %: deja seguimiento y recalcula la etapa y el proyecto.
-  await aplicarAvance(id, { porcentaje: 100, observaciones: 'Actividad finalizada' }, ctx, { permitirIgual: true })
+  await aplicarAvance(id, { porcentaje: 100, observaciones: 'Actividad finalizada' }, ctx)
 
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'actividades',

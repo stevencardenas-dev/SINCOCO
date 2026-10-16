@@ -80,7 +80,7 @@ print('etapa sin proyecto ->', estado, r['error'])
 # Criterio 4 + 5: actividad con responsable y estado PENDIENTE.
 responsable_id = crear_trabajador(admin, f'{PREFIJO}-CC-PLAN')
 actividad = {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vaciado',
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vaciado', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
     'responsable_id': responsable_id, 'descripcion': 'Vaciado y nivelacion',
 }
