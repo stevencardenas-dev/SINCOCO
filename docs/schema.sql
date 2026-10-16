@@ -564,7 +564,6 @@ CREATE TABLE `etapas_proyecto` (
   `fecha_fin_programada` date DEFAULT NULL,
   `fecha_inicio_original` date DEFAULT NULL,
   `fecha_fin_original` date DEFAULT NULL,
-  `fecha_inicio_real` date DEFAULT NULL,
   `estado` enum('PENDIENTE','EN_PROCESO','COMPLETADA') COLLATE utf8mb4_unicode_ci DEFAULT 'PENDIENTE',
   `activo` tinyint(1) NOT NULL DEFAULT '1',
   `fecha_baja` datetime DEFAULT NULL,
