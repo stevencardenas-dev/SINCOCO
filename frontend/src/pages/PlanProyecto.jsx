@@ -21,6 +21,8 @@ import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
+import EncabezadoOrdenable from '../components/EncabezadoOrdenable.jsx'
+import { alternarOrden, ordenarFilas } from '../lib/ordenarTabla.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { proyectosApi } from '../services/proyectos'
 import { etapasApi } from '../services/etapas'
@@ -144,6 +146,22 @@ function DescripcionCopiable({ texto }) {
       </button>
     </span>
   )
+}
+
+// Claves de orden de las tablas del plan (las fechas ISO ordenan como texto).
+const CLAVES_ACTIVIDAD = {
+  Actividad: (a) => a.nombre,
+  Responsable: (a) => a.responsable_nombre,
+  Fechas: (a) => a.fecha_inicio_programada,
+  Estado: (a) => ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado,
+  Avance: (a) => Number(a.porcentaje_avance),
+}
+const CLAVES_ACCESO = {
+  Trabajador: (a) => a.trabajador_nombre,
+  'Descripción de la asignación': (a) => a.observaciones,
+  Actividad: (a) => a.actividad_nombre ?? 'Todo el proyecto',
+  Vigencia: (a) => a.fecha_inicio,
+  Estado: (a) => a.estado,
 }
 
 export default function PlanProyecto() {
@@ -308,6 +326,8 @@ export default function PlanProyecto() {
 
   // Listado de acceso filtrado: texto libre y filtros combinados con "y".
   const filtrosActivos = filtrosAcceso.activos
+  const [ordenActs, setOrdenActs] = useState(null)
+  const [ordenAcceso, setOrdenAcceso] = useState(null)
   const asignacionesFiltradas = asignaciones.filter((a) => {
     const f = filtroAcceso
     const texto = [a.trabajador_nombre, a.observaciones, a.actividad_nombre, a.cargo]
@@ -581,16 +601,15 @@ export default function PlanProyecto() {
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2.5 font-semibold">Actividad</th>
-                    <th className="px-3 py-2.5 font-semibold">Responsable</th>
-                    <th className="px-3 py-2.5 font-semibold">Fechas</th>
-                    <th className="px-3 py-2.5 font-semibold">Estado</th>
-                    <th className="px-3 py-2.5 font-semibold">Avance</th>
+                    {['Actividad', 'Responsable', 'Fechas', 'Estado', 'Avance'].map((t) => (
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenActs} className="px-3 py-2.5"
+                        onOrden={(x) => setOrdenActs((o) => alternarOrden(o, x))} />
+                    ))}
                     <th className="px-3 py-2.5 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {acts.map((a) => (
+                  {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
                     <tr key={a.id}>
                       <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">{a.nombre}</td>
                       <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
@@ -842,16 +861,15 @@ export default function PlanProyecto() {
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-5 py-3 font-semibold">Trabajador</th>
-                    <th className="px-5 py-3 font-semibold">Descripción de la asignación</th>
-                    <th className="px-5 py-3 font-semibold">Actividad</th>
-                    <th className="px-5 py-3 font-semibold">Vigencia</th>
-                    <th className="px-5 py-3 font-semibold">Estado</th>
+                    {['Trabajador', 'Descripción de la asignación', 'Actividad', 'Vigencia', 'Estado'].map((t) => (
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenAcceso} className="px-5 py-3"
+                        onOrden={(x) => setOrdenAcceso((o) => alternarOrden(o, x))} />
+                    ))}
                     <th className="px-5 py-3 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {asignacionesFiltradas.map((a) => (
+                  {ordenarFilas(asignacionesFiltradas, ordenAcceso, CLAVES_ACCESO).map((a) => (
                     <tr key={a.id}>
                       <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
                       <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">

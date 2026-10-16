@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
   listar, obtener, almacenes, registrar, actualizar, baja, reactivarCtrl,
+  registrarAlm, actualizarAlm, bajaAlm, reactivarAlm,
 } from '../controllers/herramientaController.js'
 
 const router = Router()
@@ -12,6 +13,11 @@ router.use(requireAuth)
 router.get('/', requirePermiso('herramientas.listar'), listar)
 // Antes de '/:id' para que «almacenes» no se lea como un id.
 router.get('/almacenes', requirePermiso('herramientas.listar'), almacenes)
+// Gestión de almacenes: reutiliza los permisos de herramientas.
+router.post('/almacenes', requirePermiso('herramientas.crear'), registrarAlm)
+router.patch('/almacenes/:id', requirePermiso('herramientas.editar'), actualizarAlm)
+router.patch('/almacenes/:id/baja', requirePermiso('herramientas.dar_baja'), bajaAlm)
+router.patch('/almacenes/:id/reactivar', requirePermiso('herramientas.dar_baja'), reactivarAlm)
 router.get('/:id', requirePermiso('herramientas.listar'), obtener)
 router.post('/', requirePermiso('herramientas.crear'), registrar)
 router.patch('/:id', requirePermiso('herramientas.editar'), actualizar)

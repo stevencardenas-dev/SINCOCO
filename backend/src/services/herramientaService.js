@@ -22,8 +22,95 @@ export async function listarHerramientas(filtros = {}) {
   return herramientaRepository.listar({ ...filtros, estadoOperativo, disponibilidad })
 }
 
-export async function listarAlmacenes() {
-  return herramientaRepository.listarAlmacenes()
+export async function listarAlmacenes(filtros = {}) {
+  return herramientaRepository.listarAlmacenes(filtros)
+}
+
+async function almacenExistente(id) {
+  const almacen = await herramientaRepository.findAlmacenCompleto(id)
+  if (!almacen) throw new AppError('Almacén no encontrado', 404)
+  return almacen
+}
+
+/** Valida y normaliza el cuerpo de un almacén; con `parcial` solo lo que llegó. */
+function datosAlmacen(body = {}, parcial = false) {
+  const datos = {}
+  const tiene = (k) => body[k] !== undefined
+  if (!parcial || tiene('codigo')) {
+    const codigo = String(body.codigo ?? '').trim().toUpperCase()
+    if (!codigo) throw new AppError('El código es obligatorio', 400, 'codigo')
+    revisarLargo(codigo, LARGO.codigo, 'codigo')
+    datos.codigo = codigo
+  }
+  if (!parcial || tiene('nombre')) {
+    const nombre = String(body.nombre ?? '').trim()
+    if (!nombre) throw new AppError('El nombre es obligatorio', 400, 'nombre')
+    revisarLargo(nombre, 100, 'nombre')
+    datos.nombre = nombre
+  }
+  if (!parcial || tiene('ubicacion')) {
+    const ubicacion = textoOpcional(body.ubicacion)
+    revisarLargo(ubicacion, LARGO.ubicacion, 'ubicacion')
+    datos.ubicacion = ubicacion
+  }
+  if (!parcial || tiene('es_central')) datos.es_central = body.es_central ? 1 : 0
+  return datos
+}
+
+const codigoDuplicado = () => new AppError('Ya existe un almacén con ese código', 409, 'codigo')
+
+export async function registrarAlmacen(body, ctx = {}) {
+  const datos = datosAlmacen(body)
+  if (await herramientaRepository.findAlmacenByCodigo(datos.codigo)) throw codigoDuplicado()
+  const id = await herramientaRepository.insertAlmacen(datos)
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'CREAR', tabla: 'almacenes', registroId: id,
+    detalles: { codigo: datos.codigo }, ip: ctx.ip,
+  })
+  return herramientaRepository.findAlmacenCompleto(id)
+}
+
+export async function actualizarAlmacen(id, body, ctx = {}) {
+  const actual = await almacenExistente(id)
+  if (!actual.activo) throw new AppError('El almacén está dado de baja; reactívelo antes de editarlo', 409)
+  const datos = datosAlmacen(body, true)
+  if (Object.keys(datos).length === 0) throw new AppError('No hay campos que actualizar', 400)
+  if (datos.codigo && datos.codigo !== actual.codigo && (await herramientaRepository.findAlmacenByCodigo(datos.codigo))) {
+    throw codigoDuplicado()
+  }
+  await herramientaRepository.updateAlmacen(id, datos)
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'almacenes', registroId: Number(id),
+    detalles: { campos: Object.keys(datos) }, ip: ctx.ip,
+  })
+  return herramientaRepository.findAlmacenCompleto(id)
+}
+
+export async function darDeBajaAlmacen(id, ctx = {}) {
+  const almacen = await almacenExistente(id)
+  if (!almacen.activo) throw new AppError('El almacén ya estaba dado de baja', 409)
+  if (!(await herramientaRepository.bajaAlmacen(id, ctx.usuarioId))) {
+    throw new AppError(
+      'No se puede dar de baja: el almacén tiene herramientas activas. Cámbielas de almacén o désela de baja primero.',
+      409,
+    )
+  }
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'DAR_DE_BAJA', tabla: 'almacenes', registroId: Number(id),
+    detalles: { codigo: almacen.codigo }, ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 0 }
+}
+
+export async function reactivarAlmacen(id, ctx = {}) {
+  await almacenExistente(id)
+  if (!(await herramientaRepository.reactivarAlmacen(id))) {
+    throw new AppError('El almacén no está dado de baja', 409)
+  }
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'REACTIVAR', tabla: 'almacenes', registroId: Number(id), ip: ctx.ip,
+  })
+  return { id: Number(id), activo: 1 }
 }
 
 export async function obtenerHerramienta(id) {
