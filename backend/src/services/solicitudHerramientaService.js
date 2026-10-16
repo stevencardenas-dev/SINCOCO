@@ -2,6 +2,7 @@ import * as repo from '../repositories/solicitudHerramientaRepository.js'
 import * as herramientaRepository from '../repositories/herramientaRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
+import * as asignacionRepository from '../repositories/asignacionRepository.js'
 import { verificarAccesoProyecto } from './accesoService.js'
 import { rolTienePermiso } from '../middleware/permisos.js'
 import { registrar as bitacora } from '../db/bitacora.js'
@@ -71,6 +72,9 @@ export async function crearSolicitud(body = {}, ctx) {
   }
   if (!(await proyectoRepository.findById(proyectoId))) throw new AppError('Proyecto no encontrado', 404, 'proyecto_id')
   await verificarAccesoProyecto(ctx.usuario, proyectoId)
+  if (!(await asignacionRepository.tieneAcceso(proyectoId, trabajadorId))) {
+    throw new AppError('El trabajador no está asignado a este proyecto', 400, 'para_trabajador_id')
+  }
 
   const id = await repo.crear({ herramientaId, proyectoId, usuarioId: ctx.usuarioId, trabajadorId, fechaRequerida, fechaDevolucion, observaciones })
   const solicitud = await repo.findById(id)
