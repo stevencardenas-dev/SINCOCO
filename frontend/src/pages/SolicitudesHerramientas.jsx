@@ -12,6 +12,7 @@ import { solicitudesHerramientasApi as api } from '../services/solicitudesHerram
 import { herramientasApi } from '../services/herramientas'
 import { trabajadoresApi } from '../services/trabajadores'
 import { proyectosApi } from '../services/proyectos'
+import { asignacionesApi } from '../services/asignaciones'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha } from '../lib/format.js'
@@ -72,6 +73,16 @@ export default function SolicitudesHerramientas({ pestanas }) {
   })
   const form = formulario.valores
   const campo = formulario.claseCampo
+
+  // Solo pueden recibir herramientas los trabajadores con asignación vigente en el proyecto elegido.
+  const [idsDelProyecto, setIdsDelProyecto] = useState(null)
+  useEffect(() => {
+    setIdsDelProyecto(null)
+    if (!form.proyecto_id) return
+    asignacionesApi.listar({ proyecto_id: form.proyecto_id })
+      .then((filas) => setIdsDelProyecto(new Set(filas.filter((a) => a.estado === 'ACTIVO').map((a) => a.trabajador_id))))
+      .catch(() => setIdsDelProyecto(new Set()))
+  }, [form.proyecto_id])
 
   const accion = (fn, s, exito) =>
     ejecutar(() => fn(s.id), { exito: `${exito} ${s.codigo}.`, error: 'No se pudo completar la acción.' })
@@ -190,18 +201,18 @@ export default function SolicitudesHerramientas({ pestanas }) {
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="sh-trabajador" className="label">Trabajador destinatario</label>
-            <BuscadorSelect id="sh-trabajador" requerido error={formulario.campo === 'para_trabajador_id'}
-              value={form.para_trabajador_id} onChange={(v) => formulario.cambiar('para_trabajador_id', v)}
-              opciones={opciones.trabajadores.filter((t) => t.activo).map((t) => ({ value: t.id, label: `${t.nombres} ${t.apellidos}`, sublabel: t.numero_documento }))}
-              placeholder="Escriba el nombre o el documento…" />
-          </div>
-          <div>
             <label htmlFor="sh-proyecto" className="label">Proyecto</label>
             <BuscadorSelect id="sh-proyecto" requerido error={formulario.campo === 'proyecto_id'}
-              value={form.proyecto_id} onChange={(v) => formulario.cambiar('proyecto_id', v)}
+              value={form.proyecto_id} onChange={(v) => { formulario.cambiar('proyecto_id', v); formulario.cambiar('para_trabajador_id', '') }}
               opciones={opciones.proyectos.map((p) => ({ value: p.id, label: p.nombre, sublabel: p.codigo }))}
               placeholder="Escriba el nombre o el código…" />
+          </div>
+          <div>
+            <label htmlFor="sh-trabajador" className="label">Trabajador destinatario (asignado al proyecto)</label>
+            <BuscadorSelect id="sh-trabajador" requerido error={formulario.campo === 'para_trabajador_id'}
+              value={form.para_trabajador_id} onChange={(v) => formulario.cambiar('para_trabajador_id', v)}
+              opciones={opciones.trabajadores.filter((t) => t.activo && idsDelProyecto?.has(t.id)).map((t) => ({ value: t.id, label: `${t.nombres} ${t.apellidos}`, sublabel: t.numero_documento }))}
+              placeholder={!form.proyecto_id ? 'Elija primero el proyecto' : 'Escriba el nombre o el documento…'} />
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

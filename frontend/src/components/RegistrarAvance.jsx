@@ -27,6 +27,7 @@ export default function RegistrarAvance({ actividad, onCerrar, onRegistrado }) {
   const [estado, setEstado] = useState(actividad?.estado)
   const [error, setError] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [confirmando, setConfirmando] = useState(false)
 
   const cargar = () => {
     actividadesApi.historialAvance(actividad.id).then(setHistorial).catch(() => setHistorial([]))
@@ -37,6 +38,7 @@ export default function RegistrarAvance({ actividad, onCerrar, onRegistrado }) {
     setHistorial(null)
     setCriterios(null)
     setError('')
+    setConfirmando(false)
     setActual(Number(actividad?.porcentaje_avance ?? 0))
     setEstado(actividad?.estado)
     if (actividad) cargar()
@@ -60,6 +62,24 @@ export default function RegistrarAvance({ actividad, onCerrar, onRegistrado }) {
       )
     } catch (err) {
       setError(mensajeError(err, 'No se pudo registrar el avance.'))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  // Finalizar: cumple todos los criterios pendientes de una vez (el backend lleva la actividad al 100 %).
+  const finalizar = async () => {
+    setGuardando(true)
+    setError('')
+    try {
+      await actividadesApi.finalizar(actividad.id)
+      setActual(100)
+      setEstado('COMPLETADA')
+      setConfirmando(false)
+      cargar()
+      onRegistrado?.(`${actividad.nombre}: actividad finalizada; todos los criterios quedaron cumplidos.`)
+    } catch (err) {
+      setError(mensajeError(err, 'No se pudo finalizar la actividad.'))
     } finally {
       setGuardando(false)
     }
@@ -111,6 +131,26 @@ export default function RegistrarAvance({ actividad, onCerrar, onRegistrado }) {
             Cada criterio vale lo mismo; al cumplirlos todos la actividad queda completada.
           </p>
           <AlertaFormulario mensaje={error} />
+          {estado === 'EN_PROCESO' && (
+            confirmando ? (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <p>¿Finalizar la actividad? Se marcarán como cumplidos todos los criterios pendientes (avance 100 %).</p>
+                <div className="mt-2 flex gap-2">
+                  <button type="button" className="btn-primary" disabled={guardando} onClick={finalizar}>
+                    {guardando ? 'Finalizando…' : 'Sí, finalizar'}
+                  </button>
+                  <button type="button" className="btn-ghost" disabled={guardando} onClick={() => setConfirmando(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button type="button" className="btn-accion btn-accion-ok mt-3" disabled={guardando}
+                onClick={() => setConfirmando(true)}>
+                Finalizar actividad
+              </button>
+            )
+          )}
         </div>
 
         <div>

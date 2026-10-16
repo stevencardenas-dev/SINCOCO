@@ -12,6 +12,7 @@ export class Etapa {
     fecha_fin_programada,
     fecha_inicio_original,
     fecha_fin_original,
+    fecha_inicio_real,
     estado,
     activo,
     porcentaje_avance,
@@ -26,6 +27,7 @@ export class Etapa {
     // HU-34 · criterio 1: fechas de la primera programación (NULL si nunca se reprogramó).
     this.fecha_inicio_original = fecha_inicio_original ?? null
     this.fecha_fin_original = fecha_fin_original ?? null
+    this.fecha_inicio_real = fecha_inicio_real ?? null
     this.estado = estado
     this.activo = activo
     // HU-21 · criterio 4: promedio ponderado por peso de sus actividades activas.

@@ -172,10 +172,20 @@ export async function registrarAsignacion(dto, ctx = {}) {
     )
   }
 
+  // Para asignar una actividad el trabajador debe tener antes acceso vigente al proyecto.
+  if (dto.actividad_id && !(await asignacionRepository.existeActiva(dto.trabajador_id, dto.proyecto_id, null))) {
+    throw new AppError(
+      'Primero otorgue al trabajador acceso al proyecto; luego podrá asignarle actividades',
+      400,
+      'trabajador_id',
+    )
+  }
+
   const solapada = await asignacionRepository.existeSolapada(
     dto.trabajador_id,
     dto.fecha_inicio,
     dto.fecha_fin_programada,
+    dto.actividad_id ? dto.proyecto_id : null,
   )
   if (solapada) {
     throw new AppError(
