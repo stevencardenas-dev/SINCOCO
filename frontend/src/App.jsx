@@ -16,6 +16,7 @@ const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
+const SolicitudesHerramientas = lazy(() => import('./pages/SolicitudesHerramientas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 
 /**
@@ -100,6 +101,15 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['herramientas.listar']}>
                 <Herramientas />
+              </RutaPorPermiso>
+            }
+          />
+          {/* HU-30: solicitud de herramientas. */}
+          <Route
+            path="solicitudes-herramientas"
+            element={
+              <RutaPorPermiso permisos={['solicitudes_herramientas.listar']}>
+                <SolicitudesHerramientas />
               </RutaPorPermiso>
             }
           />
