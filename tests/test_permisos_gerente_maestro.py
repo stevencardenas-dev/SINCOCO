@@ -79,7 +79,7 @@ esperar('define una etapa', estado, r, 201)
 etapa_id = r['etapa']['id']
 
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad gerente', 'responsable_id': responsable_id,
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad gerente', 'criterios': ['TEST-criterio'], 'responsable_id': responsable_id,
     'fecha_inicio_programada': '2026-10-06', 'fecha_fin_programada': '2026-11-06'}, token=gerente)
 esperar('define una actividad', estado, r, 201)
 actividad_id = r['actividad']['id']
@@ -111,7 +111,7 @@ estado, r = http('POST', '/api/etapas', dict(etapa, nombre='TEST-Etapa maestro',
                                              fecha_fin_programada='2027-03-05'), token=maestro)
 esperar('NO define etapas (solo el líder, gerente y admin)', estado, r, 403)
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad maestro', 'responsable_id': responsable_id,
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad maestro', 'criterios': ['TEST-criterio'], 'responsable_id': responsable_id,
     'fecha_inicio_programada': '2026-10-06', 'fecha_fin_programada': '2026-11-06'}, token=maestro)
 esperar('NO define actividades', estado, r, 403)
 estado, r = http('PATCH', f'/api/actividades/{actividad_id}', {'nombre': 'x'}, token=maestro)

@@ -17,7 +17,7 @@ w2 = crear_trabajador(admin, f'{PREFIJO}-CC-31B')
 
 _, r = http('POST', '/api/etapas', {'proyecto_id': proyecto, 'nombre': 'TEST-Etapa 31',
             'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-12-01'}, token=admin)
-_, r = http('POST', '/api/actividades', {'etapa_id': r['etapa']['id'], 'nombre': 'TEST-Actividad 31',
+_, r = http('POST', '/api/actividades', {'etapa_id': r['etapa']['id'], 'nombre': 'TEST-Actividad 31', 'criterios': ['TEST-criterio'],
             'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
             'responsable_id': w2}, token=admin)
 actividad = r['actividad']['id']

@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js'
+import { AppError } from '../utils/AppError.js'
 
 /**
  * Repositorio del seguimiento de avance (HU-21): tabla `seguimiento_avance` y
@@ -64,7 +65,23 @@ export async function registrarAvance(actividadId, decidir) {
     }
 
     const anterior = Number(actividad.porcentaje_avance)
-    const { porcentaje, observaciones, usuarioId } = await decidir({ ...actividad, anterior })
+    const decision = await decidir({ ...actividad, anterior })
+    const { observaciones, usuarioId, criterioId, cumplido } = decision
+    let porcentaje = decision.porcentaje
+
+    // El avance de la actividad es equitativo: criterios cumplidos / total de criterios.
+    if (criterioId) {
+      const [upd] = await conn.query(
+        'UPDATE criterios_aceptacion SET cumplido = ?, fecha_cumplido = ? WHERE id = ? AND actividad_id = ?',
+        [cumplido ? 1 : 0, cumplido ? new Date() : null, criterioId, actividadId],
+      )
+      if (upd.affectedRows === 0) throw new AppError('El criterio no pertenece a la actividad', 404, 'criterio_id')
+      const [cuenta] = await conn.query(
+        'SELECT COUNT(*) AS total, COALESCE(SUM(cumplido), 0) AS cumplidos FROM criterios_aceptacion WHERE actividad_id = ?',
+        [actividadId],
+      )
+      porcentaje = Math.round((Number(cuenta[0].cumplidos) * 10000) / Number(cuenta[0].total)) / 100
+    }
     const completa = porcentaje === 100
 
     const [ins] = await conn.query(
@@ -74,7 +91,13 @@ export async function registrarAvance(actividadId, decidir) {
       [actividadId, usuarioId, anterior, porcentaje, observaciones],
     )
 
-    // HU-21 · criterio 3: al llegar al 100 % la actividad queda completada.
+    // HU-21 · criterio 3: al llegar al 100 % la actividad queda completada (y todos sus criterios cumplidos).
+    if (completa && !criterioId) {
+      await conn.query(
+        'UPDATE criterios_aceptacion SET cumplido = 1, fecha_cumplido = COALESCE(fecha_cumplido, ?) WHERE actividad_id = ?',
+        [new Date(), actividadId],
+      )
+    }
     await conn.query(
       completa
         ? `UPDATE actividades
