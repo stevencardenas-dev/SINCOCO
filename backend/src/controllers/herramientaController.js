@@ -1,6 +1,10 @@
 import {
   listarHerramientas,
   listarAlmacenes,
+  registrarAlmacen,
+  actualizarAlmacen,
+  darDeBajaAlmacen,
+  reactivarAlmacen,
   obtenerHerramienta,
   registrarHerramienta,
   actualizarHerramienta,
@@ -37,7 +41,25 @@ export const obtener = asyncHandler(async (req, res) => {
 
 /** GET /api/herramientas/almacenes -> almacenes activos para el selector. */
 export const almacenes = asyncHandler(async (req, res) => {
-  return res.json(await listarAlmacenes())
+  return res.json(await listarAlmacenes({ incluirInactivos: verdadero(req.query.incluirInactivos) }))
+})
+
+export const registrarAlm = asyncHandler(async (req, res) => {
+  const almacen = await registrarAlmacen(req.body, contexto(req))
+  return res.status(201).json({ message: 'Almacén registrado correctamente', almacen })
+})
+
+export const actualizarAlm = asyncHandler(async (req, res) => {
+  const almacen = await actualizarAlmacen(req.params.id, req.body, contexto(req))
+  return res.json({ message: 'Almacén actualizado', almacen })
+})
+
+export const bajaAlm = asyncHandler(async (req, res) => {
+  return res.json({ message: 'Almacén dado de baja', ...(await darDeBajaAlmacen(req.params.id, contexto(req))) })
+})
+
+export const reactivarAlm = asyncHandler(async (req, res) => {
+  return res.json({ message: 'Almacén reactivado', ...(await reactivarAlmacen(req.params.id, contexto(req))) })
 })
 
 export const registrar = asyncHandler(async (req, res) => {
