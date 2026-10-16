@@ -20,6 +20,7 @@ import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha } from '../lib/format.js'
 import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
+import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
 
 /**
  * HU-10 (CU-10): catálogo de herramientas con su estado operativo y su
@@ -577,14 +578,18 @@ function CatalogoHerramientas({ pestanas }) {
 const TABS = [
   { id: 'herramientas', label: 'Herramientas' },
   { id: 'almacenes', label: 'Almacenes' },
+  // HU-11: solo quien tenga el permiso (bodega y administrador).
+  { id: 'prestamos', label: 'Préstamos', permiso: 'prestamos_herramientas.listar' },
 ]
 
 export default function Herramientas() {
+  const { puede } = useAuth()
   const [tab, setTab] = useState('herramientas')
+  const tabs = TABS.filter((t) => !t.permiso || puede(t.permiso))
 
   const pestanas = (
     <div className="flex flex-wrap gap-2 border-b border-slate-200">
-      {TABS.map((t) => (
+      {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
@@ -599,6 +604,7 @@ export default function Herramientas() {
     </div>
   )
 
+  if (tab === 'prestamos' && puede('prestamos_herramientas.listar')) return <PrestamosHerramientas pestanas={pestanas} />
   return tab === 'almacenes' ? (
     <AlmacenesGestion pestanas={pestanas} />
   ) : (
