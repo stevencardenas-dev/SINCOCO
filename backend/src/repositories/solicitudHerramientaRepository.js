@@ -6,7 +6,7 @@ const SELECT = `SELECT s.id, s.codigo, s.herramienta_id, h.codigo_serial, h.nomb
                        s.proyecto_id, p.nombre AS proyecto, s.para_trabajador_id,
                        CONCAT(t.nombres, ' ', t.apellidos) AS trabajador,
                        s.solicitado_por_usuario_id, COALESCE(CONCAT(ts.nombres, ' ', ts.apellidos), u.username) AS solicitante,
-                       s.fecha_solicitud, s.fecha_requerida, s.estado, s.observaciones
+                       s.fecha_solicitud, s.fecha_requerida, s.fecha_estimada_devolucion, s.estado, s.observaciones
                   FROM solicitudes_herramientas s
                   JOIN herramientas h ON h.id = s.herramienta_id
                   JOIN proyectos p ON p.id = s.proyecto_id
@@ -31,14 +31,14 @@ export async function listar({ usuarioId = null, estado = '' } = {}) {
   return rows
 }
 
-export async function crear({ herramientaId, proyectoId, usuarioId, trabajadorId, fechaRequerida, observaciones }) {
+export async function crear({ herramientaId, proyectoId, usuarioId, trabajadorId, fechaRequerida, fechaDevolucion, observaciones }) {
   // El código definitivo depende del id; mientras tanto va uno temporal único.
   const temporal = `TMP-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
   const [r] = await pool.query(
     `INSERT INTO solicitudes_herramientas
-       (codigo, herramienta_id, proyecto_id, solicitado_por_usuario_id, para_trabajador_id, fecha_requerida, observaciones)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [temporal, herramientaId, proyectoId, usuarioId, trabajadorId, fechaRequerida, observaciones],
+       (codigo, herramienta_id, proyecto_id, solicitado_por_usuario_id, para_trabajador_id, fecha_requerida, fecha_estimada_devolucion, observaciones)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [temporal, herramientaId, proyectoId, usuarioId, trabajadorId, fechaRequerida, fechaDevolucion, observaciones],
   )
   await pool.query('UPDATE solicitudes_herramientas SET codigo = ? WHERE id = ?', [
     `SH-${String(r.insertId).padStart(5, '0')}`, r.insertId,
