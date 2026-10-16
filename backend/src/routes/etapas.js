@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
-import { listar, registrar, actualizar, baja, reactivarCtrl } from '../controllers/etapaController.js'
+import { listar, registrar, actualizar, baja, reactivarCtrl, iniciar } from '../controllers/etapaController.js'
 import { reprogramarEtapaCtrl, historialEtapa } from '../controllers/reprogramacionController.js'
 
 const router = Router()
@@ -11,6 +11,7 @@ router.use(requireAuth)
 router.get('/', requirePermiso('etapas.listar'), listar)
 router.post('/', requirePermiso('etapas.crear'), registrar)
 router.patch('/:id', requirePermiso('etapas.editar'), actualizar)
+router.patch('/:id/iniciar', requirePermiso('etapas.editar'), iniciar)
 
 // HU-34: reprogramación de fechas (solo administrador) e historial de cambios.
 router.patch('/:id/reprogramar', requirePermiso('etapas.reprogramar'), reprogramarEtapaCtrl)
