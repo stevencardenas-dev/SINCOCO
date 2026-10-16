@@ -2,6 +2,7 @@ import * as actividadRepository from '../repositories/actividadRepository.js'
 import * as etapaRepository from '../repositories/etapaRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
+import * as asignacionRepository from '../repositories/asignacionRepository.js'
 import { validarFechasEnRango } from './etapaService.js'
 import { aFechaDia, rechazarCambioDeFechas, validarDentroDeEtapa } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan, verificarOperarActividad } from './accesoService.js'
@@ -25,12 +26,16 @@ export async function listarPorEtapa(etapaId, { incluirInactivos = false } = {},
   return actividadRepository.listarPorEtapa(etapaId, incluirInactivos)
 }
 
-async function validarResponsable(responsableId) {
+async function validarResponsable(responsableId, proyectoId) {
   if (!responsableId) return
   const responsable = await trabajadorRepository.findById(responsableId)
   if (!responsable) throw new AppError('El responsable indicado no existe', 404, 'responsable_id')
   if (!responsable.activo) {
     throw new AppError('El responsable está dado de baja', 400, 'responsable_id')
+  }
+  // Solo puede responder por una actividad quien tiene acceso vigente al proyecto.
+  if (!(await asignacionRepository.tieneAcceso(proyectoId, responsableId))) {
+    throw new AppError('El responsable no tiene acceso al proyecto; otórguele acceso primero', 400, 'responsable_id')
   }
 }
 
@@ -54,7 +59,7 @@ export async function registrarActividad(dto, ctx = {}) {
 
   validarFechasEnRango(dto.fecha_inicio_programada, dto.fecha_fin_programada, proyecto)
   validarDentroDeEtapa(dto.fecha_inicio_programada, dto.fecha_fin_programada, etapa)
-  await validarResponsable(dto.responsable_id)
+  await validarResponsable(dto.responsable_id, proyecto.id)
 
   const id = await actividadRepository.create({
     etapa_id: dto.etapa_id,
@@ -108,7 +113,7 @@ export async function actualizarActividad(id, dto, ctx = {}) {
     validarDentroDeEtapa(inicio, fin, etapa)
   }
   if (campos.responsable_id !== undefined && campos.responsable_id !== actividad.responsable_id) {
-    await validarResponsable(campos.responsable_id)
+    await validarResponsable(campos.responsable_id, actividad.proyecto_id)
   }
 
   await actividadRepository.update(id, campos)
