@@ -1,4 +1,4 @@
-import { listarEtapas, registrarEtapa, actualizarEtapa, darDeBajaEtapa, reactivarEtapa } from '../services/etapaService.js'
+import { listarEtapas, registrarEtapa, actualizarEtapa, darDeBajaEtapa, reactivarEtapa, iniciarEtapa } from '../services/etapaService.js'
 import { RegistrarEtapaDto } from '../dtos/etapa/RegistrarEtapaDto.js'
 import { ActualizarEtapaDto } from '../dtos/etapa/ActualizarEtapaDto.js'
 import { AppError } from '../utils/AppError.js'
@@ -27,6 +27,12 @@ export const actualizar = asyncHandler(async (req, res) => {
   const dto = ActualizarEtapaDto.fromRequestBody(req.body)
   const etapa = await actualizarEtapa(req.params.id, dto, contexto(req))
   return res.json({ message: 'Etapa actualizada correctamente', etapa })
+})
+
+/** PATCH /api/etapas/:id/iniciar -> «Empezar»: pasa a En curso con fecha de inicio real. */
+export const iniciar = asyncHandler(async (req, res) => {
+  const etapa = await iniciarEtapa(req.params.id, contexto(req))
+  return res.json({ message: 'Etapa iniciada', etapa })
 })
 
 /** PATCH /api/etapas/:id/baja -> HU-18. */

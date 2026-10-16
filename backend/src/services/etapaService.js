@@ -153,5 +153,21 @@ const bajaReactivar = crearBajaReactivar({
   },
 })
 
+/** «Empezar»: la etapa pasa de PENDIENTE a EN_PROCESO y queda su fecha de inicio real. */
+export async function iniciarEtapa(id, ctx = {}) {
+  const etapa = await etapaRepository.findById(id)
+  if (!etapa) throw new AppError('Etapa no encontrada', 404)
+  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
+  if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
+  if (etapa.estado !== 'PENDIENTE') throw new AppError('Solo se puede empezar una etapa pendiente', 409, 'estado')
+
+  await etapaRepository.update(id, { estado: 'EN_PROCESO', fecha_inicio_real: new Date().toISOString().slice(0, 10) })
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'etapas_proyecto',
+    registroId: Number(id), detalles: { nombre: etapa.nombre, cambios: { estado: 'EN_PROCESO' } }, ip: ctx.ip,
+  })
+  return etapaRepository.findById(id)
+}
+
 export const darDeBajaEtapa = bajaReactivar.darDeBaja
 export const reactivarEtapa = bajaReactivar.reactivar

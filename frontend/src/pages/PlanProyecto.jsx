@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
-  CheckCircleIcon,
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
@@ -19,6 +18,7 @@ import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
+import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
 import EncabezadoOrdenable from '../components/EncabezadoOrdenable.jsx'
@@ -156,6 +156,13 @@ const CLAVES_ACTIVIDAD = {
   Estado: (a) => ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado,
   Avance: (a) => Number(a.porcentaje_avance),
 }
+const CLAVES_GRUPOS = {
+  Trabajador: (g) => g.trabajador_nombre,
+  Cargo: (g) => g.cargo,
+  Alcance: (g) => g.alcance,
+  Estado: (g) => g.estado,
+}
+
 const CLAVES_ACCESO = {
   Trabajador: (a) => a.trabajador_nombre,
   'Descripción de la asignación': (a) => a.observaciones,
@@ -355,6 +362,27 @@ export default function PlanProyecto() {
     return true
   })
 
+  // Una fila por trabajador; el detalle (acceso general y actividades) va en una ventana.
+  const [ordenGrupos, setOrdenGrupos] = useState(null)
+  const [grupoAbierto, setGrupoAbierto] = useState(null)
+  const gruposAcceso = [...asignacionesFiltradas.reduce((m, a) => {
+    const g = m.get(a.trabajador_id) ?? { trabajador_id: a.trabajador_id, trabajador_nombre: a.trabajador_nombre, cargo: a.cargo, filas: [] }
+    g.filas.push(a)
+    return m.set(a.trabajador_id, g)
+  }, new Map()).values()].map((g) => {
+    const vigentes = g.filas.filter((a) => a.estado === 'ACTIVO')
+    const actividades = vigentes.filter((a) => a.actividad_id).length
+    return {
+      ...g,
+      estado: vigentes.length ? 'ACTIVO' : g.filas[0].estado,
+      alcance: vigentes.some((a) => !a.actividad_id)
+        ? 'Todo el proyecto'
+        : actividades ? `${actividades} ${actividades === 1 ? 'actividad' : 'actividades'}` : 'Sin acceso vigente',
+    }
+  })
+  const grupoElegido = gruposAcceso.find((g) => g.trabajador_id === grupoAbierto)
+  const filasDelGrupo = grupoElegido?.filas ?? []
+
   /** Rango permitido para las actividades de una etapa (por defecto, el del proyecto). */
   const limiteEtapa = (et) => ({
     min: soloDia(et.fecha_inicio_programada) || soloDia(proyecto?.fecha_inicio_programada),
@@ -421,6 +449,15 @@ export default function PlanProyecto() {
       },
       { tipo: 'actividad', dato: a },
     )
+
+  const empezarEtapa = async (et) => {
+    setCambiandoEstado(`e${et.id}`)
+    await ejecutar(() => etapasApi.iniciar(et.id), {
+      exito: `Etapa «${et.nombre}» en curso; se registró la fecha real de inicio.`,
+      error: 'No se pudo empezar la etapa.',
+    })
+    setCambiandoEstado(null)
+  }
 
   /** «Empezar» (pendiente -> en curso) y «Finalizar» (en curso -> finalizado). */
   const cambiarEstado = async (a) => {
@@ -553,6 +590,11 @@ export default function PlanProyecto() {
                     <PencilSquareIcon className="h-4 w-4" /> Editar
                   </button>
                 )}
+                {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
+                  <button className="btn-ghost text-xs" disabled={cambiandoEstado === `e${et.id}`} onClick={() => empezarEtapa(et)}>
+                    <PlayIcon className="h-4 w-4" /> Empezar
+                  </button>
+                )}
                 {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
                   <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
                     <ArrowPathIcon className="h-4 w-4" /> Reprogramar
@@ -671,7 +713,13 @@ export default function PlanProyecto() {
                 <tbody className="divide-y divide-slate-100">
                   {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
                     <tr key={a.id}>
-                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">{a.nombre}</td>
+                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">
+                        <button type="button" title="Ver ficha de la actividad"
+                          className="text-left hover:text-brand-700 hover:underline"
+                          onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
+                          {a.nombre}
+                        </button>
+                      </td>
                       <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
                       <td className="px-3 py-3 text-xs text-slate-500">
                         {fmtFecha(a.fecha_inicio_programada)} — {fmtFecha(a.fecha_fin_programada)}
@@ -686,32 +734,29 @@ export default function PlanProyecto() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <button type="button" className="btn-accion btn-accion-editar"
-                            onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
-                            <EyeIcon className="h-4 w-4" /> Ver ficha
-                          </button>
                           {puedeEditarActividades && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
-                              Editar
+                            <button type="button" title="Editar" aria-label="Editar actividad"
+                              className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
+                              <PencilSquareIcon className="h-4 w-4" />
                             </button>
                           )}
                           {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
-                              <ArrowPathIcon className="h-4 w-4" /> Reprogramar
+                            <button type="button" title="Reprogramar" aria-label="Reprogramar actividad"
+                              className="btn-accion btn-accion-peligro" onClick={() => abrirReprogramacion('actividad', a)}>
+                              <ArrowPathIcon className="h-4 w-4" />
                             </button>
                           )}
-                          {puedeAvance(a) && (a.estado === 'PENDIENTE' || a.estado === 'EN_PROCESO') && (
+                          {puedeAvance(a) && a.estado === 'PENDIENTE' && (
                             <button type="button" className="btn-accion btn-accion-editar"
                               disabled={cambiandoEstado === a.id}
                               onClick={() => cambiarEstado(a)}>
-                              {a.estado === 'PENDIENTE'
-                                ? <><PlayIcon className="h-4 w-4" /> Empezar</>
-                                : <><CheckCircleIcon className="h-4 w-4" /> Finalizar</>}
+                              <PlayIcon className="h-4 w-4" /> Empezar
                             </button>
                           )}
                           {puedeAvance(a) && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => setPorAvanzar(a)}>
-                              <ClipboardDocumentCheckIcon className="h-4 w-4" /> Registrar avance
+                            <button type="button" title="Registrar avance" aria-label="Registrar avance"
+                              className="btn-accion btn-accion-ok" onClick={() => setPorAvanzar(a)}>
+                              <ClipboardDocumentCheckIcon className="h-4 w-4" />
                             </button>
                           )}
                         </div>
@@ -918,64 +963,29 @@ export default function PlanProyecto() {
             <p className="px-5 py-4 text-xs text-slate-400">Ningún acceso coincide con los filtros.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    {['Trabajador', 'Descripción de la asignación', 'Actividad', 'Vigencia', 'Estado'].map((t) => (
-                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenAcceso} className="px-5 py-3"
-                        onOrden={(x) => setOrdenAcceso((o) => alternarOrden(o, x))} />
+                    {['Trabajador', 'Cargo', 'Alcance', 'Estado'].map((t) => (
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenGrupos} className="px-5 py-3"
+                        onOrden={(x) => setOrdenGrupos((o) => alternarOrden(o, x))} />
                     ))}
                     <th className="px-5 py-3 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {ordenarFilas(asignacionesFiltradas, ordenAcceso, CLAVES_ACCESO).map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
-                      <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">
-                        <DescripcionCopiable texto={a.observaciones} />
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {a.actividad_nombre ?? 'Todo el proyecto'}
-                      </td>
-                      <td className="px-5 py-3 text-xs text-slate-500">
-                        {fmtFecha(a.fecha_inicio)}
-                        {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
-                        {a.fecha_fin_real && (
-                          <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
-                        )}
+                  {ordenarFilas(gruposAcceso, ordenGrupos, CLAVES_GRUPOS).map((g) => (
+                    <tr key={g.trabajador_id}>
+                      <td className="px-5 py-3 font-medium text-slate-800">{g.trabajador_nombre}</td>
+                      <td className="px-5 py-3 text-slate-600">{g.cargo ?? '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">{g.alcance}</td>
+                      <td className="px-5 py-3">
+                        <span className={`badge ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{g.estado}</span>
                       </td>
                       <td className="px-5 py-3">
-                        <span
-                          className={`badge ${
-                            ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {a.estado}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        {a.estado === 'ACTIVO' ? (
-                          <div className="flex flex-col items-stretch gap-1.5">
-                            <button
-                              type="button"
-                              className="btn-accion btn-accion-peligro"
-                              onClick={() => finalizarAsignacion(a)}
-                            >
-                              Finalizar acceso
-                            </button>
-                            <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
-                              Cancelar
-                            </button>
-                            <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
-                              Extender
-                            </button>
-                          </div>
-                        ) : (
-                          <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
-                            Historial
-                          </button>
-                        )}
+                        <button type="button" className="btn-accion" onClick={() => setGrupoAbierto(g.trabajador_id)}>
+                          Ver asignaciones ({g.filas.length})
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -985,6 +995,75 @@ export default function PlanProyecto() {
           )}
         </div>
       )}
+
+      {/* Asignaciones del trabajador (acceso general y actividades) con sus acciones. */}
+      <Modal abierto={Boolean(grupoElegido)} titulo={grupoElegido?.trabajador_nombre ?? ''}
+        subtitulo="Acceso al proyecto y actividades asignadas" ancho="max-w-5xl" onCerrar={() => setGrupoAbierto(null)}>
+        <div className="overflow-x-auto">
+    <table className="w-full min-w-[720px] text-left text-sm">
+      <thead>
+        <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          {['Descripción de la asignación', 'Actividad', 'Vigencia', 'Estado'].map((t) => (
+            <EncabezadoOrdenable key={t} titulo={t} orden={ordenAcceso} className="px-5 py-3"
+              onOrden={(x) => setOrdenAcceso((o) => alternarOrden(o, x))} />
+          ))}
+          <th className="px-5 py-3 font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-100">
+        {ordenarFilas(filasDelGrupo, ordenAcceso, CLAVES_ACCESO).map((a) => (
+          <tr key={a.id}>
+            <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">
+              <DescripcionCopiable texto={a.observaciones} />
+            </td>
+            <td className="px-5 py-3 text-slate-600">
+              {a.actividad_nombre ?? 'Todo el proyecto'}
+            </td>
+            <td className="px-5 py-3 text-xs text-slate-500">
+              {fmtFecha(a.fecha_inicio)}
+              {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
+              {a.fecha_fin_real && (
+                <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
+              )}
+            </td>
+            <td className="px-5 py-3">
+              <span
+                className={`badge ${
+                  ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {a.estado}
+              </span>
+            </td>
+            <td className="px-5 py-3">
+              {a.estado === 'ACTIVO' ? (
+                <div className="flex flex-col items-stretch gap-1.5">
+                  <button
+                    type="button"
+                    className="btn-accion btn-accion-peligro"
+                    onClick={() => finalizarAsignacion(a)}
+                  >
+                    Finalizar acceso
+                  </button>
+                  <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
+                    Cancelar
+                  </button>
+                  <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                    Extender
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                  Historial
+                </button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+      </Modal>
 
       <ExtenderAsignacion
         asignacion={porExtender}
