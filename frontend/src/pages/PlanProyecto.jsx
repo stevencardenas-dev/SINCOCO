@@ -200,6 +200,12 @@ export default function PlanProyecto() {
   const etapas = datos?.etapas ?? []
   const actividades = datos?.actividades ?? []
   const responsables = datos?.responsables ?? []
+  // Responsables de actividad: solo quienes tienen acceso vigente al proyecto (o su responsable).
+  // `actual` conserva al responsable ya guardado al editar, aunque haya perdido el acceso.
+  const miembrosPara = (actual = null) => {
+    const ids = new Set(asignaciones.filter((a) => a.estado === 'ACTIVO').map((a) => a.trabajador_id))
+    return responsables.filter((t) => ids.has(t.id) || t.id === datos?.proyecto?.responsable_id || (actual && String(t.id) === String(actual)))
+  }
   const asignaciones = datos?.asignaciones ?? []
   const [porExtender, setPorExtender] = useState(null) // HU-31
   const miAcceso = datos?.miAcceso ?? SIN_ACCESO
@@ -626,7 +632,7 @@ export default function PlanProyecto() {
                     onChange={(v) => nuevaActividad.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
-                      ...responsables.map((t) => ({
+                      ...miembrosPara().map((t) => ({
                         value: t.id,
                         label: `${t.nombres} ${t.apellidos}`,
                         sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
@@ -725,9 +731,17 @@ export default function PlanProyecto() {
                         {fmtFecha(a.fecha_inicio_programada)} — {fmtFecha(a.fecha_fin_programada)}
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
-                        </span>
+                        {puedeAvance(a) && a.estado === 'PENDIENTE' ? (
+                          <button type="button" title="Empezar la actividad (registra la fecha real de inicio)"
+                            disabled={cambiandoEstado === a.id} onClick={() => cambiarEstado(a)}
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60">
+                            <PlayIcon className="h-3.5 w-3.5" /> Empezar
+                          </button>
+                        ) : (
+                          <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
+                            {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600">
                         {Number(a.porcentaje_avance)}%
@@ -744,13 +758,6 @@ export default function PlanProyecto() {
                             <button type="button" title="Reprogramar" aria-label="Reprogramar actividad"
                               className="btn-accion btn-accion-peligro" onClick={() => abrirReprogramacion('actividad', a)}>
                               <ArrowPathIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                          {puedeAvance(a) && a.estado === 'PENDIENTE' && (
-                            <button type="button" className="btn-accion btn-accion-editar"
-                              disabled={cambiandoEstado === a.id}
-                              onClick={() => cambiarEstado(a)}>
-                              <PlayIcon className="h-4 w-4" /> Empezar
                             </button>
                           )}
                           {puedeAvance(a) && (
@@ -1139,7 +1146,7 @@ export default function PlanProyecto() {
                     onChange={(v) => edicion.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
-                      ...responsables.map((t) => ({
+                      ...miembrosPara(edicion.valores.responsable_id).map((t) => ({
                         value: t.id,
                         label: `${t.nombres} ${t.apellidos}`,
                         sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
