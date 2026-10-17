@@ -77,6 +77,30 @@ async function calcularDisponible(id, estado) {
   return estado === 'ACTIVO' ? 1 : 0
 }
 
+// Estados de ausencia temporal: la persona no está disponible, pero sigue asignada.
+const ESTADOS_AUSENCIA = ['VACACIONES', 'LICENCIA']
+
+/**
+ * Pasar a vacaciones o licencia a quien tiene asignaciones o actividades vigentes
+ * no se bloquea, pero exige confirmación explícita: el servidor responde 409 con
+ * el detalle de lo que queda afectado. Las asignaciones no se modifican.
+ * Devuelve cuántos compromisos tenía (0 si no hacía falta confirmar).
+ */
+async function exigirConfirmacionDeAusencia(id, estadoActual, estadoNuevo, confirmar) {
+  if (!ESTADOS_AUSENCIA.includes(estadoNuevo) || estadoNuevo === estadoActual) return 0
+  const compromisos = await trabajadorRepository.compromisosVigentes(id)
+  if (compromisos.length === 0) return 0
+  if (!confirmar) {
+    throw new AppError(
+      `El trabajador tiene ${compromisos.length} asignación(es) o actividad(es) vigente(s); confirme para pasarlo a ${estadoNuevo.toLowerCase()}. No se modificarán sus asignaciones`,
+      409,
+      'estado',
+      { codigo: 'REQUIERE_CONFIRMACION', compromisos },
+    )
+  }
+  return compromisos.length
+}
+
 /** Obtiene un trabajador por id. */
 export async function obtenerTrabajador(id) {
   const trabajador = await trabajadorRepository.findById(id)
@@ -162,8 +186,13 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
 
   // Si cambia el estado, la disponibilidad se recalcula con la misma regla del
   // cambio de estado explícito.
+  let compromisosConfirmados = 0
   if (campos.estado !== undefined) {
     validarEstado(String(campos.estado))
+    campos.estado = String(campos.estado).toUpperCase()
+    compromisosConfirmados = await exigirConfirmacionDeAusencia(
+      id, actual.estado, campos.estado, cambios.confirmar === true,
+    )
     campos.disponible = await calcularDisponible(id, campos.estado)
   }
 
@@ -184,7 +213,7 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
     accion: 'ACTUALIZAR',
     tabla: 'trabajadores',
     registroId: Number(id),
-    detalles: { cambios },
+    detalles: { cambios, ...(compromisosConfirmados > 0 && { compromisos_confirmados: compromisosConfirmados }) },
     ip: ctx.ip,
   })
 
@@ -199,7 +228,7 @@ export async function actualizarTrabajador(id, cambios, ctx = {}) {
  * trabajador no disponible; al volver a ACTIVO recupera la disponibilidad solo
  * si no tiene actividades vigentes asignadas.
  */
-export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
+export async function cambiarEstadoTrabajador(id, estado, ctx = {}, { confirmar = false } = {}) {
   const trabajador = await trabajadorRepository.findById(id)
   if (!trabajador) throw new AppError('Trabajador no encontrado', 404)
   if (!trabajador.activo) {
@@ -212,6 +241,7 @@ export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
     throw new AppError(`El trabajador ya está en estado ${nuevo}`, 409, 'estado')
   }
 
+  const compromisosConfirmados = await exigirConfirmacionDeAusencia(id, trabajador.estado, nuevo, confirmar)
   const disponible = await calcularDisponible(id, nuevo)
   await trabajadorRepository.update(id, { estado: nuevo, disponible })
 
@@ -220,7 +250,7 @@ export async function cambiarEstadoTrabajador(id, estado, ctx = {}) {
     accion: 'CAMBIAR_ESTADO',
     tabla: 'trabajadores',
     registroId: Number(id),
-    detalles: { antes: trabajador.estado, despues: nuevo, disponible },
+    detalles: { antes: trabajador.estado, despues: nuevo, disponible, compromisos_confirmados: compromisosConfirmados },
     ip: ctx.ip,
   })
 

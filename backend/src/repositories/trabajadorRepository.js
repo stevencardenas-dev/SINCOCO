@@ -169,6 +169,37 @@ export async function responsabilidadesEnCurso(id) {
   return { proyectos, actividades }
 }
 
+/**
+ * Compromisos vigentes del trabajador: sus asignaciones activas sin fecha fin real
+ * y las actividades abiertas de las que es responsable. Si una actividad aparece
+ * en las dos formas, se cuenta una sola vez (como asignación).
+ */
+export async function compromisosVigentes(id) {
+  const [asignaciones] = await pool.query(
+    `SELECT 'ASIGNACION' AS tipo, p.codigo, p.nombre AS proyecto, a.nombre AS actividad,
+            ap.fecha_inicio AS desde, ap.fecha_fin_programada AS hasta
+       FROM asignaciones_personal ap
+       JOIN proyectos p ON p.id = ap.proyecto_id
+       LEFT JOIN actividades a ON a.id = ap.actividad_id
+      WHERE ap.trabajador_id = ? AND ap.estado = 'ACTIVO' AND ap.fecha_fin_real IS NULL
+      ORDER BY p.nombre, ap.fecha_inicio`,
+    [id],
+  )
+  const [actividades] = await pool.query(
+    `SELECT 'ACTIVIDAD' AS tipo, p.codigo, p.nombre AS proyecto, a.nombre AS actividad,
+            a.fecha_inicio_programada AS desde, a.fecha_fin_programada AS hasta
+       FROM actividades a
+       JOIN etapas_proyecto e ON e.id = a.etapa_id
+       JOIN proyectos p ON p.id = e.proyecto_id
+      WHERE a.responsable_id = ? AND a.activo = 1 AND a.estado IN ('PENDIENTE', 'EN_PROCESO')
+        AND e.activo = 1
+      ORDER BY p.nombre, a.nombre`,
+    [id],
+  )
+  const vistas = new Set(asignaciones.filter((x) => x.actividad).map((x) => `${x.codigo}|${x.actividad}`))
+  return [...asignaciones, ...actividades.filter((x) => !vistas.has(`${x.codigo}|${x.actividad}`))]
+}
+
 /** Cuenta de acceso vinculada al trabajador (cada trabajador tiene una como máximo). */
 export async function cuentaVinculada(id) {
   const [rows] = await pool.query(
