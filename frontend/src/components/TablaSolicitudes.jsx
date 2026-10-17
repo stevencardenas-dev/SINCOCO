@@ -15,8 +15,8 @@ export const ESTADOS_SOLICITUD = {
   CANCELADA: { texto: 'Cancelada', clase: 'bg-slate-100 text-slate-500 ring-slate-200' },
 }
 
-export const InsigniaSolicitud = ({ estado }) => (
-  <span className={`badge ring-1 ${ESTADOS_SOLICITUD[estado]?.clase ?? ''}`}>{ESTADOS_SOLICITUD[estado]?.texto ?? estado}</span>
+export const InsigniaSolicitud = ({ estado, enTabla = false }) => (
+  <span className={`badge ring-1 ${enTabla ? 'badge-tabla' : ''} ${ESTADOS_SOLICITUD[estado]?.clase ?? ''}`}>{ESTADOS_SOLICITUD[estado]?.texto ?? estado}</span>
 )
 
 export default function TablaSolicitudes({ filas, acciones }) {
@@ -34,7 +34,7 @@ export default function TablaSolicitudes({ filas, acciones }) {
       columnas={[
         { titulo: 'Código', escritorio: true, tdClase: 'font-medium tabular-nums text-slate-800', celda: (s) => s.codigo },
         { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (s) => `${s.herramienta} (${s.codigo_serial})` },
-        { titulo: 'Estado', movil: true, orden: (s) => s.estado, celda: (s) => <InsigniaSolicitud estado={s.estado} /> },
+        { titulo: 'Estado', movil: true, orden: (s) => s.estado, celda: (s) => <InsigniaSolicitud estado={s.estado} enTabla /> },
         { titulo: 'Trabajador', celda: (s) => s.trabajador },
         { titulo: 'Proyecto', escritorio: true, celda: (s) => s.proyecto },
         { titulo: 'Solicitante', celda: (s) => s.solicitante },

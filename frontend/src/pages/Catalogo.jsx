@@ -303,7 +303,7 @@ export default function Catalogo() {
                 titulo: 'Estado',
                 celda: (f) => (
                   <span
-                    className={`badge ring-1 ${
+                    className={`badge badge-tabla ring-1 ${
                       f.activo
                         ? 'bg-emerald-50 text-emerald-700 ring-emerald-200'
                         : 'bg-slate-100 text-slate-500 ring-slate-200'
