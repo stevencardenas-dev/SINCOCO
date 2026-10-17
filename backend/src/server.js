@@ -21,6 +21,7 @@ import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
 import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
+import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
 
 // Red de seguridad del proceso: si algo se escapa fuera de una ruta (una
 // promesa rechazada al leer la base, por ejemplo), queda en el log en vez de
@@ -67,4 +68,7 @@ app.use((req, res) => {
 app.use(errorHandler)
 
 const port = process.env.PORT || 3000
-app.listen(port, () => console.log(`SINCOCO backend en http://localhost:${port}`))
+app.listen(port, () => {
+  console.log(`SINCOCO backend en http://localhost:${port}`)
+  programarCierreAutomatico()
+})
