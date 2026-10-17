@@ -1,4 +1,8 @@
+import { useState } from 'react'
 import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import Modal from './Modal.jsx'
+import TablaSolicitudes from './TablaSolicitudes.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 import BotonActualizar from './BotonActualizar.jsx'
 import AlertaFormulario from './AlertaFormulario.jsx'
 import PageHeader from './PageHeader.jsx'
@@ -13,10 +17,6 @@ import { fmtFecha } from '../lib/format.js'
  * Muestra primero las solicitudes de los maestros de obra que esperan entrega
  * (pendientes y aprobadas) y debajo los préstamos registrados.
  */
-const ESTADOS_SOLICITUD = {
-  PENDIENTE: 'bg-amber-50 text-amber-700 ring-amber-200',
-  APROBADA: 'bg-sky-50 text-sky-700 ring-sky-200',
-}
 const ESTADOS_PRESTAMO = {
   ACTIVO: 'bg-sky-50 text-sky-700 ring-sky-200',
   DEVUELTO: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
@@ -34,11 +34,45 @@ const Cargando = () => (
 )
 
 export default function PrestamosHerramientas({ pestanas }) {
+  const { puede } = useAuth()
+  const puedeResolver = puede('solicitudes_herramientas.resolver')
+  const [porRechazar, setPorRechazar] = useState(null)
+  const [motivo, setMotivo] = useState('')
+  const [errorRechazo, setErrorRechazo] = useState('')
   const sol = useRecurso(() => solicitudesHerramientasApi.listar(), [], { mensaje: 'No se pudieron cargar las solicitudes.' })
   const pre = useRecurso(() => prestamosHerramientasApi.listar(), [], { mensaje: 'No se pudieron cargar los préstamos.' })
 
   const porEntregar = (sol.datos ?? []).filter((s) => s.estado === 'PENDIENTE' || s.estado === 'APROBADA')
   const recargar = () => Promise.all([sol.recargar(), pre.recargar()])
+
+  const accion = (fn, s, exito) =>
+    sol.ejecutar(() => fn(s.id), { exito: `${exito} ${s.codigo}.`, error: 'No se pudo completar la acción.' }).then(() => pre.recargar())
+
+  const rechazar = async () => {
+    if (!motivo.trim()) return setErrorRechazo('Debe indicar la observación que justifica el rechazo.')
+    const s = porRechazar
+    setPorRechazar(null)
+    await sol.ejecutar(() => solicitudesHerramientasApi.rechazar(s.id, motivo.trim()), {
+      exito: `Solicitud ${s.codigo} rechazada.`, error: 'No se pudo rechazar la solicitud.',
+    })
+  }
+
+  // Aprobar, rechazar y atender son de bodega: el maestro solo solicita y cancela.
+  const acciones = (s) => {
+    if (!puedeResolver) return null
+    if (s.estado === 'PENDIENTE') {
+      return (
+        <>
+          <button type="button" className="btn-primary text-xs" onClick={() => accion(solicitudesHerramientasApi.aprobar, s, 'Aprobada')}>Aprobar</button>
+          <button type="button" className="btn-ghost text-xs" onClick={() => { setMotivo(''); setErrorRechazo(''); setPorRechazar(s) }}>Rechazar</button>
+        </>
+      )
+    }
+    if (s.estado === 'APROBADA') {
+      return <button type="button" className="btn-primary text-xs" onClick={() => accion(solicitudesHerramientasApi.atender, s, 'Atendida')}>Atender</button>
+    }
+    return null
+  }
 
   return (
     <div className="space-y-6">
@@ -46,6 +80,7 @@ export default function PrestamosHerramientas({ pestanas }) {
       {pestanas}
 
       {(sol.error || pre.error) && <AlertaFormulario mensaje={sol.error || pre.error} />}
+      {sol.aviso && <AlertaFormulario tipo="aviso" mensaje={sol.aviso} />}
 
       <section className="card overflow-hidden">
         <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">
@@ -56,21 +91,7 @@ export default function PrestamosHerramientas({ pestanas }) {
         ) : porEntregar.length === 0 ? (
           <p className="px-5 py-6 text-sm text-slate-500">No hay solicitudes pendientes ni aprobadas.</p>
         ) : (
-          <TablaFicha
-            filas={porEntregar}
-            minWidth="md:min-w-[860px]"
-            ficha={{ titulo: (s) => s.herramienta, subtitulo: (s) => s.codigo }}
-            columnas={[
-              { titulo: 'Solicitud', movil: true, tdClase: 'font-medium tabular-nums text-slate-800', celda: (s) => s.codigo },
-              { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (s) => `${s.herramienta} (${s.codigo_serial})` },
-              { titulo: 'Trabajador', tdClase: 'text-slate-600', celda: (s) => s.trabajador },
-              { titulo: 'Proyecto', tdClase: 'text-slate-600', celda: (s) => s.proyecto },
-              { titulo: 'Solicitante', tdClase: 'text-slate-600', celda: (s) => s.solicitante },
-              { titulo: 'Requerida', tdClase: 'text-slate-600', celda: (s) => fmtFecha(s.fecha_requerida), orden: (s) => s.fecha_requerida },
-              { titulo: 'Devolución estimada', tdClase: 'text-slate-600', celda: (s) => (s.fecha_estimada_devolucion ? fmtFecha(s.fecha_estimada_devolucion) : '—') },
-              { titulo: 'Estado', movil: true, celda: (s) => insignia(ESTADOS_SOLICITUD, s.estado) },
-            ]}
-          />
+          <TablaSolicitudes filas={porEntregar} acciones={acciones} />
         )}
       </section>
 
@@ -83,21 +104,34 @@ export default function PrestamosHerramientas({ pestanas }) {
         ) : (
           <TablaFicha
             filas={pre.datos}
-            minWidth="md:min-w-[860px]"
+            compacta
+            minWidth="md:min-w-0"
             ficha={{ titulo: (p) => p.herramienta, subtitulo: (p) => p.trabajador }}
             columnas={[
               { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (p) => `${p.herramienta} (${p.codigo_serial})` },
               { titulo: 'Trabajador', movil: true, tdClase: 'text-slate-600', celda: (p) => p.trabajador },
-              { titulo: 'Proyecto', tdClase: 'text-slate-600', celda: (p) => p.proyecto },
-              { titulo: 'Solicitud', tdClase: 'tabular-nums text-slate-600', celda: (p) => p.solicitud ?? '—' },
-              { titulo: 'Entregada', tdClase: 'text-slate-600', celda: (p) => fmtFecha(p.fecha_prestamo), orden: (p) => p.fecha_prestamo },
-              { titulo: 'Devolución estimada', tdClase: 'text-slate-600', celda: (p) => fmtFecha(p.fecha_estimada_devolucion) },
-              { titulo: 'Devuelta', tdClase: 'text-slate-600', celda: (p) => (p.fecha_real_devolucion ? fmtFecha(p.fecha_real_devolucion) : '—') },
               { titulo: 'Estado', movil: true, celda: (p) => insignia(ESTADOS_PRESTAMO, p.estado_prestamo) },
+              { titulo: 'Proyecto', celda: (p) => p.proyecto },
+              { titulo: 'Solicitud', celda: (p) => p.solicitud ?? '—' },
+              { titulo: 'Entregada', celda: (p) => fmtFecha(p.fecha_prestamo), orden: (p) => p.fecha_prestamo },
+              { titulo: 'Devolución estimada', celda: (p) => fmtFecha(p.fecha_estimada_devolucion) },
+              { titulo: 'Devuelta', celda: (p) => (p.fecha_real_devolucion ? fmtFecha(p.fecha_real_devolucion) : '—') },
+              { titulo: 'Estado al entregar', celda: (p) => p.estado_entrega },
             ]}
           />
         )}
       </section>
+
+      <Modal abierto={porRechazar !== null} titulo="Rechazar solicitud" onCerrar={() => setPorRechazar(null)} ancho="max-w-md">
+        <label htmlFor="sh-motivo" className="label">Observación (obligatoria)</label>
+        <textarea id="sh-motivo" className="input" rows={3} maxLength={500} value={motivo}
+          onChange={(e) => { setMotivo(e.target.value); setErrorRechazo('') }} />
+        {errorRechazo && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorRechazo}</p>}
+        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+          <button type="button" className="btn-primary" onClick={rechazar}>Rechazar</button>
+          <button type="button" className="btn-ghost" onClick={() => setPorRechazar(null)}>Cancelar</button>
+        </div>
+      </Modal>
     </div>
   )
 }

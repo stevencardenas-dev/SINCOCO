@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { ArrowPathIcon, ClipboardDocumentListIcon, PlusIcon } from '@heroicons/react/24/outline'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
-import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
-import { TablaFicha } from '../components/Ficha.jsx'
+import TablaSolicitudes, { ESTADOS_SOLICITUD as ESTADOS } from '../components/TablaSolicitudes.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
@@ -15,7 +14,6 @@ import { proyectosApi } from '../services/proyectos'
 import { asignacionesApi } from '../services/asignaciones'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFormulario } from '../hooks/useFormulario'
-import { fmtFecha } from '../lib/format.js'
 
 /**
  * HU-30 (CU-30): solicitud de herramientas.
@@ -24,26 +22,14 @@ import { fmtFecha } from '../lib/format.js'
  * Las transiciones y validaciones viven en el backend.
  */
 
-const ESTADOS = {
-  PENDIENTE: { texto: 'Pendiente', clase: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  APROBADA: { texto: 'Aprobada', clase: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  RECHAZADA: { texto: 'Rechazada', clase: 'bg-red-50 text-red-700 ring-red-200' },
-  ENTREGADA: { texto: 'Atendida', clase: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  CANCELADA: { texto: 'Cancelada', clase: 'bg-slate-100 text-slate-500 ring-slate-200' },
-}
-
 const VACIO = { herramienta_id: '', para_trabajador_id: '', proyecto_id: '', fecha_requerida: '', fecha_estimada_devolucion: '', observaciones: '' }
 const hoy = () => new Date().toLocaleDateString('en-CA')
 
 export default function SolicitudesHerramientas({ pestanas }) {
-  const { puede } = useAuth()
+  const { puede, user } = useAuth()
   const puedeCrear = puede('solicitudes_herramientas.crear')
-  const puedeResolver = puede('solicitudes_herramientas.resolver')
 
   const [estado, setEstado] = useState('')
-  const [porRechazar, setPorRechazar] = useState(null)
-  const [motivo, setMotivo] = useState('')
-  const [errorRechazo, setErrorRechazo] = useState('')
   const [opciones, setOpciones] = useState({ herramientas: [], trabajadores: [], proyectos: [] })
 
   const { datos, error, aviso, setAviso, recargar, ejecutar } = useRecurso(
@@ -87,13 +73,6 @@ export default function SolicitudesHerramientas({ pestanas }) {
   const accion = (fn, s, exito) =>
     ejecutar(() => fn(s.id), { exito: `${exito} ${s.codigo}.`, error: 'No se pudo completar la acción.' })
 
-  const rechazar = async () => {
-    if (!motivo.trim()) return setErrorRechazo('Debe indicar la observación que justifica el rechazo.')
-    const s = porRechazar
-    setPorRechazar(null)
-    await ejecutar(() => api.rechazar(s.id, motivo.trim()), { exito: `Solicitud ${s.codigo} rechazada.`, error: 'No se pudo rechazar la solicitud.' })
-  }
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -132,55 +111,14 @@ export default function SolicitudesHerramientas({ pestanas }) {
 
       {datos !== null && datos.length > 0 && (
         <div className="card overflow-hidden">
-          <TablaFicha
+          <TablaSolicitudes
             filas={datos}
-            minWidth="md:min-w-[900px]"
-            ficha={{ titulo: (s) => s.herramienta, subtitulo: (s) => s.codigo }}
-            columnas={[
-              { titulo: 'Código', movil: true, tdClase: 'font-medium tabular-nums text-slate-800', celda: (s) => s.codigo },
-              { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (s) => `${s.herramienta} (${s.codigo_serial})` },
-              { titulo: 'Trabajador', tdClase: 'text-slate-600', celda: (s) => s.trabajador },
-              { titulo: 'Proyecto', tdClase: 'text-slate-600', celda: (s) => s.proyecto },
-              { titulo: 'Solicitante', tdClase: 'text-slate-600', celda: (s) => s.solicitante },
-              { titulo: 'Solicitada', tdClase: 'text-slate-600', celda: (s) => fmtFecha(s.fecha_solicitud), orden: (s) => s.fecha_solicitud },
-              { titulo: 'Requerida', tdClase: 'text-slate-600', celda: (s) => fmtFecha(s.fecha_requerida), orden: (s) => s.fecha_requerida },
-              { titulo: 'Devolución esperada', tdClase: 'text-slate-600', celda: (s) => (s.fecha_estimada_devolucion ? fmtFecha(s.fecha_estimada_devolucion) : '—'), orden: (s) => s.fecha_estimada_devolucion ?? '' },
-              {
-                titulo: 'Estado',
-                movil: true,
-                celda: (s) => (
-                  <>
-                    <span className={`badge ring-1 ${ESTADOS[s.estado]?.clase}`}>{ESTADOS[s.estado]?.texto ?? s.estado}</span>
-                    {s.observaciones && <p className="mt-1 max-w-xs text-xs text-slate-500">{s.observaciones}</p>}
-                  </>
-                ),
-              },
-              {
-                titulo: 'Acciones',
-                acciones: true,
-                derecha: true,
-                celda: (s, enFicha) => {
-                  const abierta = s.estado === 'PENDIENTE' || s.estado === 'APROBADA'
-                  const botones = (
-                    <>
-                      {puedeResolver && s.estado === 'PENDIENTE' && (
-                        <>
-                          <button type="button" className="btn-ghost text-xs" onClick={() => accion(api.aprobar, s, 'Aprobada')}>Aprobar</button>
-                          <button type="button" className="btn-ghost text-xs" onClick={() => { setMotivo(''); setErrorRechazo(''); setPorRechazar(s) }}>Rechazar</button>
-                        </>
-                      )}
-                      {puedeResolver && s.estado === 'APROBADA' && (
-                        <button type="button" className="btn-ghost text-xs" onClick={() => accion(api.atender, s, 'Atendida')}>Atender</button>
-                      )}
-                      {abierta && (
-                        <button type="button" className="btn-ghost text-xs" onClick={() => accion(api.cancelar, s, 'Cancelada')}>Cancelar</button>
-                      )}
-                    </>
-                  )
-                  return enFicha ? botones : <div className="flex items-center justify-end gap-2">{botones}</div>
-                },
-              },
-            ]}
+            acciones={(s) =>
+              (s.estado === 'PENDIENTE' || s.estado === 'APROBADA') && Number(s.solicitado_por_usuario_id) === Number(user?.id) ? (
+                <button type="button" className="btn-ghost text-xs" onClick={() => accion(api.cancelar, s, 'Cancelada')}>
+                  Cancelar solicitud
+                </button>
+              ) : null}
           />
         </div>
       )}
@@ -208,11 +146,11 @@ export default function SolicitudesHerramientas({ pestanas }) {
               placeholder="Escriba el nombre o el código…" />
           </div>
           <div>
-            <label htmlFor="sh-trabajador" className="label">Trabajador destinatario (asignado al proyecto)</label>
+            <label htmlFor="sh-trabajador" className="label">Trabajador destinatario</label>
             <BuscadorSelect id="sh-trabajador" requerido error={formulario.campo === 'para_trabajador_id'}
               value={form.para_trabajador_id} onChange={(v) => formulario.cambiar('para_trabajador_id', v)}
               opciones={opciones.trabajadores.filter((t) => t.activo && idsDelProyecto?.has(t.id)).map((t) => ({ value: t.id, label: `${t.nombres} ${t.apellidos}`, sublabel: t.numero_documento }))}
-              placeholder={!form.proyecto_id ? 'Elija primero el proyecto' : 'Escriba el nombre o el documento…'} />
+              placeholder={!form.proyecto_id ? 'Elija primero el proyecto' : 'Asignados al proyecto: escriba el nombre…'} />
           </div>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -234,17 +172,6 @@ export default function SolicitudesHerramientas({ pestanas }) {
             onChange={(e) => formulario.cambiar('observaciones', e.target.value)} />
         </div>
       </ModalFormulario>
-
-      <Modal abierto={porRechazar !== null} titulo="Rechazar solicitud" onCerrar={() => setPorRechazar(null)} ancho="max-w-md">
-        <label htmlFor="sh-motivo" className="label">Observación (obligatoria)</label>
-        <textarea id="sh-motivo" className="input" rows={3} maxLength={500} value={motivo}
-          onChange={(e) => { setMotivo(e.target.value); setErrorRechazo('') }} />
-        {errorRechazo && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorRechazo}</p>}
-        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
-          <button type="button" className="btn-primary" onClick={rechazar}>Rechazar</button>
-          <button type="button" className="btn-ghost" onClick={() => setPorRechazar(null)}>Cancelar</button>
-        </div>
-      </Modal>
     </div>
   )
 }
