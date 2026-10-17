@@ -29,6 +29,8 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   -- ver todos los proyectos en vez de solo los asignados.
   ('proyectos.gestionar_acceso', 'Asignar personal a proyectos y actividades', 'proyectos'),
   ('proyectos.acceso_total',   'Ver todos los proyectos, no solo los asignados', 'proyectos'),
+  -- HU-31: extender la fecha fin de una asignación (solo el administrador).
+  ('asignaciones.extender',    'Extender la fecha fin de una asignación de personal', 'proyectos'),
   ('trabajadores.listar',      'Listar el personal',                       'personal'),
   ('trabajadores.crear',       'Registrar personal',                       'personal'),
   ('trabajadores.editar',      'Editar los datos del personal',            'personal'),

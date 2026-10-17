@@ -23,7 +23,10 @@ with sync_playwright() as p:
     ir_a(pg, f'/proyectos/{proyecto}')
     fila = pg.locator('table tbody tr', has_text='Prueba Sprint')
     fila.first.wait_for(timeout=10000)
-    fila.get_by_role('button', name='Extender').first.click()
+    # HU-05: las asignaciones del trabajador se ven en un diálogo propio.
+    fila.get_by_role('button', name='Ver asignaciones').first.click()
+    grupo = pg.get_by_role('dialog', name='Prueba Sprint')
+    grupo.get_by_role('button', name='Extender').first.click()
     dlg = pg.get_by_role('dialog', name='Extender asignación')
 
     # Fecha fuera del proyecto -> el sistema rechaza e indica el límite.
@@ -41,9 +44,20 @@ with sync_playwright() as p:
     assert 'Fecha fin original' in texto and 'Fecha fin vigente' in texto, texto
     dlg.get_by_role('button', name='Cancelar').click()
     pg.get_by_role('status').filter(has_text='extendida').wait_for(timeout=10000)
-    fila = pg.locator('table tbody tr', has_text='Prueba Sprint')
+    fila = grupo.locator('table tbody tr').first
     assert re.search(r'10\W+nov', fila.inner_text(), re.I), fila.inner_text()
     captura(pg, 'hu31_extension')
+
+    pg2 = navegador.new_page(viewport={'width': 1440, 'height': 900})
+    login(pg2, 'gerente')
+    ir_a(pg2, f'/proyectos/{proyecto}')
+    pg2.locator('table tbody tr', has_text='Prueba Sprint').first.get_by_role('button', name='Ver asignaciones').click()
+    g = pg2.get_by_role('dialog', name='Prueba Sprint')
+    g.get_by_role('button', name='Historial').first.wait_for(timeout=10000)
+    assert g.get_by_role('button', name='Extender').count() == 0, 'el gerente no debe ver Extender'
+    g.get_by_role('button', name='Historial').first.click()
+    pg2.get_by_role('dialog', name='Historial de la asignación').wait_for(timeout=10000)
+    assert pg2.locator('#ext-fecha').count() == 0, 'el gerente no debe ver el formulario'
     navegador.close()
 
 limpiar()
