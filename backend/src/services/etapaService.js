@@ -93,7 +93,10 @@ export async function actualizarEtapa(id, dto, ctx = {}) {
   rechazarCambioDeFechas(etapa, campos, 'la etapa')
   const inicio = aFechaDia(campos.fecha_inicio_programada ?? etapa.fecha_inicio_programada)
   const fin = aFechaDia(campos.fecha_fin_programada ?? etapa.fecha_fin_programada)
-  if (!inicio || !fin) {
+  // Las etapas de una plantilla nacen sin fechas: se pueden editar (nombre,
+  // descripción) sin fechas; si se envía alguna, deben quedar las dos.
+  const tocaFechas = campos.fecha_inicio_programada !== undefined || campos.fecha_fin_programada !== undefined
+  if (tocaFechas && (!inicio || !fin)) {
     throw new AppError('La etapa necesita fecha de inicio y de fin', 400, 'fecha_inicio_programada')
   }
   const cambiaFechas = inicio !== aFechaDia(etapa.fecha_inicio_programada)
