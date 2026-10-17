@@ -66,6 +66,31 @@ for usuario in ('gerente', 'maestro'):
     assert estado == 403, f'{usuario} no debe listar plantillas: {estado}'
 print('rol no administrador -> 403')
 
+
+# Etapa de plantilla sin fechas: admite actividades (rango del proyecto) y reprogramación.
+etapa_id = etapas[1]['id']
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad en etapa sin fechas', 'criterios': ['TEST-criterio'],
+    'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-10-20',
+}, token=admin)
+assert estado == 201, f'actividad en etapa sin fechas: {estado} {r}'
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad fuera del proyecto', 'criterios': ['TEST-criterio'],
+    'fecha_inicio_programada': '2020-01-01', 'fecha_fin_programada': '2020-01-10',
+}, token=admin)
+assert estado == 400, f'fuera del rango del proyecto debia dar 400, llego {estado}: {r}'
+# La actividad debe quedar dentro de las fechas que se le den a la etapa.
+estado, r = http('PATCH', f'/api/etapas/{etapa_id}/reprogramar', {
+    'motivo': 'Definir fechas', 'fecha_inicio_programada': '2026-11-01', 'fecha_fin_programada': '2026-11-30',
+}, token=admin)
+assert estado == 400, f'etapa que deja fuera a su actividad debia dar 400, llego {estado}: {r}'
+estado, r = http('PATCH', f'/api/etapas/{etapa_id}/reprogramar', {
+    'motivo': 'Definir fechas', 'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-10-31',
+}, token=admin)
+assert estado == 200, f'reprogramar etapa sin fechas: {estado} {r}'
+assert r['etapa']['fecha_inicio_programada'][:10] == '2026-10-01'
+print('etapa sin fechas -> admite actividad y se puede reprogramar')
+
 # Bitácora (HU-17).
 n = scalar(f"SELECT COUNT(*) FROM bitacora_trazabilidad WHERE accion='APLICAR_PLANTILLA' "
            f"AND tabla_afectada='etapas_proyecto' AND registro_id={proyecto_id}")
