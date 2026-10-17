@@ -32,11 +32,11 @@ export default function TablaSolicitudes({ filas, acciones }) {
         extras: (s) => [['Estado', <InsigniaSolicitud key="e" estado={s.estado} />], ['Observaciones', s.observaciones]],
       }}
       columnas={[
-        { titulo: 'Código', movil: true, tdClase: 'font-medium tabular-nums text-slate-800', celda: (s) => s.codigo },
+        { titulo: 'Código', escritorio: true, tdClase: 'font-medium tabular-nums text-slate-800', celda: (s) => s.codigo },
         { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (s) => `${s.herramienta} (${s.codigo_serial})` },
         { titulo: 'Estado', movil: true, orden: (s) => s.estado, celda: (s) => <InsigniaSolicitud estado={s.estado} /> },
         { titulo: 'Trabajador', celda: (s) => s.trabajador },
-        { titulo: 'Proyecto', celda: (s) => s.proyecto },
+        { titulo: 'Proyecto', escritorio: true, celda: (s) => s.proyecto },
         { titulo: 'Solicitante', celda: (s) => s.solicitante },
         { titulo: 'Solicitada', celda: (s) => fmtFecha(s.fecha_solicitud), orden: (s) => s.fecha_solicitud },
         { titulo: 'Requerida', celda: (s) => fmtFecha(s.fecha_requerida), orden: (s) => s.fecha_requerida },

@@ -80,7 +80,8 @@ function claveOrden(columna, fila) {
  * `orden(fila)` la reemplaza cuando ese texto no ordena bien (fechas, estados).
  *
  * `compacta`: las columnas sin `movil` (y las de acciones) se ocultan también en
- * escritorio y el botón «Ver» abre la ficha en todos los tamaños: la tabla solo
+ * escritorio (salvo las que llevan `escritorio: true`, visibles desde `md`) y el
+ * botón «Ver» abre la ficha en todos los tamaños: la tabla solo
  * muestra lo esencial y el resto, con las acciones, vive en la ventana.
  *
  * `alinearArriba`: las celdas se alinean al primer renglón (align-top) en vez
@@ -141,7 +142,7 @@ export function TablaFicha({
                   key={c.titulo}
                   aria-sort={orden?.titulo === c.titulo ? (orden.desc ? 'descending' : 'ascending') : undefined}
                   className={`font-semibold ${c.derecha ? 'text-right' : ''} ${
-                    c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : compacta ? 'hidden' : 'hidden px-5 py-3.5 md:table-cell'
+                    c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : compacta && !c.escritorio ? 'hidden' : 'hidden px-5 py-3.5 md:table-cell'
                   } ${c.thClase ?? ''}`}
                 >
                   {c.acciones ? (
@@ -182,7 +183,7 @@ export function TablaFicha({
                   <td
                     key={c.titulo}
                     className={`${c.derecha ? 'text-right' : ''} ${c.tdClase ?? ''} ${
-                      c.movil ? 'px-3 py-3 md:px-5 md:py-4' : compacta ? 'hidden' : 'hidden px-5 py-4 md:table-cell'
+                      c.movil ? 'px-3 py-3 md:px-5 md:py-4' : compacta && !c.escritorio ? 'hidden' : 'hidden px-5 py-4 md:table-cell'
                     }`}
                   >
                     {c.celda(f, false)}
