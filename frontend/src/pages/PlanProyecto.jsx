@@ -987,7 +987,7 @@ export default function PlanProyecto() {
                       <td className="px-5 py-3 text-slate-600">{g.cargo ?? '—'}</td>
                       <td className="px-5 py-3 text-slate-600">{g.alcance}</td>
                       <td className="px-5 py-3">
-                        <span className={`badge ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{g.estado}</span>
+                        <span className={`badge badge-tabla ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{g.estado}</span>
                       </td>
                       <td className="px-5 py-3">
                         <button type="button" className="btn-accion" onClick={() => setGrupoAbierto(g.trabajador_id)}>
@@ -1035,7 +1035,7 @@ export default function PlanProyecto() {
             </td>
             <td className="px-5 py-3">
               <span
-                className={`badge ${
+                className={`badge badge-tabla ${
                   ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
                 }`}
               >
