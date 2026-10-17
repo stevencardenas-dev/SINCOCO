@@ -79,6 +79,10 @@ function claveOrden(columna, fila) {
  * viceversa al pulsar su encabezado. La clave se toma del texto de la celda;
  * `orden(fila)` la reemplaza cuando ese texto no ordena bien (fechas, estados).
  *
+ * `compacta`: las columnas sin `movil` (y las de acciones) se ocultan también en
+ * escritorio y el botón «Ver» abre la ficha en todos los tamaños: la tabla solo
+ * muestra lo esencial y el resto, con las acciones, vive en la ventana.
+ *
  * `alinearArriba`: las celdas se alinean al primer renglón (align-top) en vez
  * de al centro. Sirve cuando hay celdas de varias líneas: así el texto, los
  * selectores y los botones de la fila quedan a la misma altura. Los controles
@@ -95,6 +99,7 @@ export function TablaFicha({
   vacia,
   ficha,
   alinearArriba = false,
+  compacta = false,
 }) {
   const [fichaId, setFichaId] = useState(null)
   const [orden, setOrden] = useState(null) // { titulo, desc }
@@ -136,7 +141,7 @@ export function TablaFicha({
                   key={c.titulo}
                   aria-sort={orden?.titulo === c.titulo ? (orden.desc ? 'descending' : 'ascending') : undefined}
                   className={`font-semibold ${c.derecha ? 'text-right' : ''} ${
-                    c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : 'hidden px-5 py-3.5 md:table-cell'
+                    c.movil ? 'px-3 py-3 md:px-5 md:py-3.5' : compacta ? 'hidden' : 'hidden px-5 py-3.5 md:table-cell'
                   } ${c.thClase ?? ''}`}
                 >
                   {c.acciones ? (
@@ -162,7 +167,7 @@ export function TablaFicha({
                   )}
                 </th>
               ))}
-              <th className="px-3 py-3 text-right font-semibold md:hidden">Ver ficha</th>
+              <th className={`px-3 py-3 text-right font-semibold ${compacta ? 'md:px-5' : 'md:hidden'}`}>{compacta ? 'Detalle' : 'Ver ficha'}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -177,20 +182,20 @@ export function TablaFicha({
                   <td
                     key={c.titulo}
                     className={`${c.derecha ? 'text-right' : ''} ${c.tdClase ?? ''} ${
-                      c.movil ? 'px-3 py-3 md:px-5 md:py-4' : 'hidden px-5 py-4 md:table-cell'
+                      c.movil ? 'px-3 py-3 md:px-5 md:py-4' : compacta ? 'hidden' : 'hidden px-5 py-4 md:table-cell'
                     }`}
                   >
                     {c.celda(f, false)}
                   </td>
                 ))}
-                <td className="px-3 py-3 text-right md:hidden">
+                <td className={`px-3 py-3 text-right ${compacta ? 'md:px-5 md:py-4' : 'md:hidden'}`}>
                   <button
                     type="button"
                     className={`btn-accion btn-accion-editar ${alinearArriba ? '-my-1' : ''}`}
                     onClick={() => setFichaId(getId(f))}
                     aria-label={`Ver ficha de ${ficha.etiqueta?.(f) ?? ficha.titulo(f)}`}
                   >
-                    <EyeIcon className="h-4 w-4" /> Ver ficha
+                    <EyeIcon className="h-4 w-4" /> {compacta ? 'Ver' : 'Ver ficha'}
                   </button>
                 </td>
               </tr>
