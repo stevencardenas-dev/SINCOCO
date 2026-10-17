@@ -79,6 +79,8 @@ export async function listar({
   cargoId = null,
   especialidadId = null,
   disponible = null,
+  desde = null,
+  hasta = null,
 } = {}) {
   const condiciones = []
   const params = []
@@ -114,6 +116,20 @@ export async function listar({
   } else if (disponible !== null && disponible !== undefined && disponible !== '') {
     condiciones.push('t.disponible = ?')
     params.push(Number(disponible) ? 1 : 0)
+  }
+
+  // HU-33 · criterio 3: con un periodo, solo quienes pueden ser asignados (disponibles) y no
+  // tienen asignaciones activas ni actividades abiertas que se solapen con él.
+  if (desde && hasta) {
+    condiciones.push('t.disponible = 1')
+    condiciones.push(`NOT EXISTS (SELECT 1 FROM asignaciones_personal ap
+      WHERE ap.trabajador_id = t.id AND ap.estado = 'ACTIVO' AND ap.fecha_fin_real IS NULL
+        AND ap.fecha_inicio <= ? AND COALESCE(ap.fecha_fin_programada, '9999-12-31') >= ?)`)
+    params.push(hasta, desde)
+    condiciones.push(`NOT EXISTS (SELECT 1 FROM actividades av
+      WHERE av.responsable_id = t.id AND av.activo = 1 AND av.estado IN ('PENDIENTE', 'EN_PROCESO')
+        AND av.fecha_inicio_programada <= ? AND av.fecha_fin_programada >= ?)`)
+    params.push(hasta, desde)
   }
 
   const [rows] = await pool.query(
