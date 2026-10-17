@@ -66,7 +66,7 @@ const buscarEn = (lista, valor) => lista.find((x) => x.value === valor)
 function Badge({ opcion, texto }) {
   return (
     <span
-      className={`-my-0.5 inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+      className={`badge-tabla -my-0.5 inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
         opcion?.badge ?? 'bg-slate-100 text-slate-600'
       }`}
     >

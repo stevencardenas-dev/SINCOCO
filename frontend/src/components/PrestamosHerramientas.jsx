@@ -24,7 +24,7 @@ const ESTADOS_PRESTAMO = {
   CON_NOVEDAD: 'bg-amber-50 text-amber-700 ring-amber-200',
 }
 const insignia = (mapa, valor) => (
-  <span className={`badge ring-1 ${mapa[valor] ?? 'bg-slate-100 text-slate-500 ring-slate-200'}`}>{valor}</span>
+  <span className={`badge badge-tabla ring-1 ${mapa[valor] ?? 'bg-slate-100 text-slate-500 ring-slate-200'}`}>{valor}</span>
 )
 
 const Cargando = () => (
