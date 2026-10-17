@@ -13,7 +13,7 @@ import { asyncHandler, contexto } from '../utils/http.js'
 /**
  * GET /api/trabajadores -> catálogo de personal (HU-04).
  * `?incluirInactivos=1` incluye los dados de baja (HU-18).
- * `?buscar=` `?estado=` `?cargo_id=` `?especialidad_id=` `?disponible=` filtran el listado desde la
+ * `?buscar=` `?estado=` `?cargo_id=` `?especialidad_id=` `?disponible=` `?desde=&hasta=` (HU-33) filtran el listado desde la
  * API, porque el volumen de personal no se puede resolver solo en el navegador.
  */
 export const listar = asyncHandler(async (req, res) => {
@@ -26,6 +26,8 @@ export const listar = asyncHandler(async (req, res) => {
       cargoId: req.query.cargo_id || null,
       especialidadId: req.query.especialidad_id || null,
       disponible: req.query.disponible ?? null,
+      desde: req.query.desde || null,
+      hasta: req.query.hasta || null,
     }),
   )
 })
