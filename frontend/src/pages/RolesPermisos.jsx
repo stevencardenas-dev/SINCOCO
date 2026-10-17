@@ -2,6 +2,7 @@ import { Fragment, useState } from 'react'
 import {
   ArrowPathIcon,
   CheckIcon,
+  ChevronDownIcon,
   KeyIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -64,6 +65,8 @@ export default function RolesPermisos() {
   })
   const [filtro, setFiltro] = useState('')
   const [filtroAbierto, setFiltroAbierto] = useState(false)
+  // Grupos de la matriz plegados por el usuario (por módulo).
+  const [plegados, setPlegados] = useState(() => new Set())
   // Celular: en vez de la matriz, se elige un rol y se ven sus permisos.
   const [rolVerId, setRolVerId] = useState(null)
 
@@ -119,6 +122,17 @@ export default function RolesPermisos() {
   const modulos = [...new Set(visibles.map((p) => p.modulo ?? 'otros'))].sort(
     (a, b) => ordenModulo(a) - ordenModulo(b) || a.localeCompare(b),
   )
+
+  // Con una búsqueda activa todos los grupos se muestran, para no esconder coincidencias.
+  const grupoAbierto = (modulo) => texto !== '' || !plegados.has(modulo)
+  const alternarGrupo = (modulo) =>
+    setPlegados((prev) => {
+      const sig = new Set(prev)
+      if (sig.has(modulo)) sig.delete(modulo)
+      else sig.add(modulo)
+      return sig
+    })
+  const todosPlegados = modulos.length > 0 && modulos.every((m) => plegados.has(m))
 
   const totalConcedidos = asignaciones.length
   const rolVer = roles.find((r) => r.id === rolVerId) ?? null
@@ -264,6 +278,13 @@ export default function RolesPermisos() {
             {permisos.length} permisos · {roles.length} roles · {totalConcedidos} asignaciones ·
             haga clic en una casilla para conceder o quitar
           </p>
+          <button
+            type="button"
+            className="btn-ghost text-xs"
+            onClick={() => setPlegados(todosPlegados ? new Set() : new Set(modulos))}
+          >
+            {todosPlegados ? 'Desplegar todo' : 'Plegar todo'}
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -288,14 +309,25 @@ export default function RolesPermisos() {
               {modulos.map((modulo) => (
                 <Fragment key={modulo}>
                   <tr className="bg-slate-50/70">
-                    <td
-                      colSpan={roles.length + 1}
-                      className="px-5 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
-                    >
-                      {MODULO_LABEL[modulo] ?? modulo}
+                    <td colSpan={roles.length + 1} className="p-0">
+                      <button
+                        type="button"
+                        onClick={() => alternarGrupo(modulo)}
+                        aria-expanded={grupoAbierto(modulo)}
+                        className="flex w-full items-center gap-2 px-5 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 hover:bg-slate-100"
+                      >
+                        <ChevronDownIcon
+                          className={`h-4 w-4 transition-transform ${grupoAbierto(modulo) ? '' : '-rotate-90'}`}
+                        />
+                        {MODULO_LABEL[modulo] ?? modulo}
+                        <span className="font-normal normal-case tracking-normal text-slate-400">
+                          ({visibles.filter((p) => (p.modulo ?? 'otros') === modulo).length})
+                        </span>
+                      </button>
                     </td>
                   </tr>
-                  {visibles
+                  {grupoAbierto(modulo) &&
+                    visibles
                     .filter((p) => (p.modulo ?? 'otros') === modulo)
                     .map((p) => (
                       <tr key={p.id} data-permiso={p.nombre} className="transition hover:bg-slate-50/70">

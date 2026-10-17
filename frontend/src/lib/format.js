@@ -96,3 +96,12 @@ export const estadoProyecto = {
   finalizado: { label: 'Finalizado', cls: 'bg-slate-100 text-slate-600 ring-slate-200' },
   cancelado: { label: 'Cancelado', cls: 'bg-red-50 text-red-700 ring-red-200' },
 }
+/** HU-21: esfuerzo de una actividad y su peso interno en el avance de la etapa. */
+export const ESFUERZOS = [
+  { value: 'MUY_ALTO', label: 'Muy alto', peso: 8 },
+  { value: 'ALTO', label: 'Alto', peso: 5 },
+  { value: 'MEDIO', label: 'Medio', peso: 3 },
+  { value: 'BAJO', label: 'Bajo', peso: 2 },
+  { value: 'MUY_BAJO', label: 'Muy bajo', peso: 1 },
+]
+export const etiquetaEsfuerzo = (v) => ESFUERZOS.find((e) => e.value === v)?.label ?? 'Medio'

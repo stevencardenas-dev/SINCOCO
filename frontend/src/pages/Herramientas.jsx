@@ -19,6 +19,8 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha } from '../lib/format.js'
+import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
+import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
 
 /**
  * HU-10 (CU-10): catálogo de herramientas con su estado operativo y su
@@ -64,7 +66,7 @@ const buscarEn = (lista, valor) => lista.find((x) => x.value === valor)
 function Badge({ opcion, texto }) {
   return (
     <span
-      className={`-my-0.5 inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
+      className={`badge-tabla -my-0.5 inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${
         opcion?.badge ?? 'bg-slate-100 text-slate-600'
       }`}
     >
@@ -73,7 +75,7 @@ function Badge({ opcion, texto }) {
   )
 }
 
-export default function Herramientas() {
+function CatalogoHerramientas({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('herramientas.crear')
   const puedeEditar = puede('herramientas.editar')
@@ -189,6 +191,8 @@ export default function Herramientas() {
           {incluirInactivos ? 'Ocultar dadas de baja' : 'Incluir dadas de baja'}
         </button>
       </PageHeader>
+
+      {pestanas}
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
@@ -513,9 +517,11 @@ export default function Herramientas() {
                 titulo: 'Estado',
                 movil: true,
                 celda: (h) => <Badge opcion={buscarEn(ESTADOS, h.estado_operativo)} />,
+                orden: (h) => buscarEn(ESTADOS, h.estado_operativo)?.label,
               },
               {
                 titulo: 'Disponibilidad',
+                orden: (h) => buscarEn(DISPONIBILIDADES, h.disponibilidad)?.label,
                 celda: (h) => (
                   <>
                     <Badge opcion={buscarEn(DISPONIBILIDADES, h.disponibilidad)} />
@@ -527,6 +533,7 @@ export default function Herramientas() {
               },
               {
                 titulo: 'Préstamo',
+                orden: (h) => (h.prestable ? 0 : 1),
                 celda: (h) =>
                   h.prestable ? (
                     <Badge opcion={{ badge: 'bg-emerald-50 text-emerald-700' }} texto="Prestable" />
@@ -565,5 +572,42 @@ export default function Herramientas() {
         </div>
       )}
     </div>
+  )
+}
+
+const TABS = [
+  { id: 'herramientas', label: 'Herramientas' },
+  { id: 'almacenes', label: 'Almacenes' },
+  // HU-11: solo quien tenga el permiso (bodega y administrador).
+  { id: 'prestamos', label: 'Préstamos', permiso: 'prestamos_herramientas.listar' },
+]
+
+export default function Herramientas() {
+  const { puede } = useAuth()
+  const [tab, setTab] = useState('herramientas')
+  const tabs = TABS.filter((t) => !t.permiso || puede(t.permiso))
+
+  const pestanas = (
+    <div className="flex flex-wrap gap-2 border-b border-slate-200">
+      {tabs.map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => setTab(t.id)}
+          className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
+            t.id === tab ? 'border-b-2 border-accent-400 text-brand-900' : 'text-slate-500 hover:text-brand-800'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (tab === 'prestamos' && puede('prestamos_herramientas.listar')) return <PrestamosHerramientas pestanas={pestanas} />
+  return tab === 'almacenes' ? (
+    <AlmacenesGestion pestanas={pestanas} />
+  ) : (
+    <CatalogoHerramientas pestanas={pestanas} />
   )
 }

@@ -36,7 +36,11 @@ Define las fases o hitos principales que componen el plan de trabajo de cada pro
 
 # Tabla: actividades
 
-Desglosa las tareas específicas contenidas en cada etapa, definiendo sus fechas programadas/reales, el trabajador o maestro responsable, su estado y porcentaje de avance.
+Desglosa las tareas específicas contenidas en cada etapa, definiendo sus fechas programadas/reales, el trabajador o maestro responsable, su estado y porcentaje de avance. El esfuerzo (Muy alto, Alto, Medio, Bajo, Muy bajo) determina su peso interno (8, 5, 3, 2, 1) en el avance de la etapa y del proyecto.
+
+# Tabla: criterios_aceptacion
+
+Criterios de aceptación (checkbox) que se definen al crear una actividad. El porcentaje de avance de la actividad se calcula de forma equitativa: criterios cumplidos entre total de criterios.
 
 # Tabla: asignaciones_personal
 

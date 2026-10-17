@@ -45,6 +45,11 @@
   .badge {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
   }
+  /* Badge que ocupa solo una celda: se corre su padding para que el texto
+     quede alineado con el de la columna. */
+  .badge-tabla {
+    @apply -ml-2.5;
+  }
   /* Botones de acción de las tablas: mismo tamaño, color según su función. */
   .btn-accion {
     @apply inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition;
