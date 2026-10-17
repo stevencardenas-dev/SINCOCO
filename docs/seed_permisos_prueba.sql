@@ -107,7 +107,9 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
     'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
     'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
     'avance.registrar', 'avance.listar',
-    'clientes.listar', 'trabajadores.listar'
+    'clientes.listar', 'trabajadores.listar',
+    -- HU-30: consulta el catálogo y los almacenes para solicitar herramientas.
+    'herramientas.listar'
   );
 
 -- ENCARGADO_BODEGA: catálogo de herramientas (HU-10) y de materiales (HU-07).
