@@ -10,7 +10,7 @@
 from api_helper import http, login, limpiar, scalar, crear_proyecto, crear_trabajador, PREFIJO
 
 limpiar()
-admin, maestro = login('admin'), login('maestro')
+admin, maestro, gerente = login('admin'), login('maestro'), login('gerente')
 proyecto = crear_proyecto(admin)          # 2026-10-01 -> 2027-06-30
 w1 = crear_trabajador(admin, f'{PREFIJO}-CC-31A')
 w2 = crear_trabajador(admin, f'{PREFIJO}-CC-31B')
@@ -47,6 +47,9 @@ asignar(w3, '2026-10-05', '2026-10-25', actividad)
 
 # RBAC: solo quien gestiona el acceso extiende.
 assert extender(a, '2026-10-30', token=maestro)[0] == 403
+# La tarjeta fija al administrador como actor: el gerente tampoco extiende, pero sí consulta el historial.
+assert extender(a, '2026-10-30', token=gerente)[0] == 403
+assert http('GET', f'/api/asignaciones/{a}/historial', token=gerente)[0] == 200
 
 # Criterio 3: el motivo es obligatorio.
 estado, r = extender(a, '2026-10-30', motivo='  ')

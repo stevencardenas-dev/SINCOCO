@@ -230,6 +230,7 @@ export default function PlanProyecto() {
   const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
+  const puedeExtender = puede('asignaciones.extender') // HU-31: solo el administrador
 
   // Formularios del plan. Los errores de negocio se muestran dentro de cada
   // formulario, no sobre la tabla.
@@ -1104,7 +1105,7 @@ export default function PlanProyecto() {
                     Cancelar
                   </button>
                   <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
-                    Extender
+                    {puedeExtender ? 'Extender' : 'Historial'}
                   </button>
                 </div>
               ) : (
@@ -1122,6 +1123,7 @@ export default function PlanProyecto() {
 
       <ExtenderAsignacion
         asignacion={porExtender}
+        soloLectura={!puedeExtender}
         onCerrar={() => setPorExtender(null)}
         onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
       />
