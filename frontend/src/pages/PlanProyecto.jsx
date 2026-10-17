@@ -610,14 +610,14 @@ export default function PlanProyecto() {
         return (
           <div key={et.id} className="card overflow-hidden">
             <div className="border-b border-slate-100 px-5 py-4">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
               <div className="flex min-w-0 flex-1 items-start gap-2">
                 <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-400 text-xs font-semibold text-brand-950 ring-1 ring-inset ring-accent-500/30">
                   {et.orden}
                 </span>
                 <p className="min-w-0 break-words text-sm font-semibold leading-6 text-slate-900">{et.nombre}</p>
               </div>
-              <div className="flex h-6 shrink-0 items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 xl:h-6 xl:shrink-0 xl:flex-nowrap">
                 <span
                   className="text-xs font-semibold tabular-nums text-slate-600"
                   title="Promedio ponderado por el esfuerzo de cada actividad"
