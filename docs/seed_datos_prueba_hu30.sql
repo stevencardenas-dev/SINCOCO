@@ -1,3 +1,6 @@
+-- Ya aplicado en producción (run 38974292281). Vive en docs/ y no en docs/migraciones/
+-- porque la CI carga todas las migraciones y estas asignaciones chocan con las pruebas de API.
+-- Uso manual: mysql -u root sincoco < docs/seed_datos_prueba_hu30.sql
 -- DATOS DE PRUEBA (HU-30 / HU-11): proyectos, plan de trabajo, asignaciones,
 -- solicitudes y préstamos de herramientas. NO es una migración de esquema.
 --
