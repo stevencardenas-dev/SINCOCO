@@ -689,7 +689,7 @@ export default function Proyectos() {
                 titulo: 'Estado',
                 celda: (p) => {
                   const est = estadoProyecto[p.estado?.toLowerCase()] ?? estadoProyecto.planificacion
-                  return <span className={`badge ring-1 ${est.cls}`}>{est.label}</span>
+                  return <span className={`badge badge-tabla ring-1 ${est.cls}`}>{est.label}</span>
                 },
               },
               {

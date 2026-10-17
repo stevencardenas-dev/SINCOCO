@@ -79,8 +79,17 @@ print('etapa sin proyecto ->', estado, r['error'])
 
 # Criterio 4 + 5: actividad con responsable y estado PENDIENTE.
 responsable_id = crear_trabajador(admin, f'{PREFIJO}-CC-PLAN')
+# El responsable de una actividad debe tener acceso vigente al proyecto.
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad responsable sin acceso', 'criterios': ['TEST-criterio'],
+    'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
+    'responsable_id': responsable_id}, token=admin)
+assert estado == 400, f'responsable sin acceso al proyecto debia dar 400, llego {estado}: {r}'
+estado, r = http('POST', '/api/asignaciones', {'trabajador_id': responsable_id, 'proyecto_id': proyecto_id,
+                 'fecha_inicio': '2026-10-01'}, token=admin)
+assert estado == 201, f'no se pudo dar acceso al responsable: {estado} {r}'
 actividad = {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vaciado',
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vaciado', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
     'responsable_id': responsable_id, 'descripcion': 'Vaciado y nivelacion',
 }
@@ -104,12 +113,12 @@ estado, r = http('PATCH', f'/api/actividades/{a["id"]}', {'nombre': 'TEST-Activi
                                                            'descripcion': 'Nueva descripcion'}, token=admin)
 assert estado == 200 and r['actividad']['nombre'] == 'TEST-Actividad editada', f'editar actividad: {estado} {r}'
 estado, r = http('PATCH', f'/api/actividades/{a["id"]}', {'fecha_fin_programada': '2026-12-20'}, token=admin)
-assert estado == 400, f'editar actividad fuera de su etapa debia dar 400: {estado} {r}'
+# HU-34: con las fechas ya definidas, PATCH no las cambia (hay que reprogramar).
+assert estado == 409 and r.get('codigo') == 'USAR_REPROGRAMACION', f'editar fechas debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'fecha_fin_programada': '2026-10-20'}, token=admin)
-assert estado == 400 and 'actividad' in r['error'].lower(), \
-    f'acortar la etapa dejaria la actividad fuera: {estado} {r}'
+assert estado == 409, f'cambiar fechas de la etapa por PATCH debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'fecha_fin_programada': '2026-12-20'}, token=admin)
-assert estado == 400, f'la etapa se solaparia con la intermedia: {estado} {r}'
+assert estado == 409, f'cambiar fechas de la etapa por PATCH debia dar 409: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {'nombre': 'TEST-Etapa cimentacion editada'}, token=admin)
 assert estado == 200 and r['etapa']['nombre'] == 'TEST-Etapa cimentacion editada', f'editar etapa: {estado} {r}'
 estado, r = http('PATCH', f'/api/etapas/{etapa_id}', {}, token=admin)

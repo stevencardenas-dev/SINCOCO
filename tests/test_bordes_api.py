@@ -463,7 +463,7 @@ ETAPA = id_de(etapa_bordes('ET-OK'), 'etapa',
 
 
 def actividad_bordes(codigo, **extra):
-    cuerpo = {'etapa_id': ETAPA, 'nombre': f'{PREFIJO_B}-{codigo}',
+    cuerpo = {'etapa_id': ETAPA, 'nombre': f'{PREFIJO_B}-{codigo}', 'criterios': ['TEST-criterio'],
               'fecha_inicio_programada': '2026-11-01',
               'fecha_fin_programada': '2026-11-30'}
     cuerpo.update(extra)

@@ -8,24 +8,6 @@ import { LARGO, revisarLargo, textoOpcional } from '../utils/campos.js'
 /** Estados en los que una actividad admite registrar avance (CU-21: «en ejecución»). */
 const ESTADOS_CON_AVANCE = ['EN_PROCESO', 'ATRASADA']
 
-/** HU-21 · criterio 1: el porcentaje está entre 0 y 100 (hasta 2 decimales). */
-export function revisarPorcentaje(valor) {
-  if (valor === undefined || valor === null || String(valor).trim() === '') {
-    throw new AppError('El porcentaje de avance es obligatorio', 400, 'porcentaje')
-  }
-  const n = Number(valor)
-  if (!Number.isFinite(n)) {
-    throw new AppError('El porcentaje de avance debe ser un número', 400, 'porcentaje')
-  }
-  if (n < 0 || n > 100) {
-    throw new AppError('El porcentaje de avance debe estar entre 0 y 100', 400, 'porcentaje')
-  }
-  if (Math.round(n * 100) / 100 !== n) {
-    throw new AppError('El porcentaje admite como máximo 2 decimales', 400, 'porcentaje')
-  }
-  return n
-}
-
 function mensajeEstado(estado) {
   switch (estado) {
     case 'PENDIENTE':
@@ -46,28 +28,24 @@ function mensajeEstado(estado) {
  */
 export async function aplicarAvance(
   actividadId,
-  { porcentaje, observaciones = null },
+  { porcentaje, criterioId, cumplido, observaciones = null },
   ctx = {},
-  { permitirIgual = false } = {},
 ) {
   const resultado = await avanceRepository.registrarAvance(actividadId, async (actividad) => {
     if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
     if (!ESTADOS_CON_AVANCE.includes(actividad.estado)) {
       throw new AppError(mensajeEstado(actividad.estado), 409, 'estado')
     }
-    // HU-21 · escenario alternativo 2: el avance no puede retroceder. Se compara
-    // con la fila ya bloqueada para que dos registros simultáneos no se crucen.
-    if (porcentaje < actividad.anterior) {
-      throw new AppError(
-        `El porcentaje no puede ser inferior al último registrado (${actividad.anterior} %)`,
-        400,
-        'porcentaje',
-      )
+    // Un criterio ya en el estado pedido no cambia nada: se rechaza para no dejar seguimiento vacío.
+    if (criterioId) {
+      const criterios = await actividadRepository.listarCriterios(actividadId)
+      const criterio = criterios.find((c) => c.id === Number(criterioId))
+      if (!criterio) throw new AppError('El criterio no pertenece a la actividad', 404, 'criterio_id')
+      if (criterio.cumplido === cumplido) {
+        throw new AppError(`El criterio ya estaba ${cumplido ? 'cumplido' : 'pendiente'}`, 409, 'criterio_id')
+      }
     }
-    if (!permitirIgual && porcentaje === actividad.anterior) {
-      throw new AppError(`La actividad ya está en ${actividad.anterior} % de avance`, 400, 'porcentaje')
-    }
-    return { porcentaje, observaciones, usuarioId: ctx.usuarioId }
+    return { porcentaje, criterioId, cumplido, observaciones, usuarioId: ctx.usuarioId }
   })
   if (!resultado) throw new AppError('Actividad no encontrada', 404)
 
@@ -87,13 +65,20 @@ export async function aplicarAvance(
 }
 
 /**
- * HU-21: registra el nuevo porcentaje de avance de una actividad. Conserva el
- * porcentaje anterior y el nuevo (criterio 2), completa la actividad al llegar
- * al 100 % (criterio 3) y devuelve el avance recalculado de la etapa y del
- * proyecto (criterio 4).
+ * HU-21: marca (o desmarca) un criterio de aceptación de la actividad. El
+ * porcentaje de avance se recalcula de forma equitativa (criterios cumplidos /
+ * total), se conserva el porcentaje anterior y el nuevo (criterio 2), la
+ * actividad se completa al cumplir todos (criterio 3) y se devuelve el avance
+ * recalculado de la etapa y del proyecto (criterio 4).
  */
 export async function registrarAvanceActividad(actividadId, body = {}, ctx = {}) {
-  const porcentaje = revisarPorcentaje(body.porcentaje)
+  const criterioId = Number(body.criterio_id)
+  if (!Number.isInteger(criterioId) || criterioId <= 0) {
+    throw new AppError('Indique el criterio de aceptación', 400, 'criterio_id')
+  }
+  if (typeof body.cumplido !== 'boolean') {
+    throw new AppError('Indique si el criterio está cumplido (true o false)', 400, 'cumplido')
+  }
   const observaciones = textoOpcional(body.observaciones)
   revisarLargo(observaciones, LARGO.texto_largo, 'observaciones')
 
@@ -101,8 +86,16 @@ export async function registrarAvanceActividad(actividadId, body = {}, ctx = {})
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
   await verificarOperarActividad(ctx.usuario, actividad.proyecto_id, actividadId)
 
-  const resultado = await aplicarAvance(actividadId, { porcentaje, observaciones }, ctx)
+  const resultado = await aplicarAvance(actividadId, { criterioId, cumplido: body.cumplido, observaciones }, ctx)
   return { ...resultado, actividad: await actividadRepository.findById(actividadId) }
+}
+
+/** Criterios de aceptación de una actividad (HU-21). */
+export async function listarCriteriosActividad(actividadId, usuario = null) {
+  const actividad = await actividadRepository.findById(actividadId)
+  if (!actividad) throw new AppError('Actividad no encontrada', 404)
+  await verificarAccesoProyecto(usuario, actividad.proyecto_id)
+  return actividadRepository.listarCriterios(actividadId)
 }
 
 /**

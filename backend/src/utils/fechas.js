@@ -92,3 +92,24 @@ export function diasEntre(desde, hasta) {
   const [a2, m2, d2] = hasta.split('-').map(Number)
   return Math.round((Date.UTC(a2, m2 - 1, d2) - Date.UTC(a1, m1 - 1, d1)) / 86400000)
 }
+
+/**
+ * HU-34 · criterio 5: una vez definidas, las fechas programadas de un elemento
+ * del plan solo cambian reprogramando (con motivo, historial y fechas
+ * originales). La edición directa puede completar una fecha que aún no existe,
+ * pero no modificar una ya fijada.
+ */
+export function rechazarCambioDeFechas(actual, campos, elemento) {
+  for (const campo of ['fecha_inicio_programada', 'fecha_fin_programada']) {
+    if (campos[campo] === undefined) continue
+    const vigente = aFechaDia(actual[campo])
+    if (vigente && aFechaDia(campos[campo]) !== vigente) {
+      throw new AppError(
+        `Las fechas programadas de ${elemento} solo se cambian reprogramando, con motivo`,
+        409,
+        campo,
+        { codigo: 'USAR_REPROGRAMACION' },
+      )
+    }
+  }
+}

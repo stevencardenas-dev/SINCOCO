@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
-  CheckCircleIcon,
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
@@ -19,8 +18,11 @@ import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
+import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
+import EncabezadoOrdenable from '../components/EncabezadoOrdenable.jsx'
+import { alternarOrden, ordenarFilas } from '../lib/ordenarTabla.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { proyectosApi } from '../services/proyectos'
 import { etapasApi } from '../services/etapas'
@@ -33,7 +35,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { mensajeError } from '../lib/errores.js'
-import { fmtFecha } from '../lib/format.js'
+import { fmtFecha, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 /**
  * HU-03 (RF03 · RF04): plan de trabajo de un proyecto. Define etapas y, dentro
@@ -44,7 +46,7 @@ import { fmtFecha } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', peso: '1' }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', criterios: [''] }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -146,6 +148,29 @@ function DescripcionCopiable({ texto }) {
   )
 }
 
+// Claves de orden de las tablas del plan (las fechas ISO ordenan como texto).
+const CLAVES_ACTIVIDAD = {
+  Actividad: (a) => a.nombre,
+  Responsable: (a) => a.responsable_nombre,
+  Fechas: (a) => a.fecha_inicio_programada,
+  Estado: (a) => ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado,
+  Avance: (a) => Number(a.porcentaje_avance),
+}
+const CLAVES_GRUPOS = {
+  Trabajador: (g) => g.trabajador_nombre,
+  Cargo: (g) => g.cargo,
+  Alcance: (g) => g.alcance,
+  Estado: (g) => g.estado,
+}
+
+const CLAVES_ACCESO = {
+  Trabajador: (a) => a.trabajador_nombre,
+  'Descripción de la asignación': (a) => a.observaciones,
+  Actividad: (a) => a.actividad_nombre ?? 'Todo el proyecto',
+  Vigencia: (a) => a.fecha_inicio,
+  Estado: (a) => a.estado,
+}
+
 export default function PlanProyecto() {
   const { id } = useParams()
   const { puede } = useAuth()
@@ -175,6 +200,12 @@ export default function PlanProyecto() {
   const etapas = datos?.etapas ?? []
   const actividades = datos?.actividades ?? []
   const responsables = datos?.responsables ?? []
+  // Responsables de actividad: solo quienes tienen acceso vigente al proyecto (o su responsable).
+  // `actual` conserva al responsable ya guardado al editar, aunque haya perdido el acceso.
+  const miembrosPara = (actual = null) => {
+    const ids = new Set(asignaciones.filter((a) => a.estado === 'ACTIVO').map((a) => a.trabajador_id))
+    return responsables.filter((t) => ids.has(t.id) || t.id === datos?.proyecto?.responsable_id || (actual && String(t.id) === String(actual)))
+  }
   const asignaciones = datos?.asignaciones ?? []
   const [porExtender, setPorExtender] = useState(null) // HU-31
   const miAcceso = datos?.miAcceso ?? SIN_ACCESO
@@ -218,11 +249,18 @@ export default function PlanProyecto() {
   const actividadEn = nuevaActividad.registro
 
   // Edición en ventana: `registro` es { tipo: 'etapa' | 'actividad', dato }.
+  // HU-34 · criterio 5: las fechas ya definidas no se editan aquí, se reprograman.
+  const fechasFijas = (dato) => Boolean(dato?.fecha_inicio_programada && dato?.fecha_fin_programada)
+  const sinFechas = (f, dato) => {
+    if (!fechasFijas(dato)) return f
+    const { fecha_inicio_programada: _i, fecha_fin_programada: _f, ...resto } = f
+    return resto
+  }
   const edicion = useFormulario(ETAPA_VACIA, {
     enviar: (f, { tipo, dato }) =>
       tipo === 'etapa'
-        ? etapasApi.actualizar(dato.id, f)
-        : actividadesApi.actualizar(dato.id, { ...f, responsable_id: f.responsable_id || null }),
+        ? etapasApi.actualizar(dato.id, sinFechas(f, dato))
+        : actividadesApi.actualizar(dato.id, { ...sinFechas(f, dato), responsable_id: f.responsable_id || null }),
     alGuardar: (_, { registro }) => {
       setAviso(registro.tipo === 'etapa' ? 'Etapa actualizada.' : 'Actividad actualizada.')
       return recargar()
@@ -237,6 +275,7 @@ export default function PlanProyecto() {
   // Criterio 4: si el recálculo excede el fin del proyecto la API advierte (409);
   // el formulario pide entonces la confirmación explícita antes de reenviar.
   const [requiereConfirmacion, setRequiereConfirmacion] = useState(false)
+  const [afectadas, setAfectadas] = useState([])
   const reprogramacion = useFormulario(REPROGRAMACION_VACIA, {
     enviar: async (f, { tipo, dato }) => {
       try {
@@ -247,6 +286,8 @@ export default function PlanProyecto() {
       }
     },
     alGuardar: (data, { registro }) => {
+      // Criterio 6: asignaciones que quedan fuera de las nuevas fechas (no se modifican).
+      setAfectadas(data.asignaciones_afectadas ?? [])
       // Criterio 3: avisa cuántas etapas posteriores se recalcularon.
       const movidas = data.etapas_desplazadas?.length ?? 0
       // Criterio 6: las asignaciones que ya no encajan solo se informan; no se modifican.
@@ -308,6 +349,8 @@ export default function PlanProyecto() {
 
   // Listado de acceso filtrado: texto libre y filtros combinados con "y".
   const filtrosActivos = filtrosAcceso.activos
+  const [ordenActs, setOrdenActs] = useState(null)
+  const [ordenAcceso, setOrdenAcceso] = useState(null)
   const asignacionesFiltradas = asignaciones.filter((a) => {
     const f = filtroAcceso
     const texto = [a.trabajador_nombre, a.observaciones, a.actividad_nombre, a.cargo]
@@ -324,6 +367,27 @@ export default function PlanProyecto() {
     }
     return true
   })
+
+  // Una fila por trabajador; el detalle (acceso general y actividades) va en una ventana.
+  const [ordenGrupos, setOrdenGrupos] = useState(null)
+  const [grupoAbierto, setGrupoAbierto] = useState(null)
+  const gruposAcceso = [...asignacionesFiltradas.reduce((m, a) => {
+    const g = m.get(a.trabajador_id) ?? { trabajador_id: a.trabajador_id, trabajador_nombre: a.trabajador_nombre, cargo: a.cargo, filas: [] }
+    g.filas.push(a)
+    return m.set(a.trabajador_id, g)
+  }, new Map()).values()].map((g) => {
+    const vigentes = g.filas.filter((a) => a.estado === 'ACTIVO')
+    const actividades = vigentes.filter((a) => a.actividad_id).length
+    return {
+      ...g,
+      estado: vigentes.length ? 'ACTIVO' : g.filas[0].estado,
+      alcance: vigentes.some((a) => !a.actividad_id)
+        ? 'Todo el proyecto'
+        : actividades ? `${actividades} ${actividades === 1 ? 'actividad' : 'actividades'}` : 'Sin acceso vigente',
+    }
+  })
+  const grupoElegido = gruposAcceso.find((g) => g.trabajador_id === grupoAbierto)
+  const filasDelGrupo = grupoElegido?.filas ?? []
 
   /** Rango permitido para las actividades de una etapa (por defecto, el del proyecto). */
   const limiteEtapa = (et) => ({
@@ -367,6 +431,7 @@ export default function PlanProyecto() {
 
   const abrirReprogramacion = (tipo, dato) => {
     setRequiereConfirmacion(false)
+    setAfectadas([])
     reprogramacion.abrir(
       {
         motivo: '',
@@ -386,10 +451,19 @@ export default function PlanProyecto() {
         responsable_id: a.responsable_id ?? '',
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
-        peso: String(a.peso ?? 1),
+        esfuerzo: a.esfuerzo ?? 'MEDIO',
       },
       { tipo: 'actividad', dato: a },
     )
+
+  const empezarEtapa = async (et) => {
+    setCambiandoEstado(`e${et.id}`)
+    await ejecutar(() => etapasApi.iniciar(et.id), {
+      exito: `Etapa «${et.nombre}» en curso; se registró la fecha real de inicio.`,
+      error: 'No se pudo empezar la etapa.',
+    })
+    setCambiandoEstado(null)
+  }
 
   /** «Empezar» (pendiente -> en curso) y «Finalizar» (en curso -> finalizado). */
   const cambiarEstado = async (a) => {
@@ -426,6 +500,26 @@ export default function PlanProyecto() {
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+
+      {/* HU-34 · criterio 6: asignaciones fuera de las nuevas fechas; se listan, no se modifican. */}
+      {afectadas.length > 0 && (
+        <div className="card space-y-2 border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">
+            {afectadas.length} asignación(es) de personal quedan fuera de las nuevas fechas de la actividad.
+            No se modificaron: extiéndalas o ajústelas desde «Gestión de acceso».
+          </p>
+          <ul className="list-disc space-y-1 pl-5 text-xs">
+            {afectadas.map((a) => (
+              <li key={a.id}>
+                {a.trabajador_nombre} · {a.actividad_nombre}: asignado {fmtFecha(a.fecha_inicio)}
+                {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ' (sin fin)'}; actividad
+                {' '}{fmtFecha(a.actividad_inicio_nuevo)} — {fmtFecha(a.actividad_fin_nuevo)}
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="btn-ghost text-xs" onClick={() => setAfectadas([])}>Entendido</button>
+        </div>
+      )}
 
       {puedeEtapas && nuevaEtapa.abierto && (
         <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
@@ -487,7 +581,7 @@ export default function PlanProyecto() {
               <div className="flex items-center gap-3">
                 <span
                   className="text-xs font-semibold tabular-nums text-slate-600"
-                  title="Promedio ponderado por el peso de cada actividad"
+                  title="Promedio ponderado por el esfuerzo de cada actividad"
                 >
                   Avance {Number(et.porcentaje_avance ?? 0)}%
                 </span>
@@ -500,6 +594,11 @@ export default function PlanProyecto() {
                 {puedeEditarEtapas && (
                   <button className="btn-ghost text-xs" onClick={() => abrirEdicionEtapa(et)}>
                     <PencilSquareIcon className="h-4 w-4" /> Editar
+                  </button>
+                )}
+                {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
+                  <button className="btn-ghost text-xs" disabled={cambiandoEstado === `e${et.id}`} onClick={() => empezarEtapa(et)}>
+                    <PlayIcon className="h-4 w-4" /> Empezar
                   </button>
                 )}
                 {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
@@ -533,7 +632,7 @@ export default function PlanProyecto() {
                     onChange={(v) => nuevaActividad.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
-                      ...responsables.map((t) => ({
+                      ...miembrosPara().map((t) => ({
                         value: t.id,
                         label: `${t.nombres} ${t.apellidos}`,
                         sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
@@ -556,12 +655,41 @@ export default function PlanProyecto() {
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
                 </div>
                 <div>
-                  <label htmlFor={`a-peso-${et.id}`} className="label">Peso en el avance</label>
-                  <input id={`a-peso-${et.id}`} type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
-                    className="input" value={nuevaActividad.valores.peso}
-                    onChange={(e) => nuevaActividad.cambiar('peso', e.target.value)} />
+                  <label htmlFor={`a-esfuerzo-${et.id}`} className="label">Esfuerzo</label>
+                  <select id={`a-esfuerzo-${et.id}`} className="input" value={nuevaActividad.valores.esfuerzo}
+                    onChange={(e) => nuevaActividad.cambiar('esfuerzo', e.target.value)}>
+                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                   <p className="mt-1 text-xs text-slate-500">
-                    Pondera la actividad en el avance de la etapa y del proyecto (1 = peso normal).
+                    Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="label">Criterios de aceptación</span>
+                  <div className="space-y-2">
+                    {nuevaActividad.valores.criterios.map((c, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <input type="checkbox" disabled aria-hidden="true" className="h-4 w-4" />
+                        <input className="input" maxLength={200} placeholder={`Criterio ${i + 1}`} aria-label={`Criterio de aceptación ${i + 1}`}
+                          value={c}
+                          onChange={(e) => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.map((x, k) => (k === i ? e.target.value : x)))} />
+                        {nuevaActividad.valores.criterios.length > 1 && (
+                          <button type="button" className="btn-ghost" aria-label={`Quitar criterio ${i + 1}`}
+                            onClick={() => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.filter((_, k) => k !== i))}>
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  {nuevaActividad.valores.criterios.length < 20 && (
+                    <button type="button" className="btn-ghost mt-2"
+                      onClick={() => nuevaActividad.cambiar('criterios', [...nuevaActividad.valores.criterios, ''])}>
+                      + Agregar criterio
+                    </button>
+                  )}
+                  <p className="mt-1 text-xs text-slate-500">
+                    El avance se calcula de forma equitativa según los criterios cumplidos.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -581,58 +709,61 @@ export default function PlanProyecto() {
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-3 py-2.5 font-semibold">Actividad</th>
-                    <th className="px-3 py-2.5 font-semibold">Responsable</th>
-                    <th className="px-3 py-2.5 font-semibold">Fechas</th>
-                    <th className="px-3 py-2.5 font-semibold">Estado</th>
-                    <th className="px-3 py-2.5 font-semibold">Avance</th>
+                    {['Actividad', 'Responsable', 'Fechas', 'Estado', 'Avance'].map((t) => (
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenActs} className="px-3 py-2.5"
+                        onOrden={(x) => setOrdenActs((o) => alternarOrden(o, x))} />
+                    ))}
                     <th className="px-3 py-2.5 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {acts.map((a) => (
+                  {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
                     <tr key={a.id}>
-                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">{a.nombre}</td>
+                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">
+                        <button type="button" title="Ver ficha de la actividad"
+                          className="text-left hover:text-brand-700 hover:underline"
+                          onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
+                          {a.nombre}
+                        </button>
+                      </td>
                       <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
                       <td className="px-3 py-3 text-xs text-slate-500">
                         {fmtFecha(a.fecha_inicio_programada)} — {fmtFecha(a.fecha_fin_programada)}
                       </td>
                       <td className="px-3 py-3">
-                        <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
-                          {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
-                        </span>
+                        {puedeAvance(a) && a.estado === 'PENDIENTE' ? (
+                          <button type="button" title="Empezar la actividad (registra la fecha real de inicio)"
+                            disabled={cambiandoEstado === a.id} onClick={() => cambiarEstado(a)}
+                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60">
+                            <PlayIcon className="h-3.5 w-3.5" /> Empezar
+                          </button>
+                        ) : (
+                          <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
+                            {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600">
                         {Number(a.porcentaje_avance)}%
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <button type="button" className="btn-accion btn-accion-editar"
-                            onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
-                            <EyeIcon className="h-4 w-4" /> Ver ficha
-                          </button>
                           {puedeEditarActividades && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
-                              Editar
+                            <button type="button" title="Editar" aria-label="Editar actividad"
+                              className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
+                              <PencilSquareIcon className="h-4 w-4" />
                             </button>
                           )}
                           {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => abrirReprogramacion('actividad', a)}>
-                              <ArrowPathIcon className="h-4 w-4" /> Reprogramar
-                            </button>
-                          )}
-                          {puedeAvance(a) && (a.estado === 'PENDIENTE' || a.estado === 'EN_PROCESO') && (
-                            <button type="button" className="btn-accion btn-accion-editar"
-                              disabled={cambiandoEstado === a.id}
-                              onClick={() => cambiarEstado(a)}>
-                              {a.estado === 'PENDIENTE'
-                                ? <><PlayIcon className="h-4 w-4" /> Empezar</>
-                                : <><CheckCircleIcon className="h-4 w-4" /> Finalizar</>}
+                            <button type="button" title="Reprogramar" aria-label="Reprogramar actividad"
+                              className="btn-accion btn-accion-peligro" onClick={() => abrirReprogramacion('actividad', a)}>
+                              <ArrowPathIcon className="h-4 w-4" />
                             </button>
                           )}
                           {puedeAvance(a) && (
-                            <button type="button" className="btn-accion btn-accion-editar" onClick={() => setPorAvanzar(a)}>
-                              <ClipboardDocumentCheckIcon className="h-4 w-4" /> Registrar avance
+                            <button type="button" title="Registrar avance" aria-label="Registrar avance"
+                              className="btn-accion btn-accion-ok" onClick={() => setPorAvanzar(a)}>
+                              <ClipboardDocumentCheckIcon className="h-4 w-4" />
                             </button>
                           )}
                         </div>
@@ -839,65 +970,29 @@ export default function PlanProyecto() {
             <p className="px-5 py-4 text-xs text-slate-400">Ningún acceso coincide con los filtros.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-left text-sm">
+              <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <th className="px-5 py-3 font-semibold">Trabajador</th>
-                    <th className="px-5 py-3 font-semibold">Descripción de la asignación</th>
-                    <th className="px-5 py-3 font-semibold">Actividad</th>
-                    <th className="px-5 py-3 font-semibold">Vigencia</th>
-                    <th className="px-5 py-3 font-semibold">Estado</th>
+                    {['Trabajador', 'Cargo', 'Alcance', 'Estado'].map((t) => (
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenGrupos} className="px-5 py-3"
+                        onOrden={(x) => setOrdenGrupos((o) => alternarOrden(o, x))} />
+                    ))}
                     <th className="px-5 py-3 font-semibold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {asignacionesFiltradas.map((a) => (
-                    <tr key={a.id}>
-                      <td className="px-5 py-3 font-medium text-slate-800">{a.trabajador_nombre}</td>
-                      <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">
-                        <DescripcionCopiable texto={a.observaciones} />
-                      </td>
-                      <td className="px-5 py-3 text-slate-600">
-                        {a.actividad_nombre ?? 'Todo el proyecto'}
-                      </td>
-                      <td className="px-5 py-3 text-xs text-slate-500">
-                        {fmtFecha(a.fecha_inicio)}
-                        {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
-                        {a.fecha_fin_real && (
-                          <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
-                        )}
+                  {ordenarFilas(gruposAcceso, ordenGrupos, CLAVES_GRUPOS).map((g) => (
+                    <tr key={g.trabajador_id}>
+                      <td className="px-5 py-3 font-medium text-slate-800">{g.trabajador_nombre}</td>
+                      <td className="px-5 py-3 text-slate-600">{g.cargo ?? '—'}</td>
+                      <td className="px-5 py-3 text-slate-600">{g.alcance}</td>
+                      <td className="px-5 py-3">
+                        <span className={`badge badge-tabla ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{g.estado}</span>
                       </td>
                       <td className="px-5 py-3">
-                        <span
-                          className={`badge ${
-                            ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
-                          }`}
-                        >
-                          {a.estado}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        {a.estado === 'ACTIVO' ? (
-                          <div className="flex flex-col items-stretch gap-1.5">
-                            <button
-                              type="button"
-                              className="btn-accion btn-accion-peligro"
-                              onClick={() => finalizarAsignacion(a)}
-                            >
-                              Finalizar acceso
-                            </button>
-                            <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
-                              Cancelar
-                            </button>
-                            <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
-                              Extender
-                            </button>
-                          </div>
-                        ) : (
-                          <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
-                            Historial
-                          </button>
-                        )}
+                        <button type="button" className="btn-accion" onClick={() => setGrupoAbierto(g.trabajador_id)}>
+                          Ver asignaciones ({g.filas.length})
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -907,6 +1002,75 @@ export default function PlanProyecto() {
           )}
         </div>
       )}
+
+      {/* Asignaciones del trabajador (acceso general y actividades) con sus acciones. */}
+      <Modal abierto={Boolean(grupoElegido)} titulo={grupoElegido?.trabajador_nombre ?? ''}
+        subtitulo="Acceso al proyecto y actividades asignadas" ancho="max-w-5xl" onCerrar={() => setGrupoAbierto(null)}>
+        <div className="overflow-x-auto">
+    <table className="w-full min-w-[720px] text-left text-sm">
+      <thead>
+        <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+          {['Descripción de la asignación', 'Actividad', 'Vigencia', 'Estado'].map((t) => (
+            <EncabezadoOrdenable key={t} titulo={t} orden={ordenAcceso} className="px-5 py-3"
+              onOrden={(x) => setOrdenAcceso((o) => alternarOrden(o, x))} />
+          ))}
+          <th className="px-5 py-3 font-semibold">Acciones</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-100">
+        {ordenarFilas(filasDelGrupo, ordenAcceso, CLAVES_ACCESO).map((a) => (
+          <tr key={a.id}>
+            <td className="px-5 py-3 text-slate-600 md:w-[9.25rem] md:min-w-[9.25rem] md:max-w-[9.25rem]">
+              <DescripcionCopiable texto={a.observaciones} />
+            </td>
+            <td className="px-5 py-3 text-slate-600">
+              {a.actividad_nombre ?? 'Todo el proyecto'}
+            </td>
+            <td className="px-5 py-3 text-xs text-slate-500">
+              {fmtFecha(a.fecha_inicio)}
+              {a.fecha_fin_programada ? ` — ${fmtFecha(a.fecha_fin_programada)}` : ''}
+              {a.fecha_fin_real && (
+                <span className="block text-slate-400">Terminó el {fmtFecha(a.fecha_fin_real)}</span>
+              )}
+            </td>
+            <td className="px-5 py-3">
+              <span
+                className={`badge badge-tabla ${
+                  ESTADO_ASIGNACION[a.estado] ?? 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {a.estado}
+              </span>
+            </td>
+            <td className="px-5 py-3">
+              {a.estado === 'ACTIVO' ? (
+                <div className="flex flex-col items-stretch gap-1.5">
+                  <button
+                    type="button"
+                    className="btn-accion btn-accion-peligro"
+                    onClick={() => finalizarAsignacion(a)}
+                  >
+                    Finalizar acceso
+                  </button>
+                  <button type="button" className="btn-accion" onClick={() => cancelarAsignacion(a)}>
+                    Cancelar
+                  </button>
+                  <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                    Extender
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="btn-accion" onClick={() => setPorExtender(a)}>
+                  Historial
+                </button>
+              )}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+      </Modal>
 
       <ExtenderAsignacion
         asignacion={porExtender}
@@ -942,7 +1106,8 @@ export default function PlanProyecto() {
             ['Fin real', fichaVer.dato.fecha_fin_real ? fmtFecha(fichaVer.dato.fecha_fin_real) : null],
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
-            ['Peso en el avance', fichaVer.tipo === 'actividad' && fichaVer.dato.peso != null ? Number(fichaVer.dato.peso) : null],
+            ['Esfuerzo', fichaVer.tipo === 'actividad' ? `${etiquetaEsfuerzo(fichaVer.dato.esfuerzo)} (peso ${Number(fichaVer.dato.peso)})` : null],
+            ['Criterios cumplidos', fichaVer.tipo === 'actividad' && fichaVer.dato.total_criterios ? `${fichaVer.dato.criterios_cumplidos} de ${fichaVer.dato.total_criterios}` : null],
           ]}
         />
       )}
@@ -981,7 +1146,7 @@ export default function PlanProyecto() {
                     onChange={(v) => edicion.cambiar('responsable_id', v)}
                     opciones={[
                       { value: '', label: 'Sin asignar' },
-                      ...responsables.map((t) => ({
+                      ...miembrosPara(edicion.valores.responsable_id).map((t) => ({
                         value: t.id,
                         label: `${t.nombres} ${t.apellidos}`,
                         sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
@@ -994,32 +1159,37 @@ export default function PlanProyecto() {
               )}
               <div>
                 <label htmlFor="ed-inicio" className="label">Inicio programado</label>
-                <input id="ed-inicio" type="date" required className={`input${marca('fecha_inicio_programada')}`}
+                <input id="ed-inicio" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_inicio_programada')}`}
                   value={edicion.valores.fecha_inicio_programada} min={lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_inicio_programada', e.target.value)} />
               </div>
               <div>
                 <label htmlFor="ed-fin" className="label">Fin programado</label>
-                <input id="ed-fin" type="date" required className={`input${marca('fecha_fin_programada')}`}
+                <input id="ed-fin" type="date" required disabled={fechasFijas(edicion.registro?.dato)}
+                  className={`input${marca('fecha_fin_programada')}`}
                   value={edicion.valores.fecha_fin_programada}
                   min={edicion.valores.fecha_inicio_programada || lim.min} max={lim.max}
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
               {editandoActividad && (
                 <div>
-                  <label htmlFor="ed-peso" className="label">Peso en el avance</label>
-                  <input id="ed-peso" type="number" min="0.01" max="9999.99" step="0.01" inputMode="decimal"
-                    className={`input${marca('peso')}`} value={edicion.valores.peso ?? '1'}
-                    onChange={(e) => edicion.cambiar('peso', e.target.value)} />
+                  <label htmlFor="ed-esfuerzo" className="label">Esfuerzo</label>
+                  <select id="ed-esfuerzo" className={`input${marca('esfuerzo')}`} value={edicion.valores.esfuerzo ?? 'MEDIO'}
+                    onChange={(e) => edicion.cambiar('esfuerzo', e.target.value)}>
+                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
                   </p>
                 </div>
               )}
               <p className="text-xs text-slate-500 sm:col-span-2">
-                {editandoEtapa
-                  ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
-                  : 'Las fechas deben quedar dentro de las de la etapa.'}
+                {fechasFijas(edicion.registro?.dato)
+                  ? 'Para cambiar las fechas use «Reprogramar»: conserva las originales y registra el motivo.'
+                  : editandoEtapa
+                    ? 'El orden se recalcula solo según la fecha de inicio; no puede solaparse con otra etapa ni dejar actividades fuera de sus fechas.'
+                    : 'Las fechas deben quedar dentro de las de la etapa.'}
               </p>
             </div>
           )
