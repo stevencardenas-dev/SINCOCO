@@ -26,7 +26,24 @@ export function exigirEspecialidadSiOperativo(cargo, especialidad) {
 }
 
 /** Lista el personal activo para el catálogo de personal y de responsables. */
+/** HU-33: el periodo se indica completo (desde y hasta) y en orden. */
+function validarPeriodo(desde, hasta) {
+  if (!desde && !hasta) return
+  if (!desde || !hasta) {
+    throw new AppError('Indique las dos fechas del periodo: desde y hasta', 400, desde ? 'hasta' : 'desde')
+  }
+  for (const [campo, valor] of [['desde', desde], ['hasta', hasta]]) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor) || Number.isNaN(Date.parse(valor))) {
+      throw new AppError(`${campo} debe ser una fecha válida (AAAA-MM-DD)`, 400, campo)
+    }
+  }
+  if (desde > hasta) {
+    throw new AppError('La fecha desde no puede ser posterior a la fecha hasta', 400, 'hasta')
+  }
+}
+
 export async function listarTrabajadores(filtros = {}) {
+  validarPeriodo(filtros.desde, filtros.hasta)
   return trabajadorRepository.listar(filtros)
 }
 

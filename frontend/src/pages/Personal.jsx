@@ -5,6 +5,7 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
+  UserPlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
@@ -13,6 +14,7 @@ import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import AsignarPersonal from '../components/AsignarPersonal.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
@@ -74,7 +76,7 @@ const CATALOGO_TITULO = {
   especialidades: 'Registrar una especialidad',
 }
 
-const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '' }
+const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '', desde: '', hasta: '' }
 
 const CATALOGO_VACIO = { nombre: '', descripcion: '', categoria: '', operativo: false }
 
@@ -98,6 +100,9 @@ export default function Personal() {
   const puedeEditar = puede('trabajadores.editar')
   const puedeBaja = puede('trabajadores.dar_baja')
   const puedeCatalogos = puede('catalogos.gestionar')
+  // HU-33: asignar desde el resultado exige el mismo permiso que asignar en el proyecto (HU-05).
+  const puedeAsignar = puede('proyectos.gestionar_acceso')
+  const [porAsignar, setPorAsignar] = useState(null)
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
   // HU-18: por defecto no se muestran los registros dados de baja.
@@ -131,6 +136,9 @@ export default function Personal() {
         cargo_id: filtros.cargo_id,
         especialidad_id: filtros.especialidad_id,
         disponible: filtros.disponible,
+        // HU-33: el periodo se envía completo; con una sola fecha no se consulta.
+        desde: filtros.desde && filtros.hasta ? filtros.desde : '',
+        hasta: filtros.desde && filtros.hasta ? filtros.hasta : '',
       }),
     [incluirInactivos, filtros],
     { mensaje: 'No se pudo cargar el personal.' },
@@ -344,6 +352,33 @@ export default function Personal() {
               <option value="asignado">Asignados</option>
               <option value="0">No disponibles</option>
             </select>
+          </div>
+          {/* HU-33 · criterio 3: solo quienes no tienen asignaciones solapadas en el periodo. */}
+          <div>
+            <label htmlFor="per-desde" className="label">
+              Libre desde
+            </label>
+            <input
+              id="per-desde"
+              type="date"
+              className="input"
+              value={filtros.desde}
+              max={filtros.hasta || undefined}
+              onChange={(e) => cambiarFiltro('desde', e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="per-hasta" className="label">
+              Libre hasta
+            </label>
+            <input
+              id="per-hasta"
+              type="date"
+              className="input"
+              value={filtros.hasta}
+              min={filtros.desde || undefined}
+              onChange={(e) => cambiarFiltro('hasta', e.target.value)}
+            />
           </div>
           <div>
             <label htmlFor="per-cargo" className="label">
@@ -749,13 +784,28 @@ export default function Personal() {
         <div className="card flex flex-col items-center gap-2 px-6 py-16 text-center">
           <UsersIcon className="h-10 w-10 text-slate-300" />
           <p className="text-sm font-semibold text-slate-700">
-            {hayFiltros ? 'Ningún trabajador coincide con la búsqueda' : 'Aún no hay personal registrado'}
+            {hayFiltros
+              ? (filtros.disponible === 'libre' || (filtros.desde && filtros.hasta))
+                ? 'No hay personal disponible para ese criterio'
+                : 'Ningún trabajador coincide con la búsqueda'
+              : 'Aún no hay personal registrado'}
           </p>
           {hayFiltros && (
             <p className="text-xs text-slate-500">Ajuste o limpie los filtros para ver más.</p>
           )}
         </div>
       )}
+
+      <AsignarPersonal
+        trabajador={porAsignar}
+        periodo={filtros.desde && filtros.hasta ? { desde: filtros.desde, hasta: filtros.hasta } : null}
+        onCerrar={() => setPorAsignar(null)}
+        onAsignado={(t) => {
+          setPorAsignar(null)
+          setAviso(`${t.nombres} ${t.apellidos} fue asignado.`)
+          recargar()
+        }}
+      />
 
       {personal !== null && personal.length > 0 && (
         <div className="card overflow-hidden">
@@ -887,8 +937,10 @@ export default function Personal() {
                 acciones: true,
                 // Un registro dado de baja es historial: no se edita, solo se reactiva.
                 celda: (t, enFicha) => {
-                  if (t.activo ? !puedeEditar : !puedeBaja) return null
+                  if (t.activo ? !(puedeEditar || puedeAsignar) : !puedeBaja) return null
                   const botones = t.activo ? (
+                    <>
+                    {puedeEditar && (
                     <button
                       className="btn-accion btn-accion-editar"
                       onClick={() => abrirEditar(t)}
@@ -896,6 +948,17 @@ export default function Personal() {
                     >
                       <PencilSquareIcon className="h-4 w-4" /> Editar
                     </button>
+                    )}
+                    {puedeAsignar && t.estado === 'ACTIVO' && (
+                      <button
+                        className="btn-accion btn-accion-ok"
+                        onClick={() => setPorAsignar(t)}
+                        aria-label={`Asignar a ${t.nombres} ${t.apellidos}`}
+                      >
+                        <UserPlusIcon className="h-4 w-4" /> Asignar
+                      </button>
+                    )}
+                    </>
                   ) : (
                     <button
                       className="btn-accion btn-accion-ok"
