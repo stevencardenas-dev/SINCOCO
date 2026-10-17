@@ -119,6 +119,32 @@ export async function create(asignacion) {
   return result.insertId
 }
 
+/**
+ * Asignaciones vigentes cuya fecha fin programada ya pasó sin que se haya
+ * registrado la fecha fin real (ni una extensión, que movería esa fecha).
+ */
+export async function vencidasActivas() {
+  const [rows] = await pool.query(
+    `SELECT id, trabajador_id, proyecto_id, actividad_id, fecha_fin_programada
+       FROM asignaciones_personal
+      WHERE estado = 'ACTIVO' AND fecha_fin_real IS NULL
+        AND fecha_fin_programada IS NOT NULL AND fecha_fin_programada < CURDATE()
+      ORDER BY id`,
+  )
+  return rows
+}
+
+/** Finaliza una asignación vencida con su propia fecha fin programada como fecha fin real. */
+export async function finalizarVencida(id) {
+  const [r] = await pool.query(
+    `UPDATE asignaciones_personal
+        SET estado = 'FINALIZADO', fecha_fin_real = fecha_fin_programada
+      WHERE id = ? AND estado = 'ACTIVO' AND fecha_fin_real IS NULL`,
+    [id],
+  )
+  return r.affectedRows
+}
+
 export async function update(id, campos) {
   const asignaciones = Object.keys(campos).map((c) => `${c} = ?`)
   await pool.query(
