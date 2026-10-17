@@ -5,7 +5,7 @@
 -- 2. Agrega el permiso `etapas.aplicar_plantilla` y lo asigna solo a
 --    ADMINISTRADOR (GERENTE y MAESTRO_OBRA tienen `etapas.crear`, pero no
 --    pueden aplicar plantillas).
--- 3. Carga las plantillas iniciales: Vivienda, Urbanización y
+-- 3. Carga las plantillas iniciales: Vivienda, Urbanización, Edificio / Multifamiliar y
 --    Remodelación / Adecuación.
 --
 -- Idempotente: se puede relanzar sin duplicar nada.
@@ -50,6 +50,7 @@ SELECT r.`id`, p.`id`
 INSERT IGNORE INTO `plantillas_etapas` (`nombre`, `descripcion`) VALUES
   ('Vivienda', 'Construcción de vivienda unifamiliar o multifamiliar'),
   ('Urbanización', 'Urbanización con redes, vías y zonas comunes'),
+  ('Edificio / Multifamiliar', 'Edificio de vivienda multifamiliar con sótanos, zonas comunes y sistemas especiales'),
   ('Remodelación / Adecuación', 'Remodelación o adecuación de una edificación existente');
 
 INSERT IGNORE INTO `plantillas_etapas_detalle` (`plantilla_id`, `orden`, `nombre`, `descripcion`)
@@ -79,6 +80,18 @@ SELECT p.`id`, d.`orden`, d.`nombre`, d.`descripcion`
     UNION ALL SELECT 'Remodelación / Adecuación', 4, 'Instalaciones', NULL
     UNION ALL SELECT 'Remodelación / Adecuación', 5, 'Acabados', NULL
     UNION ALL SELECT 'Remodelación / Adecuación', 6, 'Entrega y cierre', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 1, 'Gestión previa', 'Licencia de construcción, factibilidad de servicios, permisos ambientales, contratación de supervisión técnica'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 2, 'Preliminares', 'Cerramiento, campamento, descapote, replanteo'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 3, 'Excavación y movimiento de tierras', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 4, 'Cimentación y sótanos / muros de contención', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 5, 'Estructura por niveles', 'Columnas, vigas y losas, piso a piso'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 6, 'Mampostería y fachadas', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 7, 'Cubierta y terraza', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 8, 'Instalaciones hidrosanitarias, eléctricas, gas y red contra incendios', NULL
+    UNION ALL SELECT 'Edificio / Multifamiliar', 9, 'Sistemas especiales', 'Ascensores, ventilación, citofonía'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 10, 'Acabados', 'Pisos, muros, carpintería, aparatos'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 11, 'Zonas comunes y obras exteriores', 'Portería, parqueaderos, zonas sociales'
+    UNION ALL SELECT 'Edificio / Multifamiliar', 12, 'Pruebas, entrega y cierre', 'Actas de recibo, certificado técnico de ocupación, entrega de zonas comunes'
   ) d ON d.`plantilla` = p.`nombre`;
 
 SELECT 'plantillas' tabla, COUNT(*) filas FROM `plantillas_etapas`

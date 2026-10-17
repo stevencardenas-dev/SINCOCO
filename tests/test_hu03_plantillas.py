@@ -19,7 +19,7 @@ proyecto_id = crear_proyecto(admin)
 estado, plantillas = http('GET', '/api/plantillas-etapas', token=admin)
 assert estado == 200, f'listar plantillas: {estado} {plantillas}'
 nombres = {p['nombre']: p for p in plantillas}
-assert {'Vivienda', 'Urbanización', 'Remodelación / Adecuación'} <= set(nombres), 'faltan plantillas del seed'
+assert {'Vivienda', 'Urbanización', 'Edificio / Multifamiliar', 'Remodelación / Adecuación'} <= set(nombres), 'faltan plantillas del seed'
 vivienda = nombres['Vivienda']
 assert len(vivienda['etapas']) == 10
 
@@ -96,6 +96,22 @@ n = scalar(f"SELECT COUNT(*) FROM bitacora_trazabilidad WHERE accion='APLICAR_PL
            f"AND tabla_afectada='etapas_proyecto' AND registro_id={proyecto_id}")
 assert n == '2', f'se esperaban 2 registros en bitacora, hay {n}'
 print('bitacora -> 2 registros APLICAR_PLANTILLA')
+
+# Plantilla «Edificio / Multifamiliar»: 12 etapas en orden, sin fechas, y queda en bitácora.
+edificio = nombres['Edificio / Multifamiliar']
+assert len(edificio['etapas']) == 12 and edificio['etapas'][0]['nombre'] == 'Gestión previa'
+assert edificio['etapas'][-1]['nombre'] == 'Pruebas, entrega y cierre'
+proyecto2 = crear_proyecto(admin, 'TEST-PRJ-02')
+estado, r = http('POST', '/api/plantillas-etapas/aplicar',
+                 {'proyecto_id': proyecto2, 'plantilla_id': edificio['id']}, token=admin)
+assert estado == 201 and r['creadas'] == 12, f'aplicar edificio: {estado} {r}'
+assert [e['nombre'] for e in r['etapas']] == [e['nombre'] for e in edificio['etapas']]
+assert [e['orden'] for e in r['etapas']] == list(range(1, 13))
+assert all(e['estado'] == 'PENDIENTE' and e['fecha_inicio_programada'] is None for e in r['etapas'])
+n = scalar(f"SELECT COUNT(*) FROM bitacora_trazabilidad WHERE accion='APLICAR_PLANTILLA' "
+           f"AND tabla_afectada='etapas_proyecto' AND registro_id={proyecto2}")
+assert n == '1', f'se esperaba 1 registro en bitacora del edificio, hay {n}'
+print('plantilla edificio -> 12 etapas en orden, pendientes, en bitacora')
 
 limpiar()
 print('OK: plantillas de etapas')
