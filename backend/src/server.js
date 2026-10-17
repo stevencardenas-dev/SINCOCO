@@ -15,6 +15,7 @@ import herramientasRoutes from './routes/herramientas.js'
 import materialesRoutes from './routes/materiales.js'
 import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
+import plantillasEtapasRoutes from './routes/plantillasEtapas.js'
 import actividadesRoutes from './routes/actividades.js'
 import asignacionesRoutes from './routes/asignaciones.js'
 import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
@@ -55,6 +56,7 @@ app.use('/api/herramientas', rutasSeguras(herramientasRoutes))
 app.use('/api/materiales', rutasSeguras(materialesRoutes))
 app.use('/api/perfil', rutasSeguras(perfilRoutes))
 app.use('/api/etapas', rutasSeguras(etapasRoutes))
+app.use('/api/plantillas-etapas', rutasSeguras(plantillasEtapasRoutes))
 app.use('/api/actividades', rutasSeguras(actividadesRoutes))
 app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
 app.use('/api/solicitudes-herramientas', rutasSeguras(solicitudesHerramientasRoutes))

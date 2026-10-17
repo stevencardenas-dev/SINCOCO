@@ -28,12 +28,13 @@ Su efecto está presente en el dump: tablas, columnas, triggers o permisos.
 | `migracion_permisos_gerente_maestro.sql` | permisos de GERENTE y MAESTRO_OBRA | presentes |
 | `migracion_plan_editar.sql` | permisos `etapas.editar`, `actividades.editar` | presentes |
 
-## Pendientes (2)
+## Pendientes (3)
 
 | Migración | Qué falta en AWS | Motivo |
 |---|---|---|
 | `migracion_bitacora_inmutable.sql` | triggers `trg_bitacora_no_update` y `trg_bitacora_no_delete` | Los triggers no existen en el dump. La bitácora todavía se puede modificar en producción. |
 | `migracion_herramientas.sql` | permisos `herramientas.crear`, `herramientas.dar_baja`, `herramientas.editar` y `herramientas.listar` | Las tablas `herramientas` y `almacenes` sí existen, pero los permisos no. El módulo de herramientas puede responder 403 en producción. |
+| `migracion_plantillas_etapas.sql` | tablas `plantillas_etapas` y `plantillas_etapas_detalle`, permiso `etapas.aplicar_plantilla` y las 3 plantillas iniciales | Mejora de HU-03, aún sin desplegar. |
 
 Al aplicarse cada pendiente en producción, hay que moverla a `aplicadas/`, actualizar
 esta tabla y, si cambió la estructura, `docs/schema.sql`.

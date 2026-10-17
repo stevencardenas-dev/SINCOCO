@@ -29,6 +29,7 @@ import { etapasApi } from '../services/etapas'
 import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
+import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import { useRecurso } from '../hooks/useRecurso'
@@ -212,6 +213,8 @@ export default function PlanProyecto() {
 
   const gestionaPlan = miAcceso.gestiona_plan
   const puedeEtapas = gestionaPlan && puede('etapas.crear')
+  const puedeAplicarPlantilla = gestionaPlan && puede('etapas.aplicar_plantilla')
+  const [plantillaAbierta, setPlantillaAbierta] = useState(false)
   const puedeActividades = gestionaPlan && puede('actividades.crear')
   const puedeEditarEtapas = gestionaPlan && puede('etapas.editar')
   const puedeEditarActividades = gestionaPlan && puede('actividades.editar')
@@ -491,6 +494,11 @@ export default function PlanProyecto() {
             : 'Plan de trabajo'
         }
       >
+        {puedeAplicarPlantilla && (
+          <button className="btn-ghost" onClick={() => setPlantillaAbierta(true)}>
+            Aplicar plantilla
+          </button>
+        )}
         {puedeEtapas && (
           <button className="btn-primary" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
             <PlusIcon className="h-5 w-5" /> Nueva etapa
@@ -500,6 +508,16 @@ export default function PlanProyecto() {
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+
+      {puedeAplicarPlantilla && (
+        <AplicarPlantillaEtapas abierto={plantillaAbierta} proyectoId={id}
+          onCerrar={() => setPlantillaAbierta(false)}
+          onAplicada={async (r) => {
+            setPlantillaAbierta(false)
+            await recargar()
+            setAviso(`Plantilla «${r.plantilla}» aplicada: ${r.creadas} etapa(s) creada(s)${r.omitidas.length ? `, ${r.omitidas.length} omitida(s) por repetir nombre` : ''}. Defina sus fechas desde «Editar».`)
+          }} />
+      )}
 
       {/* HU-34 · criterio 6: asignaciones fuera de las nuevas fechas; se listan, no se modifican. */}
       {afectadas.length > 0 && (
