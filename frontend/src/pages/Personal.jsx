@@ -12,6 +12,7 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import ConfirmarAusencia from '../components/ConfirmarAusencia.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
@@ -23,6 +24,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha, soloDigitos } from '../lib/format.js'
+import { mensajeError } from '../lib/errores.js'
 import { CATEGORIAS, agruparPorCategoria } from '../lib/catalogos.js'
 
 /**
@@ -141,18 +143,34 @@ export default function Personal() {
     catalogosApi.especialidades.listar().then(setEspecialidades).catch(() => {})
   }, [])
 
+  // Vacaciones o licencia con asignaciones vigentes: se espera la confirmación del usuario.
+  // `via` es 'lista' (selector de la tabla) o 'form' (formulario de edición, con su `cuerpo`).
+  const [ausencia, setAusencia] = useState(null)
+  const [confirmandoAusencia, setConfirmandoAusencia] = useState(false)
+  const pideConfirmacion = (e) =>
+    e?.response?.status === 409 && e.response.data?.codigo === 'REQUIERE_CONFIRMACION'
+
   /** Cambiar el estado reemplaza al «dar de baja»: la disponibilidad se deriva. */
-  const cambiarEstado = (t, estado) => {
+  const cambiarEstado = (t, estado, confirmar = false) => {
     if (estado === t.estado) return
     // Si falla se recarga igual, para que el selector vuelva al estado real.
-    ejecutar(() => trabajadoresApi.cambiarEstado(t.id, estado), {
-      exito: ({ trabajador: actualizado }) =>
-        `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
-        (Number(actualizado.disponible)
-          ? Number(actualizado.actividades_vigentes) > 0
-            ? ' · asignado'
-            : ' · disponible'
-          : ' · no disponible'),
+    ejecutar(() => trabajadoresApi.cambiarEstado(t.id, estado, confirmar).catch((e) => {
+      if (!pideConfirmacion(e)) throw e
+      setAusencia({ via: 'lista', trabajador: t, estado, compromisos: e.response.data.compromisos })
+      return null
+    }), {
+      exito: (respuesta) => {
+        if (!respuesta) return ''
+        const actualizado = respuesta.trabajador
+        return (
+          `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
+          (Number(actualizado.disponible)
+            ? Number(actualizado.actividades_vigentes) > 0
+              ? ' · asignado'
+              : ' · disponible'
+            : ' · no disponible')
+        )
+      },
       error: 'No se pudo cambiar el estado del trabajador.',
       recargarSiFalla: true,
     })
@@ -170,7 +188,13 @@ export default function Personal() {
         cargo_id: Number(f.cargo_id),
         especialidad_id: f.especialidad_id ? Number(f.especialidad_id) : null,
       }
-      return trabajador ? trabajadoresApi.actualizar(trabajador.id, cuerpo) : trabajadoresApi.crear(cuerpo)
+      if (!trabajador) return trabajadoresApi.crear(cuerpo)
+      return trabajadoresApi.actualizar(trabajador.id, cuerpo).catch((e) => {
+        if (pideConfirmacion(e)) {
+          setAusencia({ via: 'form', trabajador, estado: cuerpo.estado, compromisos: e.response.data.compromisos, cuerpo })
+        }
+        throw e
+      })
     },
     alGuardar: ({ trabajador: t }, { registro }) => {
       setAviso(
@@ -184,6 +208,29 @@ export default function Personal() {
   })
   const form = formulario.valores
   const editando = formulario.registro
+
+  /** Confirma el paso a vacaciones/licencia y repite la operación con `confirmar`. */
+  const confirmarAusencia = async () => {
+    const { via, trabajador: t, estado, cuerpo } = ausencia
+    if (via === 'lista') {
+      setAusencia(null)
+      cambiarEstado(t, estado, true)
+      return
+    }
+    setConfirmandoAusencia(true)
+    try {
+      await trabajadoresApi.actualizar(t.id, { ...cuerpo, confirmar: true })
+      setAusencia(null)
+      formulario.cerrar()
+      setAviso(`${t.nombres} ${t.apellidos}: información actualizada; pasó a ${estado.toLowerCase()}.`)
+      await recargar()
+    } catch (e) {
+      setAusencia(null)
+      formulario.setError(mensajeError(e, 'No se pudo guardar el trabajador.'))
+    } finally {
+      setConfirmandoAusencia(false)
+    }
+  }
 
   /**
    * Registra un cargo o una especialidad nueva sin salir del formulario: queda
@@ -392,6 +439,13 @@ export default function Personal() {
           </p>
         )}
       </FiltrosDesplegable>
+
+      <ConfirmarAusencia
+        pendiente={ausencia}
+        enviando={confirmandoAusencia}
+        onConfirmar={confirmarAusencia}
+        onCancelar={() => setAusencia(null)}
+      />
 
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
       {(puedeCrear || puedeEditar) && (

@@ -52,7 +52,9 @@ export const actualizar = asyncHandler(async (req, res) => {
  * Reemplaza en la interfaz al "dar de baja": la disponibilidad se deriva.
  */
 export const cambiarEstado = asyncHandler(async (req, res) => {
-  const trabajador = await cambiarEstadoTrabajador(req.params.id, req.body?.estado, contexto(req))
+  const trabajador = await cambiarEstadoTrabajador(
+    req.params.id, req.body?.estado, contexto(req), { confirmar: req.body?.confirmar === true },
+  )
   return res.json({ message: `Estado actualizado a ${trabajador.estado}`, trabajador })
 })
 
