@@ -11,6 +11,7 @@ import {
   PencilSquareIcon,
   PlayIcon,
   PlusIcon,
+  TrashIcon,
   UserPlusIcon,
 } from '@heroicons/react/24/outline'
 import Retractil from '../components/Retractil.jsx'
@@ -29,6 +30,7 @@ import { etapasApi } from '../services/etapas'
 import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
+import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import { useRecurso } from '../hooks/useRecurso'
@@ -212,8 +214,12 @@ export default function PlanProyecto() {
 
   const gestionaPlan = miAcceso.gestiona_plan
   const puedeEtapas = gestionaPlan && puede('etapas.crear')
+  const puedeAplicarPlantilla = gestionaPlan && puede('etapas.aplicar_plantilla')
+  const [plantillaAbierta, setPlantillaAbierta] = useState(false)
   const puedeActividades = gestionaPlan && puede('actividades.crear')
   const puedeEditarEtapas = gestionaPlan && puede('etapas.editar')
+  const puedeBajaEtapas = gestionaPlan && puede('etapas.dar_baja')
+  const [etapaPorBaja, setEtapaPorBaja] = useState(null) // HU-18: confirmación de baja
   const puedeEditarActividades = gestionaPlan && puede('actividades.editar')
   // HU-34: reprogramar fechas (solo administrador); no aplica a lo ya completado.
   const puedeReprogramarEtapas = gestionaPlan && puede('etapas.reprogramar')
@@ -491,6 +497,11 @@ export default function PlanProyecto() {
             : 'Plan de trabajo'
         }
       >
+        {puedeAplicarPlantilla && (
+          <button className="btn-ghost" onClick={() => setPlantillaAbierta(true)}>
+            Aplicar plantilla
+          </button>
+        )}
         {puedeEtapas && (
           <button className="btn-primary" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
             <PlusIcon className="h-5 w-5" /> Nueva etapa
@@ -500,6 +511,38 @@ export default function PlanProyecto() {
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+
+      {/* HU-18: la baja es lógica; la etapa y sus actividades se conservan en el historial. */}
+      <Modal abierto={Boolean(etapaPorBaja)} titulo="Dar de baja la etapa" subtitulo={etapaPorBaja?.nombre}
+        onCerrar={() => setEtapaPorBaja(null)}>
+        <p className="text-sm text-slate-600">
+          La etapa dejará de mostrarse en el plan y sus actividades no contarán en el avance del proyecto.
+          No se borra: queda en el historial y se puede reactivar.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" className="btn-ghost" onClick={() => setEtapaPorBaja(null)}>Cancelar</button>
+          <button type="button" className="btn-primary" onClick={async () => {
+            const et = etapaPorBaja
+            setEtapaPorBaja(null)
+            await ejecutar(() => etapasApi.baja(et.id), {
+              exito: `Etapa «${et.nombre}» dada de baja.`,
+              error: 'No se pudo dar de baja la etapa.',
+            })
+          }}>
+            Dar de baja
+          </button>
+        </div>
+      </Modal>
+
+      {puedeAplicarPlantilla && (
+        <AplicarPlantillaEtapas abierto={plantillaAbierta} proyectoId={id}
+          onCerrar={() => setPlantillaAbierta(false)}
+          onAplicada={async (r) => {
+            setPlantillaAbierta(false)
+            await recargar()
+            setAviso(`Plantilla «${r.plantilla}» aplicada: ${r.creadas} etapa(s) creada(s)${r.omitidas.length ? `, ${r.omitidas.length} omitida(s) por repetir nombre` : ''}. Defina sus fechas con «Editar».`)
+          }} />
+      )}
 
       {/* HU-34 · criterio 6: asignaciones fuera de las nuevas fechas; se listan, no se modifican. */}
       {afectadas.length > 0 && (
@@ -565,20 +608,15 @@ export default function PlanProyecto() {
         const acts = actividades.filter((a) => a.etapa_id === et.id)
         return (
           <div key={et.id} className="card overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">
-                  <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent-400 text-xs font-semibold text-brand-950 ring-1 ring-inset ring-accent-500/30">
-                    {et.orden}
-                  </span>
-                  {et.nombre}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {et.fecha_inicio_programada ? fmtFecha(et.fecha_inicio_programada) : 'sin inicio'} —{' '}
-                  {et.fecha_fin_programada ? fmtFecha(et.fecha_fin_programada) : 'sin fin'}
-                </p>
+            <div className="border-b border-slate-100 px-5 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex min-w-0 flex-1 items-start gap-2">
+                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-400 text-xs font-semibold text-brand-950 ring-1 ring-inset ring-accent-500/30">
+                  {et.orden}
+                </span>
+                <p className="min-w-0 break-words text-sm font-semibold leading-6 text-slate-900">{et.nombre}</p>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex h-6 shrink-0 items-center gap-2">
                 <span
                   className="text-xs font-semibold tabular-nums text-slate-600"
                   title="Promedio ponderado por el esfuerzo de cada actividad"
@@ -588,33 +626,43 @@ export default function PlanProyecto() {
                 <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
                   {ESTADO_ETIQUETA[et.estado] ?? et.estado}
                 </span>
-                <button className="btn-ghost text-xs" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
-                  <EyeIcon className="h-4 w-4" /> Ver ficha
+                <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
+                  <EyeIcon className="h-3.5 w-3.5" /> Ver ficha
                 </button>
                 {puedeEditarEtapas && (
-                  <button className="btn-ghost text-xs" onClick={() => abrirEdicionEtapa(et)}>
-                    <PencilSquareIcon className="h-4 w-4" /> Editar
+                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => abrirEdicionEtapa(et)}>
+                    <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
+                  </button>
+                )}
+                {puedeBajaEtapas && (
+                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs text-red-600" onClick={() => setEtapaPorBaja(et)}>
+                    <TrashIcon className="h-3.5 w-3.5" /> Dar de baja
                   </button>
                 )}
                 {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
-                  <button className="btn-ghost text-xs" disabled={cambiandoEstado === `e${et.id}`} onClick={() => empezarEtapa(et)}>
-                    <PlayIcon className="h-4 w-4" /> Empezar
+                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" disabled={cambiandoEstado === `e${et.id}`} onClick={() => empezarEtapa(et)}>
+                    <PlayIcon className="h-3.5 w-3.5" /> Empezar
                   </button>
                 )}
-                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && (
-                  <button className="btn-ghost text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
-                    <ArrowPathIcon className="h-4 w-4" /> Reprogramar
+                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && et.fecha_inicio_programada && et.fecha_fin_programada && (
+                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
+                    <ArrowPathIcon className="h-3.5 w-3.5" /> Reprogramar
                   </button>
                 )}
                 {puedeActividades && (
                   <button
-                    className="btn-ghost text-xs"
+                    className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs"
                     onClick={() => (actividadEn === et.id ? nuevaActividad.cerrar() : nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id))}
                   >
-                    <PlusIcon className="h-4 w-4" /> Actividad
+                    <PlusIcon className="h-3.5 w-3.5" /> Actividad
                   </button>
                 )}
               </div>
+            </div>
+            <p className="mt-1 text-xs text-slate-400">
+              {et.fecha_inicio_programada ? fmtFecha(et.fecha_inicio_programada) : 'sin inicio'} —{' '}
+              {et.fecha_fin_programada ? fmtFecha(et.fecha_fin_programada) : 'sin fin'}
+            </p>
             </div>
 
             {puedeActividades && actividadEn === et.id && (
@@ -710,7 +758,7 @@ export default function PlanProyecto() {
                 <thead>
                   <tr className="text-xs uppercase tracking-wide text-slate-500">
                     {['Actividad', 'Responsable', 'Fechas', 'Estado', 'Avance'].map((t) => (
-                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenActs} className="px-3 py-2.5"
+                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenActs} className={t === 'Actividad' ? 'py-2.5 pl-5 pr-3' : 'px-3 py-2.5'}
                         onOrden={(x) => setOrdenActs((o) => alternarOrden(o, x))} />
                     ))}
                     <th className="px-3 py-2.5 font-semibold">Acciones</th>
@@ -719,7 +767,7 @@ export default function PlanProyecto() {
                 <tbody className="divide-y divide-slate-100">
                   {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
                     <tr key={a.id}>
-                      <td className="max-w-[9rem] px-3 py-3 text-xs font-medium text-slate-700">
+                      <td className="max-w-[9rem] py-3 pl-5 pr-3 text-xs font-medium text-slate-700">
                         <button type="button" title="Ver ficha de la actividad"
                           className="text-left hover:text-brand-700 hover:underline"
                           onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
