@@ -14,17 +14,11 @@ admin, maestro = login('admin'), login('maestro')
 proyecto = crear_proyecto(admin)          # 2026-10-01 -> 2027-06-30
 w1 = crear_trabajador(admin, f'{PREFIJO}-CC-31A')
 w2 = crear_trabajador(admin, f'{PREFIJO}-CC-31B')
+w3 = crear_trabajador(admin, f'{PREFIJO}-CC-31C')
+proyecto2 = crear_proyecto(admin, f'{PREFIJO}-PRJ-02')
 
-_, r = http('POST', '/api/etapas', {'proyecto_id': proyecto, 'nombre': 'TEST-Etapa 31',
-            'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-12-01'}, token=admin)
-_, r = http('POST', '/api/actividades', {'etapa_id': r['etapa']['id'], 'nombre': 'TEST-Actividad 31', 'criterios': ['TEST-criterio'],
-            'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
-            'responsable_id': w2}, token=admin)
-actividad = r['actividad']['id']
-
-
-def asignar(trabajador, inicio, fin, actividad_id=None):
-    estado, r = http('POST', '/api/asignaciones', {'trabajador_id': trabajador, 'proyecto_id': proyecto,
+def asignar(trabajador, inicio, fin, actividad_id=None, proyecto_id=None):
+    estado, r = http('POST', '/api/asignaciones', {'trabajador_id': trabajador, 'proyecto_id': proyecto_id or proyecto,
                      'actividad_id': actividad_id, 'fecha_inicio': inicio, 'fecha_fin_programada': fin}, token=admin)
     assert estado == 201, r
     return r['asignacion']['id']
@@ -34,9 +28,22 @@ def extender(id, fecha, motivo='El trabajo requiere más tiempo', token=admin):
     return http('POST', f'/api/asignaciones/{id}/extender', {'fecha_fin_programada': fecha, 'motivo': motivo}, token=token)
 
 
+# HU-05: primero el acceso al proyecto (sin actividad) y luego las actividades.
+c = asignar(w2, '2026-10-05', '2027-06-01')              # acceso de w2 a todo el proyecto
+
+_, r = http('POST', '/api/etapas', {'proyecto_id': proyecto, 'nombre': 'TEST-Etapa 31',
+            'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-12-01'}, token=admin)
+_, r = http('POST', '/api/actividades', {'etapa_id': r['etapa']['id'], 'nombre': 'TEST-Actividad 31', 'criterios': ['TEST-criterio'],
+            'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-11-05',
+            'responsable_id': w2}, token=admin)
+actividad = r['actividad']['id']
+
+otra = asignar(w1, '2026-11-01', '2026-11-30', None, proyecto2)   # otra asignación activa de w1 (otro proyecto)
+asignar(w1, '2026-10-05', '2026-10-31')                           # acceso de w1 al proyecto: no cuenta como cruce
 a = asignar(w1, '2026-10-05', '2026-10-20', actividad)
-otra = asignar(w1, '2026-11-01', '2026-11-30')          # otra asignación activa de w1
-c = asignar(w2, '2026-10-05', '2027-06-01')              # a todo el proyecto
+# w3: la actividad termina después del acceso (el acceso se extiende sin chocar con ella).
+acc3 = asignar(w3, '2026-10-05', '2026-10-20')
+asignar(w3, '2026-10-05', '2026-10-25', actividad)
 
 # RBAC: solo quien gestiona el acceso extiende.
 assert extender(a, '2026-10-30', token=maestro)[0] == 403
@@ -71,6 +78,10 @@ assert [(e['fecha_fin_anterior'][:10], e['fecha_fin_nueva'][:10]) for e in ext] 
 assert ext[0]['motivo'] == 'El trabajo requiere más tiempo' and ext[0]['usuario'] == 'admin' and ext[0]['fecha_registro']
 estado, h = http('GET', f'/api/asignaciones/{a}/historial', token=admin)
 assert estado == 200 and h['fecha_fin_original'] == '2026-10-20' and len(h['extensiones']) == 2
+
+# Regresión: en el mismo proyecto, el acceso (sin actividad) y la actividad no se cuentan como cruce.
+estado, r = extender(acc3, '2026-10-25')
+assert estado == 201, f'extender el acceso con una actividad dentro del mismo proyecto: {estado} {r}'
 
 # Criterio 6: bitácora.
 assert scalar(f"SELECT COUNT(*) FROM bitacora_trazabilidad WHERE accion='EXTENDER' AND tabla_afectada='asignaciones_personal' AND registro_id={a}") == '2'
