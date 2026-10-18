@@ -62,7 +62,11 @@ INSERT INTO `permisos` (`nombre`, `descripcion`, `modulo`) VALUES
   ('materiales.dar_baja',      'Dar de baja lógica un material',           'materiales'),
   -- HU-21: porcentaje de avance de las actividades (administrador, gerente y maestro de obra).
   ('avance.registrar',         'Registrar el porcentaje de avance de una actividad', 'seguimiento'),
-  ('avance.listar',            'Consultar el historial de avance de una actividad',  'seguimiento')
+  ('avance.listar',            'Consultar el historial de avance de una actividad',  'seguimiento'),
+  -- HU-14: incidencias de obra (administrador, gerente y maestro de obra).
+  ('incidencias.listar',       'Consultar las incidencias de obra',                  'incidencias'),
+  ('incidencias.crear',        'Registrar una incidencia de obra',                   'incidencias'),
+  ('incidencias.editar',       'Dar seguimiento a una incidencia y registrar su resolución', 'incidencias')
 ON DUPLICATE KEY UPDATE
   `descripcion` = VALUES(`descripcion`),
   `modulo` = VALUES(`modulo`);
@@ -93,6 +97,7 @@ WHERE r.`nombre` = 'GERENTE'
     'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
     'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
     'avance.registrar', 'avance.listar',
+    'incidencias.listar', 'incidencias.crear', 'incidencias.editar',
     'catalogos.listar', 'catalogos.gestionar'
   );
 
@@ -109,6 +114,7 @@ WHERE r.`nombre` = 'MAESTRO_OBRA'
     'etapas.listar', 'etapas.crear', 'etapas.editar', 'etapas.dar_baja',
     'actividades.listar', 'actividades.crear', 'actividades.editar', 'actividades.dar_baja',
     'avance.registrar', 'avance.listar',
+    'incidencias.listar', 'incidencias.crear', 'incidencias.editar',
     'clientes.listar', 'trabajadores.listar',
     -- HU-30: consulta el catálogo y los almacenes para solicitar herramientas.
     'herramientas.listar'

@@ -87,3 +87,46 @@ export async function enviarCodigoRecuperacion({ destino, username, codigo, minu
     return false
   }
 }
+
+/**
+ * HU-14: avisa al responsable del proyecto de una incidencia de severidad alta.
+ * Igual que el resto, nunca lanza: devuelve false si no hay SMTP, destino o si
+ * el servidor rechaza el mensaje.
+ */
+export async function enviarAvisoIncidencia({ destino, nombre, incidencia }) {
+  const t = obtenerTransporte()
+  if (!t || !destino) return false
+
+  const remitente = process.env.SMTP_FROM || `SINCOCO <${process.env.SMTP_USER}>`
+  const datos = [
+    `Proyecto: ${incidencia.proyecto_nombre}`,
+    incidencia.actividad_nombre ? `Actividad afectada: ${incidencia.actividad_nombre}` : null,
+    `Tipo: ${incidencia.tipo} · Severidad: ${incidencia.severidad}`,
+    `Reportada por: ${incidencia.reportado_por}`,
+  ].filter(Boolean)
+  const texto =
+    `Hola ${nombre},\n\n` +
+    `Se registró una incidencia de severidad ${incidencia.severidad} en un proyecto a su cargo.\n\n` +
+    `${incidencia.titulo}\n${incidencia.descripcion}\n\n${datos.join('\n')}\n\n` +
+    `SINCOCO · Constructora XYZ`
+  const html =
+    `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1f2530">` +
+    `<h2 style="margin:0 0 12px">Incidencia ${escapar(incidencia.severidad)}: ${escapar(incidencia.titulo)}</h2>` +
+    `<p>Hola <strong>${escapar(nombre)}</strong>, se registró una incidencia en un proyecto a su cargo.</p>` +
+    `<p>${escapar(incidencia.descripcion)}</p>` +
+    `<ul>${datos.map((l) => `<li>${escapar(l)}</li>`).join('')}</ul></div>`
+
+  try {
+    await t.sendMail({
+      from: remitente,
+      to: destino,
+      subject: `SINCOCO · Incidencia ${incidencia.severidad}: ${incidencia.titulo}`,
+      text: texto,
+      html,
+    })
+    return true
+  } catch (err) {
+    console.error('[correo] No se pudo enviar el aviso de incidencia:', err.message)
+    return false
+  }
+}
