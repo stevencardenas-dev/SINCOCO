@@ -35,7 +35,9 @@ const TRANSICIONES = {
 }
 const ESTADOS_DE_RESOLUCION = ['RESUELTA', 'CERRADA']
 
-const hoy = () => aFechaDia(new Date())
+// El día de hoy se toma en hora de Colombia: el servidor corre en otra zona horaria
+// y de noche o de madrugada habría registrado la fecha de resolución un día antes.
+const hoy = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(new Date())
 
 export async function registrarIncidencia(dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(dto.proyecto_id)
