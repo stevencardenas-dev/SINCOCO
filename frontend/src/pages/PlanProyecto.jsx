@@ -28,6 +28,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 import { proyectosApi } from '../services/proyectos'
 import { etapasApi } from '../services/etapas'
 import { actividadesApi } from '../services/actividades'
+import { incidenciasApi } from '../services/incidencias'
 import { trabajadoresApi } from '../services/trabajadores'
 import { asignacionesApi } from '../services/asignaciones'
 import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
@@ -184,16 +185,18 @@ export default function PlanProyecto() {
     async () => {
       // Personal, asignaciones y acceso dependen de permisos que el rol puede no
       // tener: si fallan, el plan se muestra igual sin esa parte.
-      const [proyectos, etapas, actividades, responsables, asignaciones, miAcceso] = await Promise.all([
+      const [proyectos, etapas, actividades, responsables, asignaciones, miAcceso, afectadas] = await Promise.all([
         proyectosApi.listar(),
         etapasApi.listar({ proyecto_id: id }),
         actividadesApi.listar({ proyecto_id: id }),
         trabajadoresApi.listar().catch(() => []),
         asignacionesApi.listar({ proyecto_id: id }).catch(() => []),
         proyectosApi.miAcceso(id).catch(() => SIN_ACCESO),
+        // HU-14: sin el permiso de incidencias el plan se muestra igual, sin el resaltado.
+        incidenciasApi.afectadas(id).catch(() => ({ actividades_ids: [] })),
       ])
       const proyecto = proyectos.find((x) => String(x.id) === String(id)) ?? null
-      return { proyecto, etapas, actividades, responsables, asignaciones, miAcceso }
+      return { proyecto, etapas, actividades, responsables, asignaciones, miAcceso, afectadas: afectadas.actividades_ids }
     },
     [id],
     { mensaje: 'No se pudo cargar el plan de trabajo.' },
@@ -202,6 +205,7 @@ export default function PlanProyecto() {
   const etapas = datos?.etapas ?? []
   const actividades = datos?.actividades ?? []
   const responsables = datos?.responsables ?? []
+  const conIncidencia = new Set(datos?.afectadas ?? []) // HU-14: actividades a resaltar
   // Responsables de actividad: solo quienes tienen acceso vigente al proyecto (o su responsable).
   // `actual` conserva al responsable ya guardado al editar, aunque haya perdido el acceso.
   const miembrosPara = (actual = null) => {
@@ -767,13 +771,20 @@ export default function PlanProyecto() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
-                    <tr key={a.id}>
+                    <tr key={a.id} className={conIncidencia.has(a.id) ? 'bg-red-50/60' : undefined}>
                       <td className="max-w-[9rem] py-3 pl-5 pr-3 text-xs font-medium text-slate-700">
                         <button type="button" title="Ver ficha de la actividad"
                           className="text-left hover:text-brand-700 hover:underline"
                           onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
                           {a.nombre}
                         </button>
+                        {/* HU-14: incidencia de severidad alta o crítica sin resolver. */}
+                        {conIncidencia.has(a.id) && (
+                          <Link to="/incidencias" title="Tiene una incidencia grave sin resolver"
+                            className="badge mt-1 block w-fit bg-red-100 text-red-700 ring-1 ring-red-200">
+                            ⚠ Incidencia
+                          </Link>
+                        )}
                       </td>
                       <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
                       <td className="px-3 py-3 text-xs text-slate-500">

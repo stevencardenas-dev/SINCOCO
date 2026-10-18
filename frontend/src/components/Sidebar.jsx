@@ -55,7 +55,7 @@ const NAV = [
     group: 'Gestión',
     items: [
       { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, roles: [ADMIN, GERENTE], proximamente: true },
-      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, roles: [ADMIN, GERENTE, MAESTRO], proximamente: true },
+      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, permiso: ['incidencias.listar'] },
       { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE], proximamente: true },
     ],
   },

@@ -26,7 +26,7 @@ Estados de Jira: **Por hacer** → **Backend-Frontend** (en curso) → **Listo**
 | HU-11 | AYD-23 | Entrega de herramientas | 3 (propuesto) | Kevin Marín | Por hacer |
 | HU-12 | AYD-24 | Devolución de herramientas | 3 (propuesto) | Kevin Marín | Por hacer |
 | HU-13 | AYD-25 | Proveedores y servicios | 2 | Juan Llanos | Por hacer |
-| HU-14 | AYD-26 | Incidencias de obra | 2 | Angel Vesga | Por hacer |
+| HU-14 | AYD-26 | Incidencias de obra | 2 | Angel Vesga | En curso |
 | HU-15 | AYD-27 | Consolidación de costos | 4 (propuesto) | Jimmy Bonilla | Por hacer |
 | HU-16 | AYD-28 | Dashboard de indicadores | 4 (propuesto) | Angel Vesga | Por hacer |
 | HU-17 | AYD-29 | Auditoría de operaciones | 2 | Alvaro Portillo | Backend-Frontend |
