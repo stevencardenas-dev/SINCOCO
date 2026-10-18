@@ -19,6 +19,7 @@ const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
+const Proveedores = lazy(() => import('./pages/Proveedores.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -115,7 +116,15 @@ export default function App() {
             }
           />
           {/* Proveedores y servicios */}
-          <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" descripcion="Proveedores y servicios contratados: transporte, alquiler de maquinaria, electricidad y plomería, con responsable, proyecto, fechas y valor." /></RutaPorRol>} />
+          {/* HU-13: catálogo de proveedores; la matriz de permisos decide quién entra. */}
+          <Route
+            path="proveedores"
+            element={
+              <RutaPorPermiso permisos={['proveedores.listar']}>
+                <Proveedores />
+              </RutaPorPermiso>
+            }
+          />
           {/* Incidencias de obra */}
           <Route
             path="incidencias"
