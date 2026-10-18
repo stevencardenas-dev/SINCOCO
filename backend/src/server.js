@@ -39,6 +39,8 @@ const app = express()
 // Es seguro porque nginx solo acepta peticiones que traen X-Origin-Verify.
 app.set('trust proxy', 2)
 app.use(cors())
+// Las incidencias aceptan una foto en base64: su propio límite, antes del global.
+app.use('/api/incidencias', express.json({ limit: '3mb' }))
 app.use(express.json())
 
 // `rutasSeguras` envuelve los controladores para que un AppError lanzado dentro

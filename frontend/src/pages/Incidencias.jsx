@@ -7,6 +7,8 @@ import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import FilaVacia from '../components/FilaVacia.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import CampoFoto from '../components/CampoFoto.jsx'
+import FotoEvidencia from '../components/FotoEvidencia.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { incidenciasApi } from '../services/incidencias'
 import { proyectosApi } from '../services/proyectos'
@@ -42,7 +44,7 @@ const SIGUIENTES = {
   CERRADA: [],
 }
 
-const VACIO = { proyecto_id: '', actividad_id: '', tipo: '', titulo: '', descripcion: '', severidad: 'MEDIA', evidencia: '' }
+const VACIO = { proyecto_id: '', actividad_id: '', tipo: '', titulo: '', descripcion: '', severidad: 'MEDIA', evidencia: '', foto: '' }
 const SIN_FILTROS = { proyecto_id: '', estado: '', severidad: '' }
 const VACIO_SEGUIMIENTO = { estado: '', fecha_resolucion: '' }
 
@@ -213,6 +215,7 @@ export default function Incidencias() {
                 valor: (i) => estadoIncidente[i.estado]?.label },
               { titulo: 'Registrada', tdClase: 'text-slate-600', celda: (i) => fmtFechaHora(i.fecha_incidencia),
                 valor: (i) => `${fmtFechaHora(i.fecha_incidencia)} · ${i.reportado_por}` },
+              { titulo: 'Foto', tdClase: 'text-slate-600', celda: (i) => (i.evidencia_archivo ? <FotoEvidencia id={i.id} /> : '—') },
               { titulo: 'Resolución', tdClase: 'text-slate-600', celda: (i) => (i.fecha_resolucion ? fmtFecha(i.fecha_resolucion) : '—') },
               ...(puedeEditar
                 ? [{
@@ -282,9 +285,11 @@ export default function Incidencias() {
                 onChange={(e) => registro.cambiar('descripcion', e.target.value)} />
             </div>
             <div className="sm:col-span-2">
-              <label htmlFor="inc-evidencia" className="label">Evidencia (opcional)</label>
+              <span className="label">Foto de la evidencia (opcional)</span>
+              <CampoFoto value={form.foto} onChange={(v) => registro.cambiar('foto', v)} />
+              <label htmlFor="inc-evidencia" className="label mt-3">Enlace a un documento (opcional)</label>
               <input id="inc-evidencia" maxLength={500} className={campo('evidencia')} value={form.evidencia}
-                placeholder="Enlace a la foto o al documento que respalda el hecho"
+                placeholder="Enlace al documento que respalda el hecho"
                 onChange={(e) => registro.cambiar('evidencia', e.target.value)} />
             </div>
           </div>

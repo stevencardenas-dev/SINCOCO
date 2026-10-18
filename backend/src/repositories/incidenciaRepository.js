@@ -8,7 +8,7 @@ import { pool } from '../db/pool.js'
 const SELECT_BASE = `
   SELECT i.id, i.proyecto_id, p.nombre AS proyecto_nombre, i.actividad_id, a.nombre AS actividad_nombre,
          i.reportado_por_usuario_id, u.username AS reportado_por,
-         i.tipo, i.titulo, i.descripcion, i.evidencia, i.severidad, i.estado,
+         i.tipo, i.titulo, i.descripcion, i.evidencia, i.evidencia_archivo, i.severidad, i.estado,
          i.fecha_incidencia, i.fecha_resolucion
     FROM incidencias i
     JOIN proyectos p ON p.id = i.proyecto_id
@@ -65,10 +65,10 @@ export async function crear(datos, alerta) {
     await conn.beginTransaction()
     const [ins] = await conn.query(
       `INSERT INTO incidencias
-         (proyecto_id, actividad_id, reportado_por_usuario_id, tipo, titulo, descripcion, evidencia, severidad)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         (proyecto_id, actividad_id, reportado_por_usuario_id, tipo, titulo, descripcion, evidencia, evidencia_archivo, severidad)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [datos.proyecto_id, datos.actividad_id, datos.usuarioId, datos.tipo, datos.titulo,
-       datos.descripcion, datos.evidencia, datos.severidad],
+       datos.descripcion, datos.evidencia, datos.evidencia_archivo ?? null, datos.severidad],
     )
     if (alerta) {
       await conn.query(

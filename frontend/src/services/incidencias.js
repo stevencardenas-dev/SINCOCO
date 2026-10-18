@@ -7,6 +7,8 @@ export const incidenciasApi = {
   /** Registra una incidencia; la respuesta indica si se generó alerta y correo. */
   crear: (cuerpo) => datos(api.post('/incidencias', cuerpo)),
   /** Seguimiento: estado y fecha de resolución. */
+  /** Foto adjunta (blob): el endpoint exige sesión, así que no sirve un <img src> directo. */
+  foto: (id) => api.get(`/incidencias/${id}/evidencia/archivo`, { responseType: 'blob' }).then((r) => r.data),
   actualizar: (id, cuerpo) => datos(api.patch(`/incidencias/${id}`, cuerpo)),
   /** Ids de las actividades del proyecto con una incidencia grave sin resolver. */
   afectadas: (proyectoId) => datos(api.get('/incidencias/afectadas', { params: { proyecto_id: proyectoId } })),
