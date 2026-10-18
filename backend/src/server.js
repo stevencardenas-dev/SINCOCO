@@ -21,6 +21,7 @@ import asignacionesRoutes from './routes/asignaciones.js'
 import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
 import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
 import incidenciasRoutes from './routes/incidencias.js'
+import serviciosExternosRoutes from './routes/serviciosExternos.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
 import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
@@ -54,6 +55,7 @@ app.use('/api/dashboard', rutasSeguras(dashboardRoutes))
 app.use('/api/proyectos', rutasSeguras(proyectosRoutes))
 app.use('/api/clientes', rutasSeguras(clientesRoutes))
 app.use('/api/proveedores', rutasSeguras(proveedoresRoutes))
+app.use('/api/servicios-externos', rutasSeguras(serviciosExternosRoutes))
 app.use('/api/trabajadores', rutasSeguras(trabajadoresRoutes))
 app.use('/api/catalogos', rutasSeguras(catalogosRoutes))
 app.use('/api/herramientas', rutasSeguras(herramientasRoutes))
