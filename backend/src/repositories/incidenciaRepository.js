@@ -9,7 +9,7 @@ const SELECT_BASE = `
   SELECT i.id, i.proyecto_id, p.nombre AS proyecto_nombre, i.actividad_id, a.nombre AS actividad_nombre,
          i.reportado_por_usuario_id, u.username AS reportado_por,
          i.tipo, i.titulo, i.descripcion, i.evidencia, i.evidencia_archivo, i.severidad, i.estado,
-         i.fecha_incidencia, i.fecha_resolucion
+         i.fecha_incidencia, DATE_FORMAT(i.fecha_resolucion, '%Y-%m-%d') AS fecha_resolucion
     FROM incidencias i
     JOIN proyectos p ON p.id = i.proyecto_id
     JOIN usuarios u ON u.id = i.reportado_por_usuario_id
