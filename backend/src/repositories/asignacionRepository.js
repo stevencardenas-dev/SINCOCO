@@ -51,6 +51,23 @@ export async function listar({ proyectoId = null, trabajadorId = null } = {}) {
   return rows
 }
 
+/**
+ * HU-34 · criterio 6: asignaciones ACTIVAS de una actividad que no caben en
+ * [inicio, fin]: empiezan antes del nuevo inicio o terminan después del nuevo
+ * fin. Una asignación sin fin programado (abierta) solo se compara por su inicio.
+ * Solo consulta: la extensión o el ajuste los hace el administrador (HU-31).
+ */
+export async function activasFueraDeRango(actividadId, inicio, fin) {
+  const [rows] = await pool.query(
+    `${SELECT_BASE}
+      WHERE a.actividad_id = ? AND a.estado = 'ACTIVO'
+        AND (a.fecha_inicio < ? OR a.fecha_fin_programada > ?)
+      ORDER BY a.fecha_inicio, a.id`,
+    [actividadId, inicio, fin],
+  )
+  return rows
+}
+
 /** ¿Ya existe una asignación activa para ese trabajador en ese destino? */
 export async function existeActiva(trabajadorId, proyectoId, actividadId) {
   const [rows] = await pool.query(
@@ -66,15 +83,18 @@ export async function existeActiva(trabajadorId, proyectoId, actividadId) {
 /**
  * ¿El trabajador tiene otra asignación activa cuyas fechas se cruzan con
  * [inicio, fin]? Un fin nulo se toma como abierto (sin fecha de término).
+ * `ignorarAccesoDeProyecto`: al asignar una actividad, el acceso general del
+ * trabajador a ese mismo proyecto (sin actividad) no cuenta como cruce.
  */
-export async function existeSolapada(trabajadorId, inicio, fin) {
+export async function existeSolapada(trabajadorId, inicio, fin, ignorarAccesoDeProyecto = null) {
   const [rows] = await pool.query(
     `SELECT id FROM asignaciones_personal
       WHERE trabajador_id = ? AND estado = 'ACTIVO'
         AND (? IS NULL OR fecha_inicio <= ?)
         AND (fecha_fin_programada IS NULL OR fecha_fin_programada >= ?)
+        AND (? IS NULL OR NOT (actividad_id IS NULL AND proyecto_id = ?))
       LIMIT 1`,
-    [trabajadorId, fin, fin, inicio],
+    [trabajadorId, fin, fin, inicio, ignorarAccesoDeProyecto, ignorarAccesoDeProyecto],
   )
   return rows[0] ?? null
 }
@@ -97,6 +117,32 @@ export async function create(asignacion) {
     ],
   )
   return result.insertId
+}
+
+/**
+ * Asignaciones vigentes cuya fecha fin programada ya pasó sin que se haya
+ * registrado la fecha fin real (ni una extensión, que movería esa fecha).
+ */
+export async function vencidasActivas() {
+  const [rows] = await pool.query(
+    `SELECT id, trabajador_id, proyecto_id, actividad_id, fecha_fin_programada
+       FROM asignaciones_personal
+      WHERE estado = 'ACTIVO' AND fecha_fin_real IS NULL
+        AND fecha_fin_programada IS NOT NULL AND fecha_fin_programada < CURDATE()
+      ORDER BY id`,
+  )
+  return rows
+}
+
+/** Finaliza una asignación vencida con su propia fecha fin programada como fecha fin real. */
+export async function finalizarVencida(id) {
+  const [r] = await pool.query(
+    `UPDATE asignaciones_personal
+        SET estado = 'FINALIZADO', fecha_fin_real = fecha_fin_programada
+      WHERE id = ? AND estado = 'ACTIVO' AND fecha_fin_real IS NULL`,
+    [id],
+  )
+  return r.affectedRows
 }
 
 export async function update(id, campos) {

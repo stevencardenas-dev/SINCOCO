@@ -64,7 +64,7 @@ export async function extenderAsignacion(id, cuerpo = {}, ctx = {}) {
   }
 
   // Alt. 1 · criterio 4: sin sobreasignación en el tramo que se agrega.
-  const choque = await extensionRepository.solapadaConTramo(asignacion.trabajador_id, id, vigente, nueva)
+  const choque = await extensionRepository.solapadaConTramo(asignacion.trabajador_id, id, vigente, nueva, asignacion.proyecto_id, asignacion.actividad_id)
   if (choque) {
     throw new AppError(
       `Sobreasignación: el trabajador ya está asignado a «${choque.actividad_nombre ?? choque.proyecto_nombre}» ` +

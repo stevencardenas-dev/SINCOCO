@@ -9,7 +9,10 @@
 #  2. cada reprogramación registra motivo obligatorio, usuario, fecha y fechas anterior/nueva.
 #  3. al reprogramar una etapa se recalculan las posteriores, en orden y sin solapes.
 #  4. si el recálculo excede el fin del proyecto: advertencia, confirmación y fin reprogramado.
-from api_helper import http, login, limpiar, crear_proyecto, scalar, sql
+#  5. las etapas y actividades completadas no se reprograman; PATCH ya no cambia fechas definidas.
+#  6. se listan, sin modificarlas, las asignaciones que quedan fuera de las nuevas fechas.
+#  7. las alertas de atraso (HU-24) se evalúan contra las fechas vigentes.
+from api_helper import http, login, limpiar, crear_proyecto, crear_trabajador, scalar, sql
 
 limpiar()
 admin = login('admin')
@@ -26,7 +29,7 @@ etapa_id = r['etapa']['id']
 assert r['etapa']['fecha_inicio_original'] is None, 'sin reprogramar no hay fecha original'
 
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad reprogramable',
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad reprogramable', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2026-10-05', 'fecha_fin_programada': '2026-10-20',
 }, token=admin)
 assert estado == 201, f'actividad: {estado} {r}'
@@ -107,7 +110,7 @@ def crear_etapa(nombre, inicio, fin):
 etapa_b = crear_etapa('TEST-Etapa B', '2027-01-15', '2027-02-15')
 etapa_c = crear_etapa('TEST-Etapa C', '2027-03-01', '2027-03-31')
 estado, r = http('POST', '/api/actividades', {
-    'etapa_id': etapa_b, 'nombre': 'TEST-Actividad de B',
+    'etapa_id': etapa_b, 'nombre': 'TEST-Actividad de B', 'criterios': ['TEST-criterio'],
     'fecha_inicio_programada': '2027-01-20', 'fecha_fin_programada': '2027-02-10',
 }, token=admin)
 assert estado == 201, f'actividad de B: {estado} {r}'
@@ -169,5 +172,77 @@ filas = scalar(f"SELECT COUNT(*) FROM reprogramaciones_plan WHERE entidad_tipo =
 assert filas == '1', 'el cambio del fin del proyecto queda en el historial'
 print('criterio 4 ok')
 
+# Criterio 5: lo completado no se reprograma.
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad completada',
+    'fecha_inicio_programada': '2026-11-01', 'fecha_fin_programada': '2026-11-10',
+}, token=admin)
+assert estado == 201, f'actividad a completar: {estado} {r}'
+completada = r['actividad']['id']
+assert http('PATCH', f'/api/actividades/{completada}/iniciar', token=admin)[0] == 200
+assert http('PATCH', f'/api/actividades/{completada}/finalizar', token=admin)[0] == 200
+estado, r = http('PATCH', f'/api/actividades/{completada}/reprogramar', {
+    'motivo': 'Intento', 'fecha_inicio_programada': '2026-11-02', 'fecha_fin_programada': '2026-11-12',
+}, token=admin)
+assert estado == 409, f'una actividad completada no se reprograma: {estado} {r}'
+sql(f"UPDATE etapas_proyecto SET estado = 'COMPLETADA' WHERE id = {etapa_c}")
+estado, r = http('PATCH', f'/api/etapas/{etapa_c}/reprogramar', {
+    'motivo': 'Intento', 'fecha_inicio_programada': '2027-04-20', 'fecha_fin_programada': '2027-04-30',
+}, token=admin)
+assert estado == 409, f'una etapa completada no se reprograma: {estado} {r}'
+assert scalar(f"SELECT fecha_fin_programada FROM etapas_proyecto WHERE id = {etapa_c}") != '2027-04-30'
+
+# Las rutas de edición directa ya no cambian fechas definidas.
+estado, r = http('PATCH', f'/api/etapas/{etapa_b}', {'fecha_fin_programada': '2027-02-27'}, token=admin)
+assert estado == 409 and r.get('codigo') == 'USAR_REPROGRAMACION', f'etapa: {estado} {r}'
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}', {'fecha_fin_programada': '2027-02-22'}, token=admin)
+assert estado == 409, f'actividad: {estado} {r}'
+estado, r = http('PATCH', f'/api/proyectos/{proyecto_id}', {'fecha_fin_programada': '2028-01-01'}, token=admin)
+assert estado == 409, f'proyecto con plan: {estado} {r}'
+estado, r = http('PATCH', f'/api/etapas/{etapa_b}', {'nombre': 'TEST-Etapa B editada'}, token=admin)
+assert estado == 200, f'editar otras propiedades sigue permitido: {estado} {r}'
+print('criterio 5 ok')
+
+# Criterio 6: las asignaciones fuera de las nuevas fechas se listan sin modificarse.
+trabajador = crear_trabajador(admin, documento='TEST-HU34-CC-02')
+estado, r = http('POST', '/api/asignaciones', {
+    'proyecto_id': proyecto_id, 'trabajador_id': trabajador, 'actividad_id': actividad_b,
+    'fecha_inicio': '2027-02-01', 'fecha_fin_programada': '2027-02-20',
+}, token=admin)
+assert estado == 201, f'asignacion de prueba: {estado} {r}'
+asignacion_id = r['asignacion']['id']
+# La actividad B (31-ene a 21-feb) se acorta hasta el 10-feb: la asignación termina después.
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}/reprogramar', {
+    'motivo': 'Recorte de alcance', 'fecha_inicio_programada': '2027-01-31',
+    'fecha_fin_programada': '2027-02-10',
+}, token=admin)
+assert estado == 200, f'reprogramar actividad B: {estado} {r}'
+assert [x['id'] for x in r['asignaciones_afectadas']] == [asignacion_id],     f'la asignacion queda fuera y se lista: {r["asignaciones_afectadas"]}'
+assert scalar(f"SELECT fecha_fin_programada FROM asignaciones_personal WHERE id = {asignacion_id}") == '2027-02-20',     'la asignacion no se modifica automaticamente'
+# Una asignación que sí cabe no se lista.
+estado, r = http('PATCH', f'/api/actividades/{actividad_b}/reprogramar', {
+    'motivo': 'Se amplia', 'fecha_inicio_programada': '2027-01-31',
+    'fecha_fin_programada': '2027-02-25',
+}, token=admin)
+assert estado == 200 and r['asignaciones_afectadas'] == [], f'ya cabe: {r}'
+print('criterio 6 ok')
+
+# Criterio 7: el atraso (HU-24) se evalúa contra las fechas vigentes.
+estado, r = http('POST', '/api/actividades', {
+    'etapa_id': etapa_id, 'nombre': 'TEST-Actividad vencida',
+    'fecha_inicio_programada': '2026-10-01', 'fecha_fin_programada': '2026-10-02',
+}, token=admin)
+assert estado == 201, f'actividad vencida: {estado} {r}'
+vencida = r['actividad']
+assert vencida['atrasada'] is True, 'fin programado pasado y sin finalizar: atrasada'
+estado, r = http('PATCH', f'/api/actividades/{vencida["id"]}/reprogramar', {
+    'motivo': 'Nueva fecha acordada', 'fecha_inicio_programada': '2026-10-01',
+    'fecha_fin_programada': '2026-12-15',
+}, token=admin)
+assert estado == 200, f'reprogramar vencida: {estado} {r}'
+assert r['actividad']['atrasada'] is False, 'con la fecha vigente en el futuro ya no esta atrasada'
+assert r['actividad']['fecha_fin_original'] == '2026-10-02', 'la original sigue siendo la vencida'
+print('criterio 7 ok')
+
 limpiar()
-print('HU-34 criterios 1 a 4: OK')
+print('HU-34 criterios 1 a 7: OK')

@@ -5,7 +5,7 @@ import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
 import { recalcularAvanceProyecto } from './avanceService.js'
 import { AppError } from '../utils/AppError.js'
-import { aFechaDia, rangosSeSolapan, validarFechasEnRango } from '../utils/fechas.js'
+import { aFechaDia, rangosSeSolapan, rechazarCambioDeFechas, validarFechasEnRango } from '../utils/fechas.js'
 import { verificarAccesoProyecto, verificarGestionPlan } from './accesoService.js'
 
 // La regla de fechas vive en utils/fechas.js (la comparten etapas, actividades
@@ -89,9 +89,14 @@ export async function actualizarEtapa(id, dto, ctx = {}) {
   const proyecto = await proyectoRepository.findById(etapa.proyecto_id)
 
   const campos = { ...dto.campos }
+  // HU-34 · criterio 5: las fechas ya definidas se cambian solo reprogramando.
+  rechazarCambioDeFechas(etapa, campos, 'la etapa')
   const inicio = aFechaDia(campos.fecha_inicio_programada ?? etapa.fecha_inicio_programada)
   const fin = aFechaDia(campos.fecha_fin_programada ?? etapa.fecha_fin_programada)
-  if (!inicio || !fin) {
+  // Las etapas de una plantilla nacen sin fechas: se pueden editar (nombre,
+  // descripción) sin fechas; si se envía alguna, deben quedar las dos.
+  const tocaFechas = campos.fecha_inicio_programada !== undefined || campos.fecha_fin_programada !== undefined
+  if (tocaFechas && (!inicio || !fin)) {
     throw new AppError('La etapa necesita fecha de inicio y de fin', 400, 'fecha_inicio_programada')
   }
   const cambiaFechas = inicio !== aFechaDia(etapa.fecha_inicio_programada)
@@ -150,6 +155,22 @@ const bajaReactivar = crearBajaReactivar({
     await recalcularAvanceProyecto(etapa.proyecto_id)
   },
 })
+
+/** «Empezar»: la etapa pasa de PENDIENTE a EN_PROCESO y queda su fecha de inicio real. */
+export async function iniciarEtapa(id, ctx = {}) {
+  const etapa = await etapaRepository.findById(id)
+  if (!etapa) throw new AppError('Etapa no encontrada', 404)
+  await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
+  if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
+  if (etapa.estado !== 'PENDIENTE') throw new AppError('Solo se puede empezar una etapa pendiente', 409, 'estado')
+
+  await etapaRepository.update(id, { estado: 'EN_PROCESO', fecha_inicio_real: new Date().toISOString().slice(0, 10) })
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'ACTUALIZAR', tabla: 'etapas_proyecto',
+    registroId: Number(id), detalles: { nombre: etapa.nombre, cambios: { estado: 'EN_PROCESO' } }, ip: ctx.ip,
+  })
+  return etapaRepository.findById(id)
+}
 
 export const darDeBajaEtapa = bajaReactivar.darDeBaja
 export const reactivarEtapa = bajaReactivar.reactivar

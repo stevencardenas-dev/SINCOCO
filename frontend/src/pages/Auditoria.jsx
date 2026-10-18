@@ -199,6 +199,7 @@ export default function Auditoria() {
                 titulo: 'Fecha y hora',
                 tdClase: 'whitespace-nowrap text-slate-600',
                 celda: (f) => fmtFechaHora(f.fecha_registro),
+                orden: (f) => f.fecha_registro,
               },
               {
                 titulo: 'Usuario',

@@ -17,7 +17,7 @@ const sumarDia = (iso) => {
   return d.toLocaleDateString('en-CA')
 }
 
-export default function ExtenderAsignacion({ asignacion, onCerrar, onExtendida }) {
+export default function ExtenderAsignacion({ asignacion, onCerrar, onExtendida, soloLectura = false }) {
   const [historial, setHistorial] = useState(null)
   const cargar = () => asignacionesApi.historial(asignacion.id).then(setHistorial).catch(() => setHistorial({ extensiones: [] }))
 
@@ -39,7 +39,7 @@ export default function ExtenderAsignacion({ asignacion, onCerrar, onExtendida }
   if (!asignacion) return null
   const vigente = dia(historial?.asignacion?.fecha_fin_programada ?? asignacion.fecha_fin_programada)
   const extensiones = historial?.extensiones ?? []
-  const puedeExtender = asignacion.estado === 'ACTIVO' && Boolean(vigente)
+  const puedeExtender = !soloLectura && asignacion.estado === 'ACTIVO' && Boolean(vigente)
   const v = formulario.valores
 
   const cuerpo = (
@@ -80,9 +80,11 @@ export default function ExtenderAsignacion({ asignacion, onCerrar, onExtendida }
         </>
       ) : (
         <p className="text-xs text-slate-500">
-          {asignacion.estado === 'ACTIVO'
-            ? 'Esta asignación no tiene fecha fin programada: no hay nada que extender.'
-            : 'La asignación está cerrada y no admite extensión: registre una nueva asignación.'}
+          {soloLectura
+            ? 'Solo el administrador puede extender asignaciones.'
+            : asignacion.estado === 'ACTIVO'
+              ? 'Esta asignación no tiene fecha fin programada: no hay nada que extender.'
+              : 'La asignación está cerrada y no admite extensión: registre una nueva asignación.'}
         </p>
       )}
     </>

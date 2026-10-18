@@ -16,6 +16,7 @@ import {
   UserCircleIcon,
   UsersIcon,
   WrenchScrewdriverIcon,
+  ClipboardDocumentListIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline'
 
@@ -46,6 +47,7 @@ const NAV = [
     items: [
       { to: '/materiales', label: 'Materiales', icon: CubeIcon, permiso: ['materiales.listar'] },
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
+      { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardDocumentListIcon, permiso: ['solicitudes_herramientas.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA], proximamente: true },
     ],
   },
@@ -53,7 +55,7 @@ const NAV = [
     group: 'Gestión',
     items: [
       { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, roles: [ADMIN, GERENTE], proximamente: true },
-      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, roles: [ADMIN, GERENTE, MAESTRO], proximamente: true },
+      { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, permiso: ['incidencias.listar'] },
       { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE], proximamente: true },
     ],
   },

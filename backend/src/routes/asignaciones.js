@@ -16,6 +16,7 @@ router.patch('/:id', requirePermiso('proyectos.gestionar_acceso'), actualizar)
 
 // HU-31: prórroga de la fecha fin sin sobrescribir el historial.
 router.get('/:id/historial', requirePermiso('proyectos.gestionar_acceso'), historial)
-router.post('/:id/extender', requirePermiso('proyectos.gestionar_acceso'), extender)
+// HU-31: la tarjeta fija como actor al administrador; el gerente solo ve el historial.
+router.post('/:id/extender', requirePermiso('asignaciones.extender'), extender)
 
 export default router

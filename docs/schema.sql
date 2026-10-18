@@ -44,7 +44,8 @@ CREATE TABLE `actividades` (
   `fecha_inicio_real` date DEFAULT NULL,
   `fecha_fin_real` date DEFAULT NULL,
   `porcentaje_avance` decimal(5,2) NOT NULL DEFAULT '0.00',
-  `peso` decimal(6,2) NOT NULL DEFAULT '1.00',
+  `esfuerzo` enum('MUY_ALTO','ALTO','MEDIO','BAJO','MUY_BAJO') NOT NULL DEFAULT 'MEDIO',
+  `peso` decimal(6,2) NOT NULL DEFAULT '3.00',
   `estado` enum('PENDIENTE','EN_PROCESO','COMPLETADA','ATRASADA','SUSPENDIDA') COLLATE utf8mb4_unicode_ci DEFAULT 'PENDIENTE',
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `actualizado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,6 +61,26 @@ CREATE TABLE `actividades` (
   CONSTRAINT `fk_actividad_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `trabajadores` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_actividad_avance` CHECK ((`porcentaje_avance` between 0 and 100)),
   CONSTRAINT `chk_actividad_peso` CHECK ((`peso` > 0))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `criterios_aceptacion`
+--
+
+DROP TABLE IF EXISTS `criterios_aceptacion`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `criterios_aceptacion` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `actividad_id` bigint NOT NULL,
+  `descripcion` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `cumplido` tinyint(1) NOT NULL DEFAULT '0',
+  `fecha_cumplido` datetime DEFAULT NULL,
+  `orden` int NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  KEY `idx_criterio_actividad` (`actividad_id`),
+  CONSTRAINT `fk_criterio_actividad` FOREIGN KEY (`actividad_id`) REFERENCES `actividades` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

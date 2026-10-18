@@ -21,7 +21,8 @@ mock.module('../src/repositories/asignacionRepository.js', {
       const a = estado.asignaciones.find((x) => x.id === Number(id))
       return a ? { ...a } : null
     },
-    existeActiva: async () => null,
+    // Duplicado: nunca. Acceso previo al proyecto (HU-30): existe si `accesoProyecto` y se pregunta sin actividad.
+    existeActiva: async (_t, _p, actividadId) => (!actividadId && estado.accesoProyecto ? { id: 98 } : null),
     existeSolapada: async () => (estado.solapada ? { id: 99 } : null),
     create: async (a) => {
       const id = estado.asignaciones.length + 1
@@ -69,6 +70,8 @@ const rechaza = (promesa, estadoHttp) => assert.rejects(promesa, (e) => e.status
 beforeEach(() => {
   estado.asignaciones = []
   estado.solapada = false
+  // Asignar a una actividad exige que el trabajador ya tenga acceso al proyecto (HU-30).
+  estado.accesoProyecto = true
   estado.escrituras = []
   estado.bitacora = []
 })
@@ -87,6 +90,7 @@ describe('HU-05 · criterio 1: datos de la asignación', () => {
   })
 
   test('la actividad es opcional: sin ella la asignación es a todo el proyecto', async () => {
+    estado.accesoProyecto = false // a todo el proyecto: aún no tiene acceso
     await alta({ actividad_id: '' })
     assert.equal(estado.escrituras.find((e) => e.tipo === 'create').actividad_id, null)
   })

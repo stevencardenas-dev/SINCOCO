@@ -16,7 +16,9 @@ const Auditoria = lazy(() => import('./pages/Auditoria.jsx'))
 const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
+const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
+const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -103,10 +105,26 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
+          {/* Solicitudes al inventario: pestañas Herramientas (HU-30) y Materiales (HU-08, pendiente). */}
+          <Route
+            path="solicitudes"
+            element={
+              <RutaPorPermiso permisos={['solicitudes_herramientas.listar']}>
+                <Solicitudes />
+              </RutaPorPermiso>
+            }
+          />
           {/* Proveedores y servicios */}
           <Route path="proveedores" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Proveedores y servicios" descripcion="Proveedores y servicios contratados: transporte, alquiler de maquinaria, electricidad y plomería, con responsable, proyecto, fechas y valor." /></RutaPorRol>} />
           {/* Incidencias de obra */}
-          <Route path="incidencias" element={<RutaPorRol roles={[ADMIN, GERENTE, MAESTRO]}><ModulePlaceholder title="Incidencias de obra" descripcion="Novedades e imprevistos en obra (averías, accidentes, retrasos) vinculados al proyecto donde ocurrieron." /></RutaPorRol>} />
+          <Route
+            path="incidencias"
+            element={
+              <RutaPorPermiso permisos={['incidencias.listar']}>
+                <Incidencias />
+              </RutaPorPermiso>
+            }
+          />
           {/* Alertas de inventario */}
           <Route path="alertas" element={<RutaPorRol roles={[ADMIN, GERENTE, BODEGA]}><ModulePlaceholder title="Alertas de inventario" descripcion="Avisos cuando un material alcanza el nivel mínimo definido en el catálogo, con su atención y seguimiento." /></RutaPorRol>} />
           {/* Consolidación de costos */}

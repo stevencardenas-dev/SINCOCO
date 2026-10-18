@@ -5,6 +5,7 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
+  UserPlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
@@ -12,7 +13,9 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import ConfirmarAusencia from '../components/ConfirmarAusencia.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import AsignarPersonal from '../components/AsignarPersonal.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
@@ -23,6 +26,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha, soloDigitos } from '../lib/format.js'
+import { mensajeError } from '../lib/errores.js'
 import { CATEGORIAS, agruparPorCategoria } from '../lib/catalogos.js'
 
 /**
@@ -74,7 +78,7 @@ const CATALOGO_TITULO = {
   especialidades: 'Registrar una especialidad',
 }
 
-const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '' }
+const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '', desde: '', hasta: '' }
 
 const CATALOGO_VACIO = { nombre: '', descripcion: '', categoria: '', operativo: false }
 
@@ -98,6 +102,9 @@ export default function Personal() {
   const puedeEditar = puede('trabajadores.editar')
   const puedeBaja = puede('trabajadores.dar_baja')
   const puedeCatalogos = puede('catalogos.gestionar')
+  // HU-33: asignar desde el resultado exige el mismo permiso que asignar en el proyecto (HU-05).
+  const puedeAsignar = puede('proyectos.gestionar_acceso')
+  const [porAsignar, setPorAsignar] = useState(null)
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
   // HU-18: por defecto no se muestran los registros dados de baja.
@@ -131,6 +138,9 @@ export default function Personal() {
         cargo_id: filtros.cargo_id,
         especialidad_id: filtros.especialidad_id,
         disponible: filtros.disponible,
+        // HU-33: el periodo se envía completo; con una sola fecha no se consulta.
+        desde: filtros.desde && filtros.hasta ? filtros.desde : '',
+        hasta: filtros.desde && filtros.hasta ? filtros.hasta : '',
       }),
     [incluirInactivos, filtros],
     { mensaje: 'No se pudo cargar el personal.' },
@@ -141,18 +151,34 @@ export default function Personal() {
     catalogosApi.especialidades.listar().then(setEspecialidades).catch(() => {})
   }, [])
 
+  // Vacaciones o licencia con asignaciones vigentes: se espera la confirmación del usuario.
+  // `via` es 'lista' (selector de la tabla) o 'form' (formulario de edición, con su `cuerpo`).
+  const [ausencia, setAusencia] = useState(null)
+  const [confirmandoAusencia, setConfirmandoAusencia] = useState(false)
+  const pideConfirmacion = (e) =>
+    e?.response?.status === 409 && e.response.data?.codigo === 'REQUIERE_CONFIRMACION'
+
   /** Cambiar el estado reemplaza al «dar de baja»: la disponibilidad se deriva. */
-  const cambiarEstado = (t, estado) => {
+  const cambiarEstado = (t, estado, confirmar = false) => {
     if (estado === t.estado) return
     // Si falla se recarga igual, para que el selector vuelva al estado real.
-    ejecutar(() => trabajadoresApi.cambiarEstado(t.id, estado), {
-      exito: ({ trabajador: actualizado }) =>
-        `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
-        (Number(actualizado.disponible)
-          ? Number(actualizado.actividades_vigentes) > 0
-            ? ' · asignado'
-            : ' · disponible'
-          : ' · no disponible'),
+    ejecutar(() => trabajadoresApi.cambiarEstado(t.id, estado, confirmar).catch((e) => {
+      if (!pideConfirmacion(e)) throw e
+      setAusencia({ via: 'lista', trabajador: t, estado, compromisos: e.response.data.compromisos })
+      return null
+    }), {
+      exito: (respuesta) => {
+        if (!respuesta) return ''
+        const actualizado = respuesta.trabajador
+        return (
+          `${t.nombres} ${t.apellidos}: estado ${actualizado.estado}` +
+          (Number(actualizado.disponible)
+            ? Number(actualizado.actividades_vigentes) > 0
+              ? ' · asignado'
+              : ' · disponible'
+            : ' · no disponible')
+        )
+      },
       error: 'No se pudo cambiar el estado del trabajador.',
       recargarSiFalla: true,
     })
@@ -170,7 +196,13 @@ export default function Personal() {
         cargo_id: Number(f.cargo_id),
         especialidad_id: f.especialidad_id ? Number(f.especialidad_id) : null,
       }
-      return trabajador ? trabajadoresApi.actualizar(trabajador.id, cuerpo) : trabajadoresApi.crear(cuerpo)
+      if (!trabajador) return trabajadoresApi.crear(cuerpo)
+      return trabajadoresApi.actualizar(trabajador.id, cuerpo).catch((e) => {
+        if (pideConfirmacion(e)) {
+          setAusencia({ via: 'form', trabajador, estado: cuerpo.estado, compromisos: e.response.data.compromisos, cuerpo })
+        }
+        throw e
+      })
     },
     alGuardar: ({ trabajador: t }, { registro }) => {
       setAviso(
@@ -184,6 +216,29 @@ export default function Personal() {
   })
   const form = formulario.valores
   const editando = formulario.registro
+
+  /** Confirma el paso a vacaciones/licencia y repite la operación con `confirmar`. */
+  const confirmarAusencia = async () => {
+    const { via, trabajador: t, estado, cuerpo } = ausencia
+    if (via === 'lista') {
+      setAusencia(null)
+      cambiarEstado(t, estado, true)
+      return
+    }
+    setConfirmandoAusencia(true)
+    try {
+      await trabajadoresApi.actualizar(t.id, { ...cuerpo, confirmar: true })
+      setAusencia(null)
+      formulario.cerrar()
+      setAviso(`${t.nombres} ${t.apellidos}: información actualizada; pasó a ${estado.toLowerCase()}.`)
+      await recargar()
+    } catch (e) {
+      setAusencia(null)
+      formulario.setError(mensajeError(e, 'No se pudo guardar el trabajador.'))
+    } finally {
+      setConfirmandoAusencia(false)
+    }
+  }
 
   /**
    * Registra un cargo o una especialidad nueva sin salir del formulario: queda
@@ -345,6 +400,33 @@ export default function Personal() {
               <option value="0">No disponibles</option>
             </select>
           </div>
+          {/* HU-33 · criterio 3: solo quienes no tienen asignaciones solapadas en el periodo. */}
+          <div>
+            <label htmlFor="per-desde" className="label">
+              Libre desde
+            </label>
+            <input
+              id="per-desde"
+              type="date"
+              className="input"
+              value={filtros.desde}
+              max={filtros.hasta || undefined}
+              onChange={(e) => cambiarFiltro('desde', e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="per-hasta" className="label">
+              Libre hasta
+            </label>
+            <input
+              id="per-hasta"
+              type="date"
+              className="input"
+              value={filtros.hasta}
+              min={filtros.desde || undefined}
+              onChange={(e) => cambiarFiltro('hasta', e.target.value)}
+            />
+          </div>
           <div>
             <label htmlFor="per-cargo" className="label">
               Cargo
@@ -392,6 +474,13 @@ export default function Personal() {
           </p>
         )}
       </FiltrosDesplegable>
+
+      <ConfirmarAusencia
+        pendiente={ausencia}
+        enviando={confirmandoAusencia}
+        onConfirmar={confirmarAusencia}
+        onCancelar={() => setAusencia(null)}
+      />
 
       {/* Formulario de registro: en ventana emergente, no al final de la página. */}
       {(puedeCrear || puedeEditar) && (
@@ -749,13 +838,28 @@ export default function Personal() {
         <div className="card flex flex-col items-center gap-2 px-6 py-16 text-center">
           <UsersIcon className="h-10 w-10 text-slate-300" />
           <p className="text-sm font-semibold text-slate-700">
-            {hayFiltros ? 'Ningún trabajador coincide con la búsqueda' : 'Aún no hay personal registrado'}
+            {hayFiltros
+              ? (filtros.disponible === 'libre' || (filtros.desde && filtros.hasta))
+                ? 'No hay personal disponible para ese criterio'
+                : 'Ningún trabajador coincide con la búsqueda'
+              : 'Aún no hay personal registrado'}
           </p>
           {hayFiltros && (
             <p className="text-xs text-slate-500">Ajuste o limpie los filtros para ver más.</p>
           )}
         </div>
       )}
+
+      <AsignarPersonal
+        trabajador={porAsignar}
+        periodo={filtros.desde && filtros.hasta ? { desde: filtros.desde, hasta: filtros.hasta } : null}
+        onCerrar={() => setPorAsignar(null)}
+        onAsignado={(t) => {
+          setPorAsignar(null)
+          setAviso(`${t.nombres} ${t.apellidos} fue asignado.`)
+          recargar()
+        }}
+      />
 
       {personal !== null && personal.length > 0 && (
         <div className="card overflow-hidden">
@@ -887,8 +991,10 @@ export default function Personal() {
                 acciones: true,
                 // Un registro dado de baja es historial: no se edita, solo se reactiva.
                 celda: (t, enFicha) => {
-                  if (t.activo ? !puedeEditar : !puedeBaja) return null
+                  if (t.activo ? !(puedeEditar || puedeAsignar) : !puedeBaja) return null
                   const botones = t.activo ? (
+                    <>
+                    {puedeEditar && (
                     <button
                       className="btn-accion btn-accion-editar"
                       onClick={() => abrirEditar(t)}
@@ -896,6 +1002,17 @@ export default function Personal() {
                     >
                       <PencilSquareIcon className="h-4 w-4" /> Editar
                     </button>
+                    )}
+                    {puedeAsignar && t.estado === 'ACTIVO' && (
+                      <button
+                        className="btn-accion btn-accion-ok"
+                        onClick={() => setPorAsignar(t)}
+                        aria-label={`Asignar a ${t.nombres} ${t.apellidos}`}
+                      >
+                        <UserPlusIcon className="h-4 w-4" /> Asignar
+                      </button>
+                    )}
+                    </>
                   ) : (
                     <button
                       className="btn-accion btn-accion-ok"

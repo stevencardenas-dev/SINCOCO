@@ -99,6 +99,10 @@ def limpiar():
         "WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%') "
         "OR trabajador_id IN (SELECT id FROM trabajadores WHERE numero_documento LIKE 'TEST-%')"
     )
+    # Etapas de plantilla: sus nombres no llevan el prefijo TEST-, se borran por proyecto.
+    sql("DELETE FROM actividades WHERE etapa_id IN (SELECT id FROM etapas_proyecto WHERE proyecto_id IN "
+        "(SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%'))")
+    sql("DELETE FROM etapas_proyecto WHERE proyecto_id IN (SELECT id FROM proyectos WHERE codigo LIKE 'TEST-%')")
     sql("DELETE FROM actividades WHERE nombre LIKE 'TEST-%'")
     sql("DELETE FROM etapas_proyecto WHERE nombre LIKE 'TEST-%'")
     # Además de los proyectos de prueba, se quitan los que apunten a un

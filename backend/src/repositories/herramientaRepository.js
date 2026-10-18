@@ -129,13 +129,75 @@ export async function reactivar(id) {
   return result.affectedRows
 }
 
-/** Almacenes activos, para el selector del formulario (solo lectura). */
-export async function listarAlmacenes() {
+const EN_USO = `(SELECT COUNT(*) FROM herramientas h WHERE h.almacen_id = a.id AND h.activo = 1)`
+
+/**
+ * Almacenes: por defecto solo los activos (selector del formulario); con
+ * `incluirInactivos` también los dados de baja. `en_uso` = herramientas activas.
+ */
+export async function listarAlmacenes({ incluirInactivos = false } = {}) {
   const [rows] = await pool.query(
-    `SELECT id, codigo, nombre, ubicacion, es_central
-       FROM almacenes WHERE activo = 1 ORDER BY es_central DESC, nombre`,
+    `SELECT a.id, a.codigo, a.nombre, a.ubicacion, a.es_central, a.activo, a.fecha_baja,
+            ${EN_USO} AS en_uso
+       FROM almacenes a ${incluirInactivos ? '' : 'WHERE a.activo = 1'}
+      ORDER BY a.es_central DESC, a.nombre`,
   )
   return rows
+}
+
+export async function findAlmacenCompleto(id) {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.codigo, a.nombre, a.ubicacion, a.es_central, a.activo, a.fecha_baja,
+            ${EN_USO} AS en_uso
+       FROM almacenes a WHERE a.id = ? LIMIT 1`,
+    [id],
+  )
+  return rows[0] ?? null
+}
+
+export async function findAlmacenByCodigo(codigo) {
+  const [rows] = await pool.query('SELECT id FROM almacenes WHERE codigo = ? LIMIT 1', [codigo])
+  return rows[0] ?? null
+}
+
+export async function insertAlmacen({ codigo, nombre, ubicacion, es_central }) {
+  const [result] = await pool.query(
+    'INSERT INTO almacenes (codigo, nombre, ubicacion, es_central) VALUES (?, ?, ?, ?)',
+    [codigo, nombre, ubicacion, es_central ? 1 : 0],
+  )
+  return result.insertId
+}
+
+const ALMACEN_EDITABLES = new Set(['codigo', 'nombre', 'ubicacion', 'es_central'])
+
+export async function updateAlmacen(id, campos) {
+  const claves = Object.keys(campos).filter((k) => ALMACEN_EDITABLES.has(k))
+  if (claves.length === 0) return 0
+  const [result] = await pool.query(
+    `UPDATE almacenes SET ${claves.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`,
+    [...claves.map((k) => campos[k]), id],
+  )
+  return result.affectedRows
+}
+
+/** Baja lógica: solo si no tiene herramientas activas (se comprueba en la misma sentencia). */
+export async function bajaAlmacen(id, usuarioId) {
+  const [result] = await pool.query(
+    `UPDATE almacenes
+        SET activo = 0, fecha_baja = NOW(), baja_por_usuario_id = ?
+      WHERE id = ? AND activo = 1
+        AND NOT EXISTS (SELECT 1 FROM herramientas h WHERE h.almacen_id = almacenes.id AND h.activo = 1)`,
+    [usuarioId ?? null, id],
+  )
+  return result.affectedRows
+}
+
+export async function reactivarAlmacen(id) {
+  const [result] = await pool.query(
+    'UPDATE almacenes SET activo = 1, fecha_baja = NULL, baja_por_usuario_id = NULL WHERE id = ? AND activo = 0',
+    [id],
+  )
+  return result.affectedRows
 }
 
 export async function findAlmacen(id) {

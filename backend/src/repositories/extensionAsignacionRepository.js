@@ -18,9 +18,10 @@ export async function listarPorAsignacion(asignacionId) {
  * Otra asignación ACTIVA del trabajador que se cruce con el tramo que se
  * agrega, (`desde`, `hasta`]. Un fin nulo se toma como abierto. Misma regla de
  * solapamiento que HU-05, pero solo sobre el periodo nuevo y sin contar la
- * propia asignación.
+ * propia asignación. En el mismo proyecto, el acceso al proyecto (sin actividad)
+ * y una asignación de actividad no se cuentan entre sí, como en HU-05.
  */
-export async function solapadaConTramo(trabajadorId, excluirId, desde, hasta) {
+export async function solapadaConTramo(trabajadorId, excluirId, desde, hasta, proyectoId, actividadId) {
   const [rows] = await pool.query(
     `SELECT a.id, a.fecha_inicio, a.fecha_fin_programada, p.nombre AS proyecto_nombre,
             act.nombre AS actividad_nombre
@@ -30,8 +31,9 @@ export async function solapadaConTramo(trabajadorId, excluirId, desde, hasta) {
       WHERE a.trabajador_id = ? AND a.id <> ? AND a.estado = 'ACTIVO'
         AND a.fecha_inicio <= ?
         AND (a.fecha_fin_programada IS NULL OR a.fecha_fin_programada > ?)
+        AND NOT (a.proyecto_id = ? AND ((? IS NULL) <> (a.actividad_id IS NULL)))
       LIMIT 1`,
-    [trabajadorId, excluirId, hasta, desde],
+    [trabajadorId, excluirId, hasta, desde, proyectoId, actividadId],
   )
   return rows[0] ?? null
 }

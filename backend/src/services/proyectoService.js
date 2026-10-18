@@ -2,6 +2,8 @@ import * as clienteRepository from '../repositories/clienteRepository.js'
 import * as trabajadorRepository from '../repositories/trabajadorRepository.js'
 import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
+import * as etapaRepository from '../repositories/etapaRepository.js'
+import { rechazarCambioDeFechas } from '../utils/fechas.js'
 import { alcanceDeUsuario, verificarAccesoProyecto } from './accesoService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { crearBajaReactivar } from './bajaReactivar.js'
@@ -174,6 +176,12 @@ export async function actualizarProyecto(id, cambios = {}, ctx = {}) {
         'presupuesto_inicial',
       )
     }
+  }
+
+  // HU-34 · criterio 5: con el plan de trabajo ya armado, las fechas del proyecto
+  // solo cambian reprogramando (el fin se extiende al reprogramar una etapa).
+  if ((await etapaRepository.listarPorProyecto(id)).length > 0) {
+    rechazarCambioDeFechas(actual, campos, 'un proyecto con plan de trabajo')
   }
 
   // Criterio 3: fechas coherentes, comparando con el valor vigente.

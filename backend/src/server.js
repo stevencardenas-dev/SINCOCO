@@ -15,10 +15,15 @@ import herramientasRoutes from './routes/herramientas.js'
 import materialesRoutes from './routes/materiales.js'
 import perfilRoutes from './routes/perfil.js'
 import etapasRoutes from './routes/etapas.js'
+import plantillasEtapasRoutes from './routes/plantillasEtapas.js'
 import actividadesRoutes from './routes/actividades.js'
 import asignacionesRoutes from './routes/asignaciones.js'
+import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
+import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
+import incidenciasRoutes from './routes/incidencias.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
+import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
 
 // Red de seguridad del proceso: si algo se escapa fuera de una ruta (una
 // promesa rechazada al leer la base, por ejemplo), queda en el log en vez de
@@ -34,6 +39,8 @@ const app = express()
 // Es seguro porque nginx solo acepta peticiones que traen X-Origin-Verify.
 app.set('trust proxy', 2)
 app.use(cors())
+// Las incidencias aceptan una foto en base64: su propio límite, antes del global.
+app.use('/api/incidencias', express.json({ limit: '3mb' }))
 app.use(express.json())
 
 // `rutasSeguras` envuelve los controladores para que un AppError lanzado dentro
@@ -53,8 +60,13 @@ app.use('/api/herramientas', rutasSeguras(herramientasRoutes))
 app.use('/api/materiales', rutasSeguras(materialesRoutes))
 app.use('/api/perfil', rutasSeguras(perfilRoutes))
 app.use('/api/etapas', rutasSeguras(etapasRoutes))
+app.use('/api/plantillas-etapas', rutasSeguras(plantillasEtapasRoutes))
 app.use('/api/actividades', rutasSeguras(actividadesRoutes))
 app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
+app.use('/api/solicitudes-herramientas', rutasSeguras(solicitudesHerramientasRoutes))
+app.use('/api/prestamos-herramientas', rutasSeguras(prestamosHerramientasRoutes))
+
+app.use('/api/incidencias', rutasSeguras(incidenciasRoutes))
 
 app.use((req, res) => {
   res.status(404).json({ error: 'Recurso no encontrado' })
@@ -63,4 +75,7 @@ app.use((req, res) => {
 app.use(errorHandler)
 
 const port = process.env.PORT || 3000
-app.listen(port, () => console.log(`SINCOCO backend en http://localhost:${port}`))
+app.listen(port, () => {
+  console.log(`SINCOCO backend en http://localhost:${port}`)
+  programarCierreAutomatico()
+})
