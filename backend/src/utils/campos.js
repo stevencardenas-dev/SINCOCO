@@ -36,6 +36,8 @@ export const LARGO = {
   modelo: 50,
   rol_en_proyecto: 100,
   motivo_reprogramacion: 500,
+  nombre_servicio: 150,
+  responsable_externo: 100,
   titulo_incidencia: 150,
   evidencia_incidencia: 500,
   // Las columnas TEXT no tienen tope en la base; este es un límite de cordura
@@ -106,6 +108,26 @@ const estaVacio = (v) => v === undefined || v === null || String(v).trim() === '
 /** Texto recortado, o null si llegó vacío. */
 export function textoOpcional(v) {
   return estaVacio(v) ? null : String(v).trim()
+}
+
+/** Los montos son decimal(15,2): 13 dígitos enteros como máximo. */
+export const MONTO_MAXIMO = 9_999_999_999_999.99
+
+/**
+ * Monto en pesos (HU-28): no negativo, con a lo sumo 2 decimales y dentro del
+ * rango de la columna. Devuelve null si llegó vacío.
+ */
+export function montoOpcional(v, campo) {
+  if (estaVacio(v)) return null
+  const n = Number(v)
+  if (!Number.isFinite(n) || n < 0) {
+    throw new AppError(`${campo} debe ser un monto numérico no negativo`, 400, campo)
+  }
+  if (n > MONTO_MAXIMO) throw new AppError(`${campo} supera el máximo permitido`, 400, campo)
+  if (Math.round(n * 100) / 100 !== n) {
+    throw new AppError(`${campo} admite como máximo 2 decimales`, 400, campo)
+  }
+  return n
 }
 
 /** Los ids del catálogo llegan como número o como texto desde un <select>. */

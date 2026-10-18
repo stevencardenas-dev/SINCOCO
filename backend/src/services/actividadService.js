@@ -71,6 +71,7 @@ export async function registrarActividad(dto, ctx = {}) {
     porcentaje_avance: 0,
     esfuerzo: dto.esfuerzo,
     peso: PESO_ESFUERZO[dto.esfuerzo],
+    presupuesto: dto.presupuesto,
     criterios: dto.criterios,
     estado: 'PENDIENTE',
   })
