@@ -36,7 +36,7 @@ aws s3 cp "s3://$BUCKET/sincoco-backend.tar.gz" /tmp/sincoco-backend.tar.gz --re
 rm -rf /tmp/sincoco-src && mkdir -p /tmp/sincoco-src
 tar -xzf /tmp/sincoco-backend.tar.gz -C /tmp/sincoco-src
 
-mkdir -p "$DEST/backend" "$DEST/logs"
+mkdir -p "$DEST/backend" "$DEST/logs" "$DEST/uploads/incidencias"
 cp -r /tmp/sincoco-src/backend/. "$DEST/backend/"
 chown -R ubuntu:ubuntu "$DEST"
 
