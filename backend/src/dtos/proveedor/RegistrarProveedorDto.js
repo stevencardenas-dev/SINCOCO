@@ -5,9 +5,7 @@ import {
   revisarLargo,
   revisarTelefono,
 } from '../../utils/campos.js'
-
-/** NIT: solo dígitos (6 a 14) con dígito de verificación opcional tras guion. */
-const FORMATO_NIT = /^\d{6,14}(-\d)?$/
+import { normalizarNit, tieneFormatoNit } from '../../utils/nit.js'
 
 /**
  * DTO para el registro de un proveedor (HU-13 · criterios 1 y 2: documento
@@ -44,7 +42,9 @@ export class RegistrarProveedorDto {
 
     const texto = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim())
 
-    const documento_identificacion = String(body.documento_identificacion).trim()
+    // Sin espacios ni puntos de millar, para que `900.123.456-8` y `900123456-8`
+    // cuenten como el mismo NIT al validar la unicidad.
+    const documento_identificacion = normalizarNit(body.documento_identificacion)
     const razon_social = String(body.razon_social).trim()
     const nombre_contacto = String(body.nombre_contacto).trim()
     const email = String(body.email).trim()
@@ -54,9 +54,9 @@ export class RegistrarProveedorDto {
     // La columna mide lo mismo que `numero_documento`; se revisa antes del
     // formato para que un texto enorme no se confunda con un NIT mal escrito.
     revisarLargo(documento_identificacion, LARGO.numero_documento, 'documento_identificacion')
-    if (!FORMATO_NIT.test(documento_identificacion)) {
+    if (!tieneFormatoNit(documento_identificacion)) {
       throw new AppError(
-        'El documento de identificación debe ser un NIT: de 6 a 14 dígitos, con dígito de verificación opcional (ej. 900123456-7)',
+        'El documento de identificación debe ser un NIT: de 8 a 10 dígitos, guion y dígito de verificación (ej. 900123456-8)',
         400,
         'documento_identificacion',
       )
