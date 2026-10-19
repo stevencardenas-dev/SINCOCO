@@ -47,7 +47,7 @@ const ESTADOS = {
   CANCELADO: { label: 'Cancelado', cls: 'bg-red-50 text-red-700 ring-red-200' },
 }
 
-export default function ServiciosExternos() {
+export default function ServiciosExternos({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('servicios_externos.crear')
 
@@ -134,7 +134,7 @@ export default function ServiciosExternos() {
     <div className="space-y-6">
       <PageHeader
         accion={<BotonActualizar onClick={recargar} />}
-        title="Proveedores y servicios"
+        title="Servicios externos"
         subtitle="Servicios externos contratados: responsable, fechas y valor pactado con el proveedor"
       >
         {puedeCrear && (
@@ -143,6 +143,7 @@ export default function ServiciosExternos() {
           </button>
         )}
       </PageHeader>
+      {pestanas}
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}

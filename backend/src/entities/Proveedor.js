@@ -14,6 +14,8 @@ export class Proveedor {
     direccion,
     estado,
     activo,
+    fecha_baja,
+    documentos,
   }) {
     this.id = id
     this.documento_identificacion = documento_identificacion
@@ -24,6 +26,8 @@ export class Proveedor {
     this.direccion = direccion ?? null
     this.estado = estado
     this.activo = activo
+    this.fecha_baja = fecha_baja ?? null
+    this.documentos = Number(documentos ?? 0)
   }
 
   static fromRow(row) {
