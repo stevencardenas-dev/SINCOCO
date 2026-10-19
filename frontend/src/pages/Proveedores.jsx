@@ -233,7 +233,7 @@ function DocumentosProveedor({ proveedor, puedeAdjuntar, onCerrar, onCambio }) {
   )
 }
 
-export default function Proveedores() {
+export default function Proveedores({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('proveedores.crear')
   const puedeEditar = puede('proveedores.editar')
@@ -349,6 +349,7 @@ export default function Proveedores() {
           {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
         </button>
       </PageHeader>
+      {pestanas}
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}

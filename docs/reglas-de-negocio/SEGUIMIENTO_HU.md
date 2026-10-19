@@ -40,7 +40,7 @@ Estados de Jira: **Por hacer** → **Backend-Frontend** (en curso) → **Listo**
 | HU-25 | AYD-37 | Reportes exportables | 4 (propuesto) | Alvaro Portillo | Por hacer |
 | HU-26 | AYD-38 | Salida efectiva de materiales | 4 (propuesto) | Kevin Marín | Por hacer |
 | HU-27 | AYD-39 | Historial de herramienta | 4 (propuesto) | Alvaro Portillo | Por hacer |
-| HU-28 | AYD-40 | Detalle de servicio externo | 2 | Jimmy Bonilla | Por hacer |
+| HU-28 | AYD-40 | Detalle de servicio externo | 2 | Jimmy Bonilla | Backend-Frontend |
 | HU-29 | AYD-41 | Traslado de materiales entre almacenes | 3 (propuesto) | Gian Abril | Por hacer |
 | HU-30 | AYD-42 | Solicitud de herramientas | 2 | Kevin Marín | Por hacer |
 | HU-31 | AYD-45 | Extensión o prórroga de asignación de personal | 2 | Alvaro Portillo | Por hacer |

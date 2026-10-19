@@ -19,7 +19,7 @@ const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
-const Proveedores = lazy(() => import('./pages/Proveedores.jsx'))
+const ProveedoresServicios = lazy(() => import('./pages/ProveedoresServicios.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -115,13 +115,12 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
-          {/* Proveedores y servicios */}
-          {/* HU-13: catálogo de proveedores; la matriz de permisos decide quién entra. */}
+                    {/* HU-13 y HU-28: proveedores y servicios externos en pestañas; la matriz de permisos decide quién entra. */}
           <Route
             path="proveedores"
             element={
-              <RutaPorPermiso permisos={['proveedores.listar']}>
-                <Proveedores />
+              <RutaPorPermiso permisos={['proveedores.listar', 'servicios_externos.listar']}>
+                <ProveedoresServicios />
               </RutaPorPermiso>
             }
           />

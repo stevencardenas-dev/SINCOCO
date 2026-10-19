@@ -38,7 +38,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { mensajeError } from '../lib/errores.js'
-import { fmtFecha, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
+import { fmtFecha, fmtCOP, fmtMiles, soloDigitos, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 /**
  * HU-03 (RF03 · RF04): plan de trabajo de un proyecto. Define etapas y, dentro
@@ -49,7 +49,7 @@ import { fmtFecha, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', criterios: [''] }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', presupuesto: '', criterios: [''] }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -250,7 +250,7 @@ export default function PlanProyecto() {
   // `registro` es el id de la etapa donde se está agregando la actividad.
   const nuevaActividad = useFormulario(ACTIVIDAD_VACIA, {
     enviar: (f, etapaId) =>
-      actividadesApi.crear({ ...f, etapa_id: etapaId, responsable_id: f.responsable_id || null }),
+      actividadesApi.crear({ ...f, etapa_id: etapaId, responsable_id: f.responsable_id || null, presupuesto: soloDigitos(f.presupuesto) }),
     alGuardar: () => {
       setAviso('Actividad registrada.')
       return recargar()
@@ -271,7 +271,7 @@ export default function PlanProyecto() {
     enviar: (f, { tipo, dato }) =>
       tipo === 'etapa'
         ? etapasApi.actualizar(dato.id, sinFechas(f, dato))
-        : actividadesApi.actualizar(dato.id, { ...sinFechas(f, dato), responsable_id: f.responsable_id || null }),
+        : actividadesApi.actualizar(dato.id, { ...sinFechas(f, dato), responsable_id: f.responsable_id || null, presupuesto: soloDigitos(f.presupuesto) }),
     alGuardar: (_, { registro }) => {
       setAviso(registro.tipo === 'etapa' ? 'Etapa actualizada.' : 'Actividad actualizada.')
       return recargar()
@@ -463,6 +463,7 @@ export default function PlanProyecto() {
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
         esfuerzo: a.esfuerzo ?? 'MEDIO',
+        presupuesto: a.presupuesto == null ? '' : String(Math.round(a.presupuesto)),
       },
       { tipo: 'actividad', dato: a },
     )
@@ -715,6 +716,15 @@ export default function PlanProyecto() {
                   </select>
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <label htmlFor={`a-presupuesto-${et.id}`} className="label">Presupuesto (COP, opcional)</label>
+                  <input id={`a-presupuesto-${et.id}`} type="text" inputMode="numeric" autoComplete="off" className="input tabular-nums"
+                    placeholder="10.000.000" value={fmtMiles(nuevaActividad.valores.presupuesto)}
+                    onChange={(e) => nuevaActividad.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Si lo define, el sistema advierte cuando un servicio externo lo excede.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -1168,6 +1178,7 @@ export default function PlanProyecto() {
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
             ['Esfuerzo', fichaVer.tipo === 'actividad' ? `${etiquetaEsfuerzo(fichaVer.dato.esfuerzo)} (peso ${Number(fichaVer.dato.peso)})` : null],
+            ['Presupuesto', fichaVer.tipo === 'actividad' && fichaVer.dato.presupuesto != null ? fmtCOP(fichaVer.dato.presupuesto) : null],
             ['Criterios cumplidos', fichaVer.tipo === 'actividad' && fichaVer.dato.total_criterios ? `${fichaVer.dato.criterios_cumplidos} de ${fichaVer.dato.total_criterios}` : null],
           ]}
         />
@@ -1242,6 +1253,18 @@ export default function PlanProyecto() {
                   </select>
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+              )}
+              {editandoActividad && (
+                <div className="sm:col-span-2">
+                  <label htmlFor="ed-presupuesto" className="label">Presupuesto (COP, opcional)</label>
+                  <input id="ed-presupuesto" type="text" inputMode="numeric" autoComplete="off"
+                    className={`input tabular-nums${marca('presupuesto')}`} placeholder="10.000.000"
+                    value={fmtMiles(edicion.valores.presupuesto ?? '')}
+                    onChange={(e) => edicion.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Referencia para advertir cuando un servicio externo la excede; vacío = sin presupuesto.
                   </p>
                 </div>
               )}
