@@ -108,6 +108,23 @@ describe('HU-07 · criterio 1: código único, alfanumérico y obligatorio', () 
     await assert.rejects(registrar(), (e) => e.statusCode === undefined && e.code === 'ECONNRESET')
   })
 
+  test('un código repetido de un material dado de baja pide reactivarlo, no editarlo', async () => {
+    await registrar()
+    await service.darDeBajaMaterial(1)
+    await assert.rejects(
+      registrar({ descripcion: 'Otro cemento' }),
+      (e) => e.statusCode === 409 && /dado de baja/.test(e.message) && /reactívelo/.test(e.message),
+    )
+  })
+
+  test('editar conservando el mismo código (como llega del formulario) no es un duplicado', async () => {
+    await registrar()
+    for (const [id, codigo] of [[1, 'CEM001'], ['1', 'cem001'], [1, ' CEM001 ']]) {
+      const m = await service.actualizarMaterial(id, { codigo, descripcion: `Cemento ${codigo.trim()}` })
+      assert.equal(m.codigo, 'CEM001')
+    }
+  })
+
   test('editar a un código ajeno responde 409', async () => {
     await registrar()
     await registrar({ codigo: 'ARE001', descripcion: 'Arena' })

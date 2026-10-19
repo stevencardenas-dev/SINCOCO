@@ -54,8 +54,13 @@ function traducirCodigoDuplicado(err) {
 async function exigirCodigoLibre(codigo, idActual = null) {
   const existente = await materialRepository.findByCodigo(codigo)
   if (existente && Number(existente.id) !== Number(idActual)) {
+    // Un material dado de baja no sale en el catálogo ni se edita: hay que
+    // reactivarlo primero, y el mensaje tiene que decirlo.
+    const sugerencia = existente.activo
+      ? 'edite el material existente en lugar de crear uno duplicado'
+      : 'está dado de baja: búsquelo con «Incluir dados de baja» y reactívelo en lugar de crear uno duplicado'
     throw new AppError(
-      `Ya existe un material con el código ${codigo} (id ${existente.id}); edite el material existente en lugar de crear uno duplicado`,
+      `Ya existe un material con el código ${codigo} (id ${existente.id}); ${sugerencia}`,
       409,
       'codigo',
     )
