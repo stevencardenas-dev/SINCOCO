@@ -46,7 +46,7 @@ import { fmtFecha, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 const ETAPA_VACIA = { nombre: '', descripcion: '', fecha_inicio_programada: '', fecha_fin_programada: '' }
 const REPROGRAMACION_VACIA = { motivo: '', fecha_inicio_programada: '', fecha_fin_programada: '', confirmar: false }
-const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', criterios: [''] }
+const ACTIVIDAD_VACIA = { nombre: '', responsable_id: '', fecha_inicio_programada: '', fecha_fin_programada: '', esfuerzo: 'MEDIO', presupuesto: '', criterios: [''] }
 const ACCESO_VACIO = {
   trabajador_id: '',
   actividad_id: '',
@@ -452,6 +452,7 @@ export default function PlanProyecto() {
         fecha_inicio_programada: soloDia(a.fecha_inicio_programada),
         fecha_fin_programada: soloDia(a.fecha_fin_programada),
         esfuerzo: a.esfuerzo ?? 'MEDIO',
+        presupuesto: a.presupuesto ?? '',
       },
       { tipo: 'actividad', dato: a },
     )
@@ -662,6 +663,15 @@ export default function PlanProyecto() {
                   </select>
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor={`a-presupuesto-${et.id}`} className="label">Presupuesto (COP, opcional)</label>
+                  <input id={`a-presupuesto-${et.id}`} type="number" min="0" step="1" inputMode="numeric" className="input"
+                    placeholder="Ej. 5000000" value={nuevaActividad.valores.presupuesto}
+                    onChange={(e) => nuevaActividad.cambiar('presupuesto', e.target.value)} />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Se valida contra el valor de los servicios externos contratados.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
@@ -1182,6 +1192,15 @@ export default function PlanProyecto() {
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
                   </p>
+                </div>
+              )}
+              {editandoActividad && (
+                <div>
+                  <label htmlFor="ed-presupuesto" className="label">Presupuesto (COP, opcional)</label>
+                  <input id="ed-presupuesto" type="number" min="0" step="1" inputMode="numeric"
+                    className={`input${marca('presupuesto')}`} placeholder="Sin presupuesto definido"
+                    value={edicion.valores.presupuesto ?? ''}
+                    onChange={(e) => edicion.cambiar('presupuesto', e.target.value)} />
                 </div>
               )}
               <p className="text-xs text-slate-500 sm:col-span-2">

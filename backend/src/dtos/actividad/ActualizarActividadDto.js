@@ -1,5 +1,5 @@
 import { AppError } from '../../utils/AppError.js'
-import { LARGO, revisarLargo, textoOpcional, PESO_ESFUERZO, revisarEsfuerzo } from '../../utils/campos.js'
+import { LARGO, revisarLargo, textoOpcional, PESO_ESFUERZO, revisarEsfuerzo, revisarPresupuesto } from '../../utils/campos.js'
 
 /** DTO para editar una actividad: solo viajan los campos que se quieren cambiar. */
 export class ActualizarActividadDto {
@@ -41,6 +41,8 @@ export class ActualizarActividadDto {
       campos.esfuerzo = revisarEsfuerzo(body.esfuerzo)
       campos.peso = PESO_ESFUERZO[campos.esfuerzo]
     }
+
+    if (body.presupuesto !== undefined) campos.presupuesto = revisarPresupuesto(body.presupuesto)
 
     if (Object.keys(campos).length === 0) throw new AppError('No hay campos que actualizar', 400)
     return new ActualizarActividadDto(campos)

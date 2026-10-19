@@ -46,6 +46,7 @@ CREATE TABLE `actividades` (
   `porcentaje_avance` decimal(5,2) NOT NULL DEFAULT '0.00',
   `esfuerzo` enum('MUY_ALTO','ALTO','MEDIO','BAJO','MUY_BAJO') NOT NULL DEFAULT 'MEDIO',
   `peso` decimal(6,2) NOT NULL DEFAULT '3.00',
+  `presupuesto` decimal(15,2) DEFAULT NULL,
   `estado` enum('PENDIENTE','EN_PROCESO','COMPLETADA','ATRASADA','SUSPENDIDA') COLLATE utf8mb4_unicode_ci DEFAULT 'PENDIENTE',
   `creado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `actualizado_en` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,7 +61,8 @@ CREATE TABLE `actividades` (
   CONSTRAINT `fk_actividad_etapa` FOREIGN KEY (`etapa_id`) REFERENCES `etapas_proyecto` (`id`) ON DELETE RESTRICT,
   CONSTRAINT `fk_actividad_responsable` FOREIGN KEY (`responsable_id`) REFERENCES `trabajadores` (`id`) ON DELETE SET NULL,
   CONSTRAINT `chk_actividad_avance` CHECK ((`porcentaje_avance` between 0 and 100)),
-  CONSTRAINT `chk_actividad_peso` CHECK ((`peso` > 0))
+  CONSTRAINT `chk_actividad_peso` CHECK ((`peso` > 0)),
+  CONSTRAINT `chk_actividad_presupuesto` CHECK (((`presupuesto` is null) or (`presupuesto` >= 0)))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 

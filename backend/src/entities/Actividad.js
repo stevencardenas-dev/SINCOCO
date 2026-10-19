@@ -19,6 +19,7 @@ export class Actividad {
     porcentaje_avance,
     peso,
     esfuerzo,
+    presupuesto,
     total_criterios,
     criterios_cumplidos,
     estado,
@@ -45,6 +46,8 @@ export class Actividad {
     this.peso = peso === undefined || peso === null ? 3 : Number(peso)
     // Esfuerzo cualitativo que determina el peso (Muy alto 8, Alto 5, Medio 3, Bajo 2, Muy bajo 1).
     this.esfuerzo = esfuerzo ?? 'MEDIO'
+    // Presupuesto en pesos con el que se valida el valor de los servicios externos (HU-28); NULL si no se definió.
+    this.presupuesto = presupuesto === undefined || presupuesto === null ? null : Number(presupuesto)
     // Criterios de aceptación: el avance es cumplidos / total.
     this.total_criterios = Number(total_criterios ?? 0)
     this.criterios_cumplidos = Number(criterios_cumplidos ?? 0)

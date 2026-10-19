@@ -106,6 +106,19 @@ export function textoOpcional(v) {
   return estaVacio(v) ? null : String(v).trim()
 }
 
+/** Presupuesto de una actividad en pesos: null si no se define, o un monto mayor o igual a 0. */
+export function revisarPresupuesto(v) {
+  if (estaVacio(v)) return null
+  const monto = Number(String(v).trim())
+  if (!Number.isFinite(monto) || monto < 0) {
+    throw new AppError('El presupuesto debe ser un monto en pesos mayor o igual a 0', 400, 'presupuesto')
+  }
+  if (monto >= 1e13) {
+    throw new AppError('El presupuesto es demasiado grande', 400, 'presupuesto')
+  }
+  return Math.round(monto * 100) / 100
+}
+
 /** Los ids del catálogo llegan como número o como texto desde un <select>. */
 export function numeroOpcional(v, campo) {
   if (estaVacio(v)) return null
