@@ -17,8 +17,14 @@ from api_helper import PREFIJO, http, limpiar, login, sql
 
 RUTA = '/api/proveedores'
 RAZON = f'{PREFIJO}-Proveedor de prueba'
-# NIT numérico único por ejecución (el prefijo de prueba no cabe en el formato).
-DOCUMENTO = '8' + str(int(time.time()))[-9:] + '-1'
+# NIT único por ejecución, con su dígito de verificación (módulo 11 de la DIAN).
+def con_dv(base):
+    pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+    resto = sum(int(d) * pesos[i] for i, d in enumerate(reversed(base))) % 11
+    return f'{base}-{11 - resto if resto >= 2 else resto}'
+
+
+DOCUMENTO = con_dv('8' + str(int(time.time()))[-8:])
 
 
 def limpiar_proveedores():
@@ -60,13 +66,13 @@ print('documento inválido ->', estado, r['error'])
 # --- 4. Campos obligatorios ----------------------------------------------------
 for campo in ('email', 'nombre_contacto'):
     cuerpo = {k: v for k, v in CUERPO.items() if k != campo}
-    cuerpo['documento_identificacion'] = '7' + str(int(time.time()))[-9:]
+    cuerpo['documento_identificacion'] = con_dv('7' + str(int(time.time()))[-8:])
     estado, r = http('POST', RUTA, cuerpo, token=TOKEN['admin'])
     assert estado == 400 and campo in r.get('error', ''), f'falta {campo}: {estado} {r}'
 print('faltan email / nombre_contacto -> 400')
 
 # --- 5. RBAC --------------------------------------------------------------------
-estado, r = http('POST', RUTA, dict(CUERPO, documento_identificacion='600123456'), token=TOKEN['gerente'])
+estado, r = http('POST', RUTA, dict(CUERPO, documento_identificacion=con_dv('600123456')), token=TOKEN['gerente'])
 assert estado == 403, f'el gerente no debe crear proveedores: {estado} {r}'
 print('gerente crea proveedor ->', estado)
 

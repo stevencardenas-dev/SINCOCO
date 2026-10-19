@@ -1,6 +1,7 @@
 import * as proveedorRepository from '../repositories/proveedorRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
+import { dvValido } from '../utils/nit.js'
 
 /**
  * HU-13: catálogo de proveedores. Un proveedor es un actor externo del
@@ -33,21 +34,37 @@ export async function exigirProveedorActivo(id) {
   return proveedor
 }
 
+const documentoDuplicado = () =>
+  new AppError('Ya existe un proveedor con ese documento de identificación', 409, 'documento_identificacion')
+
+/** HU-13 criterio 1: el dígito de verificación debe corresponder al NIT. */
+function exigirDvValido(documento) {
+  if (!dvValido(documento)) {
+    throw new AppError(
+      'El dígito de verificación del NIT no es correcto',
+      400,
+      'documento_identificacion',
+    )
+  }
+}
+
 /**
  * Registra un proveedor nuevo. `documento_identificacion` es UNIQUE en el
  * esquema: si ya existe se responde 409 señalando el campo en conflicto.
  */
 export async function registrarProveedor(dto, ctx = {}) {
+  exigirDvValido(dto.documento_identificacion)
   const existente = await proveedorRepository.findByDocumento(dto.documento_identificacion)
-  if (existente) {
-    throw new AppError(
-      'Ya existe un proveedor con ese documento de identificación',
-      409,
-      'documento_identificacion',
-    )
-  }
+  if (existente) throw documentoDuplicado()
 
-  const id = await proveedorRepository.create(dto)
+  let id
+  try {
+    id = await proveedorRepository.create(dto)
+  } catch (error) {
+    // Dos altas simultáneas del mismo NIT: la clave única de la base gana.
+    if (error?.code === 'ER_DUP_ENTRY') throw documentoDuplicado()
+    throw error
+  }
 
   await bitacora({
     usuarioId: ctx.usuarioId,
@@ -67,14 +84,19 @@ export async function registrarProveedor(dto, ctx = {}) {
 export async function actualizarProveedor(id, dto, ctx = {}) {
   const actual = await obtenerProveedor(id)
   if (!actual.activo) throw new AppError('El proveedor está dado de baja; reactívelo antes de editarlo', 409)
-  if (await proveedorRepository.findByDocumento(dto.documento_identificacion, Number(id))) {
-    throw new AppError(
-      'Ya existe un proveedor con ese documento de identificación',
-      409,
-      'documento_identificacion',
-    )
+  // Un proveedor anterior a esta regla puede conservar su NIT sin cambios.
+  if (dto.documento_identificacion !== actual.documento_identificacion) {
+    exigirDvValido(dto.documento_identificacion)
   }
-  await proveedorRepository.update(id, dto)
+  if (await proveedorRepository.findByDocumento(dto.documento_identificacion, Number(id))) {
+    throw documentoDuplicado()
+  }
+  try {
+    await proveedorRepository.update(id, dto)
+  } catch (error) {
+    if (error?.code === 'ER_DUP_ENTRY') throw documentoDuplicado()
+    throw error
+  }
   await bitacora({
     usuarioId: ctx.usuarioId,
     accion: 'ACTUALIZAR',
@@ -123,6 +145,12 @@ export async function reactivarProveedor(id, ctx = {}) {
 export const TIPOS_DOCUMENTO = ['CERTIFICADO', 'POLIZA', 'CONTRATO', 'RUT', 'OTRO']
 export const MIME_PERMITIDOS = ['application/pdf', 'image/png', 'image/jpeg']
 export const TAMANO_MAXIMO = 5 * 1024 * 1024
+// Primeros bytes (leídos como latin1) de cada formato permitido.
+const FIRMAS = {
+  'application/pdf': '%PDF-',
+  'image/png': '\x89PNG',
+  'image/jpeg': '\xff\xd8\xff',
+}
 
 export async function listarDocumentos(proveedorId) {
   await obtenerProveedor(proveedorId)
@@ -144,6 +172,14 @@ export async function adjuntarDocumento(proveedorId, { tipo, nombre, mime, conte
   }
   if (!Buffer.isBuffer(contenido) || contenido.length === 0) {
     throw new AppError('El archivo está vacío', 400, 'archivo')
+  }
+  if (contenido.length > TAMANO_MAXIMO) {
+    throw new AppError('El archivo supera el máximo de 5 MB', 413, 'archivo')
+  }
+  // El tipo declarado lo escribe el cliente: se comprueba con los primeros
+  // bytes para que un .exe renombrado a .pdf no pase.
+  if (!contenido.subarray(0, 8).toString('latin1').startsWith(FIRMAS[mime])) {
+    throw new AppError('El contenido del archivo no corresponde a su formato', 400, 'archivo')
   }
 
   const id = await proveedorRepository.crearDocumento({

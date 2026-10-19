@@ -403,7 +403,7 @@ export default function Proveedores() {
           }
         >
           <div className="grid gap-5 sm:grid-cols-2">
-            {texto('p-doc', 'NIT / documento', 'documento_identificacion', { maxLength: 20, required: true }, 'Único. Ej.: 900123456-7')}
+            {texto('p-doc', 'NIT / documento', 'documento_identificacion', { maxLength: 20, required: true }, 'Con dígito de verificación. Ej.: 900123456-8')}
             {texto('p-razon', 'Razón social', 'razon_social', { maxLength: 150, required: true })}
             {texto('p-contacto', 'Nombre de contacto', 'nombre_contacto', { maxLength: 100, required: true })}
             {texto('p-tel', 'Teléfono', 'telefono', { maxLength: 20, required: true, type: 'tel' })}
