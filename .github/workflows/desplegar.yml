@@ -139,6 +139,16 @@ jobs:
           } > .env
           node scripts/seed.js   # reemplaza los hashes de marcador por bcrypt real
 
+      # Pruebas unitarias del backend: sin MySQL, con dobles en memoria.
+      # hu05 y hu34 quedan fuera hasta corregir sus fallos actuales.
+      - name: Pruebas unitarias del backend
+        working-directory: backend
+        run: |
+          node --test --experimental-test-module-mocks \
+            test/hu07_materiales.test.js test/hu10_herramientas.test.js \
+            test/hu10_herramientas_consulta.test.js test/hu17_auditoria.test.js \
+            test/hu21_avance.test.js test/hu30_solicitud_herramientas.test.js
+
       - name: Arrancar el backend
         working-directory: backend
         run: |
