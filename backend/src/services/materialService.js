@@ -1,5 +1,6 @@
 import * as materialRepository from '../repositories/materialRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
+import { evaluarStockMinimo } from './alertaService.js'
 import { AppError } from '../utils/AppError.js'
 import { numeroOpcional } from '../utils/campos.js'
 import {
@@ -145,6 +146,8 @@ export async function actualizarMaterial(id, cambios = {}, ctx = {}) {
     detalles: { codigo: actual.codigo, cambios: campos },
     ip: ctx.ip,
   })
+  // HU-23: subir el nivel mínimo puede dejar el material en o bajo el umbral.
+  if (campos.nivel_minimo !== undefined) await evaluarStockMinimo(id)
   return materialRepository.findById(id)
 }
 
