@@ -17,6 +17,7 @@ const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
+const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
@@ -94,6 +95,14 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['materiales.listar']}>
                 <Materiales />
+              </RutaPorPermiso>
+            }
+          />
+          <Route
+            path="ingresos"
+            element={
+              <RutaPorPermiso permisos={['entradas_inventario.listar']}>
+                <EntradasInventario />
               </RutaPorPermiso>
             }
           />
