@@ -50,7 +50,7 @@ const NAV = [
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardDocumentListIcon, permiso: ['solicitudes_herramientas.listar'] },
       { to: '/ingresos', label: 'Ingreso', icon: ArrowDownTrayIcon, permiso: ['entradas_inventario.listar'] },
-      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, roles: [ADMIN, GERENTE, BODEGA], proximamente: true },
+      { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, permiso: ['alertas.listar'] },
     ],
   },
   {

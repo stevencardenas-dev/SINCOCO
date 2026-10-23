@@ -23,6 +23,7 @@ import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
 import incidenciasRoutes from './routes/incidencias.js'
 import serviciosExternosRoutes from './routes/serviciosExternos.js'
 import entradasInventarioRoutes from './routes/entradasInventario.js'
+import alertasRoutes from './routes/alertas.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
 import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
@@ -68,7 +69,8 @@ app.use('/api/actividades', rutasSeguras(actividadesRoutes))
 app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
 app.use('/api/solicitudes-herramientas', rutasSeguras(solicitudesHerramientasRoutes))
 app.use('/api/prestamos-herramientas', rutasSeguras(prestamosHerramientasRoutes))
-app.use('C:/Program Files/Git/api/entradas-inventario', rutasSeguras(entradasInventarioRoutes))
+app.use('/api/entradas-inventario', rutasSeguras(entradasInventarioRoutes))
+app.use('/api/alertas', rutasSeguras(alertasRoutes))
 
 app.use('/api/incidencias', rutasSeguras(incidenciasRoutes))
 

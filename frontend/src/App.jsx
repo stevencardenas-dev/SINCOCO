@@ -18,6 +18,7 @@ const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
+const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
 const ProveedoresServicios = lazy(() => import('./pages/ProveedoresServicios.jsx'))
@@ -105,6 +106,14 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
+          <Route
+            path="alertas"
+            element={
+              <RutaPorPermiso permisos={['alertas.listar']}>
+                <Alertas />
+              </RutaPorPermiso>
+            }
+          />
           {/* Inventario de herramientas */}
           {/* HU-10: catálogo de herramientas; la matriz de permisos decide quién entra. */}
           <Route
@@ -142,8 +151,6 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
-          {/* Alertas de inventario */}
-          <Route path="alertas" element={<RutaPorRol roles={[ADMIN, GERENTE, BODEGA]}><ModulePlaceholder title="Alertas de inventario" descripcion="Avisos cuando un material alcanza el nivel mínimo definido en el catálogo, con su atención y seguimiento." /></RutaPorRol>} />
           {/* Consolidación de costos */}
           <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" descripcion="Consolidación de costos de materiales y servicios externos por proyecto para el análisis gerencial." /></RutaPorRol>} />
           {/* Reportes */}

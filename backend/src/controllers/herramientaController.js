@@ -12,6 +12,7 @@ import {
   reactivarHerramienta,
 } from '../services/herramientaService.js'
 import { RegistrarHerramientaDto } from '../dtos/herramienta/RegistrarHerramientaDto.js'
+import { cambiarEstado, historialReparaciones } from '../services/herramientaEstadoService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 const verdadero = (v) => ['1', 'true', 'on'].includes(String(v))
@@ -82,3 +83,9 @@ export const reactivarCtrl = asyncHandler(async (req, res) => {
   const resultado = await reactivarHerramienta(req.params.id, contexto(req))
   return res.json({ message: 'Herramienta reactivada', ...resultado })
 })
+
+// HU-37: enviar a reparación, volver a disponible o dar de baja (definitiva).
+export const estado = asyncHandler(async (req, res) =>
+  res.json({ message: 'Estado actualizado', herramienta: await cambiarEstado(req.params.id, req.body, contexto(req)) }))
+
+export const reparaciones = asyncHandler(async (req, res) => res.json(await historialReparaciones(req.params.id)))
