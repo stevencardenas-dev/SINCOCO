@@ -80,6 +80,11 @@ function CatalogoHerramientas({ pestanas }) {
   const puedeCrear = puede('herramientas.crear')
   const puedeEditar = puede('herramientas.editar')
   const puedeBaja = puede('herramientas.dar_baja')
+  const puedeEstado = puede('herramientas.cambiar_estado')
+  // HU-37: cambio de estado operativo (reparación) con motivo obligatorio.
+  const [cambio, setCambio] = useState(null)
+  const [errorCambio, setErrorCambio] = useState('')
+  const [guardandoCambio, setGuardandoCambio] = useState(false)
 
   // HU-18: por defecto no se muestran las herramientas dadas de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
@@ -152,6 +157,26 @@ function CatalogoHerramientas({ pestanas }) {
     error: 'No se pudo dar de baja la herramienta.',
   })
   const porDarDeBaja = baja.registro
+
+  const confirmarCambio = async () => {
+    if (!cambio.motivo.trim()) return setErrorCambio('Todo cambio de estado exige un motivo.')
+    setGuardandoCambio(true)
+    try {
+      await herramientasApi.cambiarEstado(cambio.herramienta.id, {
+        accion: cambio.accion, motivo: cambio.motivo.trim(), costo: cambio.costo,
+      })
+      const h = cambio.herramienta
+      setCambio(null)
+      formulario.cerrar()
+      setError('')
+      setAviso(`${h.nombre} (${h.codigo_serial}) ${cambio.accion === 'EN_REPARACION' ? 'pasó a reparación' : 'volvió a estar disponible'}.`)
+      await recargar()
+    } catch (e) {
+      setErrorCambio(e?.response?.data?.message || 'No se pudo cambiar el estado de la herramienta.')
+    } finally {
+      setGuardandoCambio(false)
+    }
+  }
 
   const abrirEditar = (h) => {
     setAviso('')
@@ -310,11 +335,29 @@ function CatalogoHerramientas({ pestanas }) {
           ancho="max-w-3xl"
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar herramienta'}
           acciones={
-            editando &&
-            puedeBaja && (
-              <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir(null, editando)}>
-                <span aria-hidden="true">⚠️</span> Dar de baja
-              </button>
+            editando && (
+              <>
+                {puedeEstado && (
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    onClick={() => {
+                      setErrorCambio('')
+                      setCambio({
+                        herramienta: editando, motivo: '', costo: '',
+                        accion: editando.estado_operativo === 'EN_MANTENIMIENTO' ? 'DISPONIBLE' : 'EN_REPARACION',
+                      })
+                    }}
+                  >
+                    {editando.estado_operativo === 'EN_MANTENIMIENTO' ? 'Volver a disponible' : 'Enviar a reparación'}
+                  </button>
+                )}
+                {puedeBaja && (
+                  <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir(null, editando)}>
+                    <span aria-hidden="true">⚠️</span> Dar de baja
+                  </button>
+                )}
+              </>
             )
           }
         >
@@ -425,6 +468,36 @@ function CatalogoHerramientas({ pestanas }) {
           </div>
         </ModalFormulario>
       )}
+
+      {/* HU-37: enviar a reparación / volver a disponible, con motivo obligatorio. */}
+      <Modal
+        abierto={cambio !== null}
+        titulo={cambio?.accion === 'EN_REPARACION' ? 'Enviar a reparación' : 'Registrar salida de reparación'}
+        onCerrar={() => !guardandoCambio && setCambio(null)}
+        ancho="max-w-md"
+      >
+        {cambio && (
+          <>
+            <label htmlFor="he-motivo" className="label">{cambio.accion === 'EN_REPARACION' ? 'Descripción del daño (motivo)' : 'Trabajo realizado (motivo)'}</label>
+            <textarea id="he-motivo" className="input" rows={3} maxLength={500} value={cambio.motivo}
+              onChange={(e) => { setCambio({ ...cambio, motivo: e.target.value }); setErrorCambio('') }} />
+            {cambio.accion === 'DISPONIBLE' && (
+              <>
+                <label htmlFor="he-costo" className="label mt-4">Costo de la reparación (opcional)</label>
+                <input id="he-costo" type="number" min="0" step="0.01" className="input" value={cambio.costo}
+                  onChange={(e) => setCambio({ ...cambio, costo: e.target.value })} />
+              </>
+            )}
+            {errorCambio && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorCambio}</p>}
+            <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+              <button type="button" className="btn-primary disabled:opacity-60" disabled={guardandoCambio} onClick={confirmarCambio}>
+                {guardandoCambio ? 'Guardando…' : 'Confirmar'}
+              </button>
+              <button type="button" className="btn-ghost" disabled={guardandoCambio} onClick={() => setCambio(null)}>Cancelar</button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* Confirmación de «Dar de baja» (HU-18), encima del formulario de edición. */}
       <Modal

@@ -13,7 +13,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { fmtFecha } from '../lib/format.js'
 
 /**
- * HU-11 (solo lectura): panel de préstamos para bodega (pestaña de Herramientas).
+ * HU-11 panel de préstamos para bodega (pestaña de Herramientas).
  * Muestra primero las solicitudes de los maestros de obra que esperan entrega
  * (pendientes y aprobadas) y debajo los préstamos registrados.
  */
@@ -36,6 +36,10 @@ const Cargando = () => (
 export default function PrestamosHerramientas({ pestanas }) {
   const { puede } = useAuth()
   const puedeResolver = puede('solicitudes_herramientas.resolver')
+  const puedeEntregar = puede('prestamos_herramientas.crear')
+  const [porEntregarSol, setPorEntregarSol] = useState(null)
+  const [entrega, setEntrega] = useState({ estado_entrega: 'BUENO', fecha_estimada_devolucion: '', observaciones: '' })
+  const [errorEntrega, setErrorEntrega] = useState('')
   const [porRechazar, setPorRechazar] = useState(null)
   const [motivo, setMotivo] = useState('')
   const [errorRechazo, setErrorRechazo] = useState('')
@@ -57,6 +61,24 @@ export default function PrestamosHerramientas({ pestanas }) {
     })
   }
 
+  const abrirEntrega = (s) => {
+    setEntrega({ estado_entrega: 'BUENO', fecha_estimada_devolucion: String(s.fecha_estimada_devolucion ?? '').slice(0, 10), observaciones: '' })
+    setErrorEntrega('')
+    setPorEntregarSol(s)
+  }
+
+  const entregar = async () => {
+    if (!entrega.fecha_estimada_devolucion) return setErrorEntrega('La fecha estimada de devolución es obligatoria.')
+    const s = porEntregarSol
+    try {
+      await prestamosHerramientasApi.entregar({ solicitud_id: s.id, ...entrega, observaciones: entrega.observaciones.trim() })
+      setPorEntregarSol(null)
+      await recargar()
+    } catch (e) {
+      setErrorEntrega(e?.response?.data?.message || 'No se pudo registrar la entrega.')
+    }
+  }
+
   // Aprobar, rechazar y atender son de bodega: el maestro solo solicita y cancela.
   const acciones = (s) => {
     if (!puedeResolver) return null
@@ -69,7 +91,9 @@ export default function PrestamosHerramientas({ pestanas }) {
       )
     }
     if (s.estado === 'APROBADA') {
-      return <button type="button" className="btn-primary text-xs" onClick={() => accion(solicitudesHerramientasApi.atender, s, 'Atendida')}>Atender</button>
+      return puedeEntregar
+        ? <button type="button" className="btn-primary text-xs" onClick={() => abrirEntrega(s)}>Entregar</button>
+        : null
     }
     return null
   }
@@ -121,6 +145,32 @@ export default function PrestamosHerramientas({ pestanas }) {
           />
         )}
       </section>
+
+      <Modal abierto={porEntregarSol !== null} titulo="Entregar herramienta" onCerrar={() => setPorEntregarSol(null)} ancho="max-w-md">
+        {porEntregarSol && (
+          <p className="mb-4 text-sm text-slate-600">
+            {porEntregarSol.herramienta} ({porEntregarSol.codigo_serial}) → {porEntregarSol.trabajador}
+          </p>
+        )}
+        <label htmlFor="pe-estado" className="label">Condición de entrega</label>
+        <select id="pe-estado" className="input" value={entrega.estado_entrega}
+          onChange={(e) => setEntrega({ ...entrega, estado_entrega: e.target.value })}>
+          <option value="EXCELENTE">Excelente</option>
+          <option value="BUENO">Bueno</option>
+          <option value="REGULAR">Regular</option>
+        </select>
+        <label htmlFor="pe-fecha" className="label mt-4">Fecha estimada de devolución</label>
+        <input id="pe-fecha" type="date" className="input" value={entrega.fecha_estimada_devolucion}
+          onChange={(e) => { setEntrega({ ...entrega, fecha_estimada_devolucion: e.target.value }); setErrorEntrega('') }} />
+        <label htmlFor="pe-obs" className="label mt-4">Observaciones</label>
+        <textarea id="pe-obs" className="input" rows={3} maxLength={500} value={entrega.observaciones}
+          onChange={(e) => setEntrega({ ...entrega, observaciones: e.target.value })} />
+        {errorEntrega && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorEntrega}</p>}
+        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+          <button type="button" className="btn-primary" onClick={entregar}>Registrar entrega</button>
+          <button type="button" className="btn-ghost" onClick={() => setPorEntregarSol(null)}>Cancelar</button>
+        </div>
+      </Modal>
 
       <Modal abierto={porRechazar !== null} titulo="Rechazar solicitud" onCerrar={() => setPorRechazar(null)} ancho="max-w-md">
         <label htmlFor="sh-motivo" className="label">Observación (obligatoria)</label>

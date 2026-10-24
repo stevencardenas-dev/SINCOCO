@@ -3,7 +3,7 @@ import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
   listar, obtener, almacenes, registrar, actualizar, baja, reactivarCtrl,
-  registrarAlm, actualizarAlm, bajaAlm, reactivarAlm,
+  registrarAlm, actualizarAlm, bajaAlm, reactivarAlm, estado, reparaciones,
 } from '../controllers/herramientaController.js'
 
 const router = Router()
@@ -25,5 +25,9 @@ router.patch('/:id', requirePermiso('herramientas.editar'), actualizar)
 // HU-18: baja lógica y reactivación (nunca borrado físico).
 router.patch('/:id/baja', requirePermiso('herramientas.dar_baja'), baja)
 router.patch('/:id/reactivar', requirePermiso('herramientas.dar_baja'), reactivarCtrl)
+
+// HU-37: estado operativo (reparación / baja definitiva) e historial de reparaciones.
+router.patch('/:id/estado', requirePermiso('herramientas.cambiar_estado'), estado)
+router.get('/:id/reparaciones', requirePermiso('herramientas.listar'), reparaciones)
 
 export default router
