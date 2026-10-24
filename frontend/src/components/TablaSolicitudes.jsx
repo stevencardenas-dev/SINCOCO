@@ -41,6 +41,7 @@ export default function TablaSolicitudes({ filas, acciones }) {
         { titulo: 'Solicitada', celda: (s) => fmtFecha(s.fecha_solicitud), orden: (s) => s.fecha_solicitud },
         { titulo: 'Requerida', celda: (s) => fmtFecha(s.fecha_requerida), orden: (s) => s.fecha_requerida },
         { titulo: 'Devolución estimada', celda: (s) => (s.fecha_estimada_devolucion ? fmtFecha(s.fecha_estimada_devolucion) : '—') },
+        { titulo: 'Autorizó', escritorio: true, celda: (s) => s.autorizado_por ?? '—' },
         { titulo: 'Acciones', acciones: true, derecha: true, celda: (s, enFicha) => (enFicha ? acciones?.(s) ?? null : null) },
       ]}
     />

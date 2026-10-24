@@ -19,17 +19,13 @@ export async function listarPrestamos({ estado = '' } = {}) {
 
 /**
  * HU-11: entrega de una herramienta a partir de una solicitud APROBADA.
- * Deja constancia de quién entrega, la condición de entrega y la fecha estimada
- * de devolución (obligatoria; por defecto la de la solicitud), y pasa la
+ * Deja constancia de quién entrega, la condición de entrega (el estado operativo
+ * que la herramienta ya tenía) y la fecha estimada de devolución (obligatoria; por defecto la de la solicitud), y pasa la
  * herramienta a PRESTADA.
  */
 export async function registrarEntrega(body = {}, ctx) {
   const solicitudId = Number(body.solicitud_id)
   if (!Number.isInteger(solicitudId) || solicitudId <= 0) throw new AppError('solicitud_id es obligatorio', 400, 'solicitud_id')
-  const estadoEntrega = String(body.estado_entrega ?? '').trim().toUpperCase()
-  if (!ESTADOS_ENTREGA.includes(estadoEntrega)) {
-    throw new AppError(`estado_entrega debe ser uno de: ${ESTADOS_ENTREGA.join(', ')}`, 400, 'estado_entrega')
-  }
   const observaciones = textoOpcional(body.observaciones)
   revisarLargo(observaciones, 500, 'observaciones')
   const fechaBody = body.fecha_estimada_devolucion ? aFechaDia(body.fecha_estimada_devolucion) : null
@@ -38,7 +34,7 @@ export async function registrarEntrega(body = {}, ctx) {
   }
 
   const r = await repo.entregar({
-    solicitudId, usuarioId: ctx.usuarioId, estadoEntrega, observaciones,
+    solicitudId, usuarioId: ctx.usuarioId, observaciones,
     validar: async (sol, herr) => {
       if (!sol) throw new AppError('Solicitud no encontrada', 404, 'solicitud_id')
       if (sol.estado !== 'APROBADA') throw new AppError(`Solo se entrega una solicitud aprobada (estado actual: ${sol.estado})`, 409, 'solicitud_id')
@@ -56,7 +52,7 @@ export async function registrarEntrega(body = {}, ctx) {
   })
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'ENTREGAR_HERRAMIENTA', tabla: 'prestamos_herramientas', registroId: r.id,
-    detalles: { solicitud_id: solicitudId, herramienta_id: r.solicitud.herramienta_id, trabajador_id: r.solicitud.para_trabajador_id, estado_entrega: estadoEntrega }, ip: ctx.ip,
+    detalles: { solicitud_id: solicitudId, herramienta_id: r.solicitud.herramienta_id, trabajador_id: r.solicitud.para_trabajador_id, estado_entrega: r.herramienta.estado_operativo }, ip: ctx.ip,
   })
   return repo.findById(r.id)
 }
