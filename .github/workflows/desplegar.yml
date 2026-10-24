@@ -56,6 +56,8 @@ jobs:
   pruebas:
     name: Pruebas de API (HU-01, HU-03, HU-04, HU-18)
     runs-on: ubuntu-latest
+    # Si un paso se cuelga (p. ej. un handle abierto), falla en minutos y no libera tarde la cola.
+    timeout-minutes: 15
 
     services:
       mysql:
@@ -144,7 +146,7 @@ jobs:
       - name: Pruebas unitarias del backend
         working-directory: backend
         run: |
-          node --test --experimental-test-module-mocks \
+          node --test --test-force-exit --experimental-test-module-mocks \
             test/hu07_materiales.test.js test/hu10_herramientas.test.js \
             test/hu10_herramientas_consulta.test.js test/hu17_auditoria.test.js \
             test/hu21_avance.test.js test/hu30_solicitud_herramientas.test.js
