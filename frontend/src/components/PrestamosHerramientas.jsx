@@ -38,7 +38,7 @@ export default function PrestamosHerramientas({ pestanas }) {
   const puedeResolver = puede('solicitudes_herramientas.resolver')
   const puedeEntregar = puede('prestamos_herramientas.crear')
   const [porEntregarSol, setPorEntregarSol] = useState(null)
-  const [entrega, setEntrega] = useState({ estado_entrega: 'BUENO', fecha_estimada_devolucion: '', observaciones: '' })
+  const [entrega, setEntrega] = useState({ fecha_estimada_devolucion: '', observaciones: '' })
   const [errorEntrega, setErrorEntrega] = useState('')
   const [porRechazar, setPorRechazar] = useState(null)
   const [motivo, setMotivo] = useState('')
@@ -62,7 +62,7 @@ export default function PrestamosHerramientas({ pestanas }) {
   }
 
   const abrirEntrega = (s) => {
-    setEntrega({ estado_entrega: 'BUENO', fecha_estimada_devolucion: String(s.fecha_estimada_devolucion ?? '').slice(0, 10), observaciones: '' })
+    setEntrega({ fecha_estimada_devolucion: String(s.fecha_estimada_devolucion ?? '').slice(0, 10), observaciones: '' })
     setErrorEntrega('')
     setPorEntregarSol(s)
   }
@@ -152,14 +152,7 @@ export default function PrestamosHerramientas({ pestanas }) {
             {porEntregarSol.herramienta} ({porEntregarSol.codigo_serial}) → {porEntregarSol.trabajador}
           </p>
         )}
-        <label htmlFor="pe-estado" className="label">Condición de entrega</label>
-        <select id="pe-estado" className="input" value={entrega.estado_entrega}
-          onChange={(e) => setEntrega({ ...entrega, estado_entrega: e.target.value })}>
-          <option value="EXCELENTE">Excelente</option>
-          <option value="BUENO">Bueno</option>
-          <option value="REGULAR">Regular</option>
-        </select>
-        <label htmlFor="pe-fecha" className="label mt-4">Fecha estimada de devolución</label>
+        <label htmlFor="pe-fecha" className="label">Fecha estimada de devolución</label>
         <input id="pe-fecha" type="date" className="input" value={entrega.fecha_estimada_devolucion}
           onChange={(e) => { setEntrega({ ...entrega, fecha_estimada_devolucion: e.target.value }); setErrorEntrega('') }} />
         <label htmlFor="pe-obs" className="label mt-4">Observaciones</label>

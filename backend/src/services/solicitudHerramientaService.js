@@ -91,7 +91,8 @@ async function transicion(id, permitidoDesde, hacia, ctx, { observacion = null, 
   if (exigeObservacion && !observacion) {
     throw new AppError('Debe indicar la observación que justifica el rechazo', 400, 'observaciones')
   }
-  if (!(await repo.cambiarEstado(id, s.estado, hacia, observacion))) {
+  const aprobadoPor = hacia === 'APROBADA' ? ctx.usuarioId : null
+  if (!(await repo.cambiarEstado(id, s.estado, hacia, observacion, aprobadoPor))) {
     throw new AppError('La solicitud ya fue resuelta por otra persona', 409)
   }
   await bitacora({

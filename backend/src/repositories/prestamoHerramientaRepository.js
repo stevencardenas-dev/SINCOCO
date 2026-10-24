@@ -27,7 +27,7 @@ export async function listar({ estado = '' } = {}) {
  * herramienta, inserta el préstamo, marca la herramienta como PRESTADA y la
  * solicitud como ENTREGADA. `validar(solicitud, herramienta)` lanza si no procede y devuelve la fecha estimada de devolución.
  */
-export async function entregar({ solicitudId, usuarioId, estadoEntrega, observaciones, validar }) {
+export async function entregar({ solicitudId, usuarioId, observaciones, validar }) {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
@@ -41,7 +41,7 @@ export async function entregar({ solicitudId, usuarioId, estadoEntrega, observac
          (solicitud_id, herramienta_id, trabajador_id, proyecto_id, entregado_por_usuario_id,
           fecha_estimada_devolucion, estado_entrega, observaciones_entrega)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [sol.id, sol.herramienta_id, sol.para_trabajador_id, sol.proyecto_id, usuarioId, fechaDevolucion, estadoEntrega, observaciones],
+      [sol.id, sol.herramienta_id, sol.para_trabajador_id, sol.proyecto_id, usuarioId, fechaDevolucion, herr.estado_operativo, observaciones],
     )
     await conn.query("UPDATE herramientas SET disponibilidad = 'PRESTADA' WHERE id = ?", [sol.herramienta_id])
     await conn.query("UPDATE solicitudes_herramientas SET estado = 'ENTREGADA' WHERE id = ?", [sol.id])
