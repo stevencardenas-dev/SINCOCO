@@ -124,7 +124,7 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
-          {/* Solicitudes al inventario: pestañas Herramientas (HU-30) y Materiales (HU-08, pendiente). */}
+          {/* Solicitudes al inventario: pestañas Herramientas (HU-30) y Materiales (HU-08). */}
           <Route
             path="solicitudes"
             element={

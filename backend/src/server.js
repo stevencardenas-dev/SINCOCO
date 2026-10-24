@@ -22,6 +22,7 @@ import solicitudesHerramientasRoutes from './routes/solicitudesHerramientas.js'
 import prestamosHerramientasRoutes from './routes/prestamosHerramientas.js'
 import incidenciasRoutes from './routes/incidencias.js'
 import serviciosExternosRoutes from './routes/serviciosExternos.js'
+import solicitudesMaterialesRoutes from './routes/solicitudesMateriales.js'
 import entradasInventarioRoutes from './routes/entradasInventario.js'
 import alertasRoutes from './routes/alertas.js'
 import { errorHandler } from './middleware/errorHandler.js'
@@ -69,6 +70,7 @@ app.use('/api/actividades', rutasSeguras(actividadesRoutes))
 app.use('/api/asignaciones', rutasSeguras(asignacionesRoutes))
 app.use('/api/solicitudes-herramientas', rutasSeguras(solicitudesHerramientasRoutes))
 app.use('/api/prestamos-herramientas', rutasSeguras(prestamosHerramientasRoutes))
+app.use('/api/solicitudes-materiales', rutasSeguras(solicitudesMaterialesRoutes))
 app.use('/api/entradas-inventario', rutasSeguras(entradasInventarioRoutes))
 app.use('/api/alertas', rutasSeguras(alertasRoutes))
 

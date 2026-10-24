@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { CubeIcon } from '@heroicons/react/24/outline'
-import PageHeader from '../components/PageHeader.jsx'
 import SolicitudesHerramientas from './SolicitudesHerramientas.jsx'
+import SolicitudesMateriales from './SolicitudesMateriales.jsx'
 
 /**
  * Solicitudes al inventario, en pestañas como Gestión Administrativa:
- * Herramientas (HU-30) y Materiales (HU-08, aún solo visual).
+ * Herramientas (HU-30) y Materiales (HU-08).
  */
 const TABS = [
   { id: 'herramientas', label: 'Herramientas' },
@@ -34,17 +33,5 @@ export default function Solicitudes() {
 
   if (tab === 'herramientas') return <SolicitudesHerramientas pestanas={pestanas} />
 
-  return (
-    <div className="space-y-6">
-      <PageHeader title="Solicitudes" subtitle="Solicitudes de materiales al inventario" />
-      {pestanas}
-      <div className="card flex flex-col items-center gap-2 px-6 py-16 text-center">
-        <CubeIcon className="h-10 w-10 text-slate-300" />
-        <p className="text-sm font-semibold text-slate-700">Solicitud de materiales</p>
-        <p className="max-w-md text-sm text-slate-500">
-          Próximamente: el maestro de obra podrá pedir materiales al inventario y bodega los aprobará.
-        </p>
-      </div>
-    </div>
-  )
+  return <SolicitudesMateriales pestanas={pestanas} />
 }

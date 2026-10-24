@@ -2,7 +2,7 @@ import * as repo from '../repositories/alertaRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
 
-export const TIPOS = ['STOCK_MINIMO', 'HERRAMIENTA_PENDIENTE', 'ACTIVIDAD_ATRASADA', 'INCIDENCIA_CRITICA']
+export const TIPOS = ['STOCK_MINIMO', 'HERRAMIENTA_PENDIENTE', 'ACTIVIDAD_ATRASADA', 'INCIDENCIA_CRITICA', 'SOLICITUD_MATERIAL']
 
 /** HU-23: consulta de alertas (`atendida=0|1` filtra pendientes o atendidas). */
 export async function listarAlertas({ tipo = '', atendida = '' } = {}) {
