@@ -49,6 +49,10 @@ mock.module('../src/db/bitacora.js', {
   namedExports: { registrar: async (entrada) => { estado.bitacora.push(entrada) } },
 })
 
+mock.module('../src/services/alertaService.js', {
+  namedExports: { evaluarStockMinimo: async () => {} },
+})
+
 const service = await import('../src/services/materialService.js')
 const { RegistrarMaterialDto } = await import('../src/dtos/material/RegistrarMaterialDto.js')
 
