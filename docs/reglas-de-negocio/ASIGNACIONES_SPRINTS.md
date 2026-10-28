@@ -1,35 +1,33 @@
 # Asignaciones por sprint
 
 Registro de quién desarrolla cada historia de usuario y diseño de los sprints 2
-a 4. El estado real vive en Jira (proyecto **AYD**); este documento es el plan
+y 3. El estado real vive en Jira (proyecto **AYD**); este documento es el plan
 de reparto del equipo.
 
 > **Estado del plan.** Sprint 1: **cerrado** el 2026-10-05, con sus 5 HU en
 > *Listo*. Sprint 2: **activo** y cargado en Jira (sincronizado el 2026-10-06).
-> Sprints 3 y 4: **propuesta** pendiente de aprobación; aún no están en Jira.
+> Sprint 3: **activo** y cargado en Jira (sincronizado el 2026-10-27).
 > El detalle por historia (estado, responsable, clave Jira) está en
 > `SEGUIMIENTO_HU.md`.
 
 ## Reglas del reparto
 
-- El proyecto tiene **4 sprints**; el sprint 1 ya terminó y el sprint 2 está en curso.
+- El sprint 1 ya terminó; los sprints 2 y 3 están en curso.
 - Equipo de **6 personas**: cada sprint asigna **2 historias por persona**
   (12 historias por sprint).
-- Las HU-05 a HU-30 conservan el sprint de la Primera Entrega. Las HU-31 a
-  HU-41 (posteriores a ella) se ubicaron según sus dependencias.
-- Se procuró que cada persona continúe módulos que ya conoce y que la carga en
+- - Se procuró que cada persona continúe módulos que ya conoce y que la carga en
   puntos de estimación quede pareja.
 
 ## Equipo
 
-| Integrante | Cuenta en Jira |
-|---|---|
-| Alvaro Sneider Portillo Mora | ALVARO SNEIDER PORTILLO MORA |
-| Jimmy Alejandro Bonilla Castro | JIMMY ALEJANDRO BONILLA CASTRO |
-| Angel Johany Vesga Sarmiento | ANGEL JOHANY VESGA SARMIENTO |
-| Gian Karlo Abril Fierro | GIAN KARLO ABRIL FIERRO |
-| Juan David Llanos Castañeda | JUAN DAVID LLANOS CASTANEDA |
-| Kevin Steven Marín Cárdenas | KEVIN STEVEN MARIN CARDENAS |
+| Integrante | Cuenta en Jira | Correo GitHub | Usuario GitHub |
+|---|---|---|---|
+| Alvaro Sneider Portillo Mora | ALVARO SNEIDER PORTILLO MORA | alvaropro.0605@gmail.com | Masterkillerr |
+| Jimmy Alejandro Bonilla Castro | JIMMY ALEJANDRO BONILLA CASTRO | jimmyalejandrobc@ufps.edu.co | jimmy1413-a |
+| Angel Johany Vesga Sarmiento | ANGEL JOHANY VESGA SARMIENTO | angeljohanyvs@ufps.edu.co | angelvesga |
+| Gian Karlo Abril Fierro | GIAN KARLO ABRIL FIERRO | gkabril19@gmail.com | gianOneK |
+| Juan David Llanos Castañeda | JUAN DAVID LLANOS CASTANEDA | juandavidllca@ufps.edu.co | JuanLlanos123 |
+| Kevin Steven Marín Cárdenas | KEVIN STEVEN MARIN CARDENAS | steven.cardenas.dev@gmail.com | stevencardenas-dev |
 
 ## Calendario
 
@@ -37,8 +35,7 @@ de reparto del equipo.
 |---|---|---|---|
 | Sprint 1 | 2026-09-15 | 2026-10-04 | Cerrado (completado el 2026-10-05; en Jira figuraba hasta el 6 de oct) |
 | Sprint 2 | 2026-10-05 | 2026-10-25 | Activo (iniciado el 2026-10-05; en Jira figura hasta el 27 de oct) |
-| Sprint 3 | 2026-10-26 | 2026-11-15 | Por crear |
-| Sprint 4 | 2026-11-16 | 2026-12-06 | Por crear |
+| Sprint 3 | 2026-10-19 | 2026-11-09 | Activo (cargado en Jira con 12 HU) |
 
 Cada sprint dura 3 semanas y empieza el día siguiente al fin del anterior.
 
@@ -77,56 +74,38 @@ Estado al 2026-10-06: 6 en *Backend-Frontend*, 6 por hacer.
 | Juan Llanos | HU-07 | Catálogo de materiales | 3 | 6 | Backend-Frontend |
 | | HU-13 | Registro de proveedores y servicios | 3 | | Por hacer |
 
-## Sprint 3 (propuesto)
+## Sprint 3 (activo, cargado en Jira; consultado el 2026-10-27)
 
-Carga: 43 puntos (HU nuevas: 32, 35, 37, 41).
+Carga: 48 puntos (HU nuevas: 35, 36, 37). Las 12 historias están en el sprint
+"AYD Sprint 3" de Jira, con responsable. Estado: 6 en *Documentando* y 6 por
+hacer. Jira difiere del plan inicial: HU-09, HU-12, HU-20, HU-23, HU-26 y HU-36
+se adelantaron desde otros sprints o se reasignaron.
 
-| Responsable | HU | Historia | Pts | Total |
-|---|---|---|---|---|
-| Alvaro Portillo | HU-19 | Ingreso de materiales al inventario | 5 | 8 |
-| | HU-41 | Calificación de desempeño de proveedores *(nueva)* | 3 | |
-| Jimmy Bonilla | HU-24 | Alerta de actividades atrasadas y herramientas pendientes | 5 | 8 |
-| | HU-32 | Autorización de sobrecosto de servicio externo *(nueva)* | 3 | |
-| Angel Vesga | HU-08 | Solicitud de materiales | 5 | 8 |
-| | HU-22 | Carga de evidencias de avance | 3 | |
-| Gian Abril | HU-29 | Traslado de materiales entre almacenes | 5 | 7 |
-| | HU-06 | Historial de asignaciones de trabajadores | 2 | |
-| Kevin Marín | HU-11 | Entrega de herramientas a trabajadores | 3 | 6 |
-| | HU-12 | Devolución de herramientas | 3 | |
-| Juan Llanos | HU-37 | Mantenimiento y estado operativo de herramientas *(nueva)* | 3 | 6 |
-| | HU-35 | Reemplazo de herramienta averiada *(nueva)* | 3 | |
+| Responsable | HU | Historia | Pts | Total | Estado |
+|---|---|---|---|---|---|
+| Alvaro Portillo | HU-19 | Ingreso de materiales al inventario | 5 | 8 | Documentando |
+| | HU-09 | Devolución de materiales sobrantes | 3 | | Por hacer |
+| Jimmy Bonilla | HU-23 | Alerta de stock mínimo de inventario | 3 | 8 | Documentando |
+| | HU-20 | Consumo real de materiales | 5 | | Por hacer |
+| Angel Vesga | HU-08 | Solicitud de materiales | 5 | 10 | Documentando |
+| | HU-36 | Aprobación parcial o ajuste de solicitudes de materiales *(nueva)* | 5 | | Por hacer |
+| Gian Abril | HU-29 | Traslado de materiales entre almacenes | 5 | 8 | Documentando |
+| | HU-12 | Devolución de herramientas | 3 | | Por hacer |
+| Kevin Marín | HU-11 | Entrega de herramientas a trabajadores | 3 | 8 | Documentando |
+| | HU-26 | Salida efectiva de materiales | 5 | | Por hacer |
+| Juan Llanos | HU-37 | Registro de mantenimiento y cambio de estado de herramientas *(nueva)* | 3 | 6 | Documentando |
+| | HU-35 | Reasignación de herramientas en caso de fallo u avería *(nueva)* | 3 | | Por hacer |
 
-## Sprint 4 (propuesto)
+## Carga acumulada (sprints 2 y 3)
 
-Carga: 60 puntos (HU nuevas: 36, 38, 39, 40). Es el sprint más cargado porque
-la Primera Entrega ya concentraba allí las HU de mayor estimación (HU-15,
-HU-16, HU-25).
-
-| Responsable | HU | Historia | Pts | Total |
-|---|---|---|---|---|
-| Alvaro Portillo | HU-25 | Generación y exportación de reportes | 8 | 10 |
-| | HU-27 | Historial de movimientos de herramientas | 2 | |
-| Jimmy Bonilla | HU-15 | Consolidación automática de costos | 8 | 11 |
-| | HU-09 | Devolución de materiales sobrantes | 3 | |
-| Angel Vesga | HU-16 | Dashboard de indicadores de proyectos | 8 | 11 |
-| | HU-40 | Acta de recepción de materiales en obra *(nueva)* | 3 | |
-| Gian Abril | HU-38 | Congelar o finalizar proyecto *(nueva)* | 5 | 10 |
-| | HU-39 | Desviaciones presupuestales en tiempo real *(nueva)* | 5 | |
-| Kevin Marín | HU-26 | Salida efectiva de materiales | 5 | 10 |
-| | HU-20 | Consumo real de materiales | 5 | |
-| Juan Llanos | HU-36 | Aprobación parcial o ajuste de solicitudes de materiales *(nueva)* | 5 | 8 |
-| | HU-23 | Alerta de stock mínimo de inventario | 3 | |
-
-## Carga acumulada (sprints 2 a 4)
-
-| Integrante | S2 | S3 | S4 | Total |
-|---|---|---|---|---|
-| Alvaro Portillo | 8 | 8 | 10 | 26 |
-| Jimmy Bonilla | 8 | 8 | 11 | 27 |
-| Angel Vesga | 8 | 8 | 11 | 27 |
-| Gian Abril | 6 | 7 | 10 | 23 |
-| Kevin Marín | 8 | 6 | 10 | 24 |
-| Juan Llanos | 6 | 6 | 8 | 20 |
+| Integrante | S2 | S3 | Total |
+|---|---|---|---|
+| Alvaro Portillo | 8 | 8 | 16 |
+| Jimmy Bonilla | 8 | 8 | 16 |
+| Angel Vesga | 8 | 10 | 18 |
+| Gian Abril | 6 | 8 | 14 |
+| Kevin Marín | 8 | 8 | 16 |
+| Juan Llanos | 6 | 6 | 12 |
 
 ## Dependencias dentro del mismo sprint
 
@@ -136,21 +115,11 @@ coordinar el orden entre responsables.
 | Sprint | Historia | Depende de | Responsable de la dependencia |
 |---|---|---|---|
 | 2 | HU-31 (Alvaro) | HU-05 | Gian |
-| 3 | HU-35 (Juan) | HU-12 (Kevin) y HU-37 (Juan) | Kevin |
-| 3 | HU-41 (Alvaro) | HU-19 (Alvaro) | — |
-| 4 | HU-36 (Juan) | HU-26 (despacho del saldo) | Kevin |
-| 4 | HU-40 (Angel) | HU-26 | Kevin |
-| 4 | HU-38 (Gian) | HU-15 (consolidación final) | Jimmy |
-| 4 | HU-39 (Gian) | HU-15 y HU-16 | Jimmy y Angel |
+| 3 | HU-35 (Juan) | HU-12 (Gian) y HU-37 (Juan) | Gian |
+| 3 | HU-36 (Angel) | HU-08 (Angel) y HU-26 (despacho del saldo) | Kevin |
+| 3 | HU-20 (Jimmy) | HU-26 (material despachado) | Kevin |
 
 ## Pendientes
 
-- Aprobar o ajustar el reparto de los sprints 3 y 4.
-- Crear en Jira los sprints 3 y 4 y mover a ellos las historias de cada uno.
-  Las 8 HU nuevas de esos sprints ya existen en Jira (backlog), con épica y
-  responsable: HU-32 AYD-48, HU-35 AYD-49, HU-36 AYD-50, HU-37 AYD-51,
-  HU-38 AYD-52, HU-39 AYD-53, HU-40 AYD-54, HU-41 AYD-55.
-- Asignar en Jira a los responsables de las HU originales de los sprints 3 y 4
-  (hoy sin asignar).
-- Ajustar en Jira la fecha de fin del Sprint 2 (27 de oct) al calendario de este
-  documento (25 de oct).
+- Ajustar las fechas de los sprints de este documento a las de Jira (sprint 3:
+  19 oct – 9 nov).
