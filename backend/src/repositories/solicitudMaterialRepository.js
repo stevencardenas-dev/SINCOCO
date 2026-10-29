@@ -4,7 +4,7 @@ import { pool } from '../db/pool.js'
 
 const SELECT = `SELECT s.id, s.codigo, s.proyecto_id, p.nombre AS proyecto, s.actividad_id, a.nombre AS actividad,
                        s.solicitado_por_usuario_id, u.username AS solicitante,
-                       s.fecha_solicitud, s.fecha_requerida, s.estado, s.observaciones
+                       s.fecha_solicitud, s.fecha_requerida, s.estado, s.observaciones, s.excede_presupuesto
                   FROM solicitudes_materiales s
                   JOIN proyectos p ON p.id = s.proyecto_id
                   LEFT JOIN actividades a ON a.id = s.actividad_id
@@ -49,21 +49,50 @@ export async function findActividadProyecto(actividadId) {
   return rows[0] || null
 }
 
+/** Catálogo mínimo para el selector del formulario: no expone existencias ni costos. */
+export async function catalogoMateriales() {
+  const [rows] = await pool.query(
+    'SELECT id, codigo, descripcion, unidad_medida FROM materiales WHERE activo = 1 ORDER BY codigo',
+  )
+  return rows
+}
+
+/** Cantidad presupuestada por material para la actividad (solo los materiales presupuestados). */
+export async function presupuestoActividad(actividadId) {
+  const [rows] = await pool.query(
+    'SELECT material_id, cantidad_presupuestada FROM presupuesto_materiales_actividad WHERE actividad_id = ?',
+    [actividadId],
+  )
+  return rows
+}
+
+/** Lo ya pedido por material para la actividad en solicitudes vigentes (no rechazadas ni canceladas). */
+export async function yaSolicitadoActividad(actividadId, materialIds) {
+  const [rows] = await pool.query(
+    `SELECT d.material_id, SUM(d.cantidad_solicitada) AS cantidad
+       FROM detalles_solicitud_materiales d JOIN solicitudes_materiales s ON s.id = d.solicitud_id
+      WHERE s.actividad_id = ? AND s.activo = 1 AND s.estado NOT IN ('RECHAZADA', 'CANCELADA') AND d.material_id IN (?)
+      GROUP BY d.material_id`,
+    [actividadId, materialIds],
+  )
+  return rows
+}
+
 export async function findMateriales(ids) {
   const [rows] = await pool.query('SELECT id, activo, descripcion FROM materiales WHERE id IN (?)', [ids])
   return rows
 }
 
 /** Crea la solicitud con sus líneas y la alerta para bodega, en una transacción. */
-export async function crear({ proyectoId, actividadId, usuarioId, fechaRequerida, observaciones, detalles }) {
+export async function crear({ proyectoId, actividadId, usuarioId, fechaRequerida, observaciones, detalles, excedePresupuesto = false }) {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
     const temporal = `TMP-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
     const [ins] = await conn.query(
-      `INSERT INTO solicitudes_materiales (codigo, proyecto_id, actividad_id, solicitado_por_usuario_id, fecha_requerida, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [temporal, proyectoId, actividadId, usuarioId, fechaRequerida, observaciones],
+      `INSERT INTO solicitudes_materiales (codigo, proyecto_id, actividad_id, solicitado_por_usuario_id, fecha_requerida, observaciones, excede_presupuesto)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [temporal, proyectoId, actividadId, usuarioId, fechaRequerida, observaciones, excedePresupuesto ? 1 : 0],
     )
     const codigo = `SM-${String(ins.insertId).padStart(5, '0')}`
     await conn.query('UPDATE solicitudes_materiales SET codigo = ? WHERE id = ?', [codigo, ins.insertId])
@@ -77,7 +106,11 @@ export async function crear({ proyectoId, actividadId, usuarioId, fechaRequerida
     await conn.query(
       `INSERT INTO alertas (tipo, titulo, descripcion, referencia_id, tabla_referencia)
        VALUES ('SOLICITUD_MATERIAL', ?, ?, ?, 'solicitudes_materiales')`,
-      [`Nueva solicitud de materiales ${codigo}`, `Se solicitaron ${detalles.length} material(es) para revisión de bodega.`, ins.insertId],
+      [
+        `Nueva solicitud de materiales ${codigo}${excedePresupuesto ? ' (excede lo presupuestado)' : ''}`,
+        `Se solicitaron ${detalles.length} material(es) para revisión de bodega.${excedePresupuesto ? ' La cantidad supera lo presupuestado para la actividad y el solicitante lo confirmó.' : ''}`,
+        ins.insertId,
+      ],
     )
     await conn.commit()
     return ins.insertId
@@ -87,6 +120,15 @@ export async function crear({ proyectoId, actividadId, usuarioId, fechaRequerida
   } finally {
     conn.release()
   }
+}
+
+/** Aviso dirigido a un usuario (p. ej. al solicitante cuando bodega resuelve su solicitud). */
+export async function crearNotificacion({ usuarioId, titulo, mensaje, referenciaId = null }, conn = pool) {
+  await conn.query(
+    `INSERT INTO notificaciones (usuario_id, titulo, mensaje, referencia_id, tabla_referencia)
+     VALUES (?, ?, ?, ?, 'solicitudes_materiales')`,
+    [usuarioId, titulo, mensaje, referenciaId],
+  )
 }
 
 /** Cambia el estado solo si sigue en uno de los estados esperados (evita doble resolución). */
@@ -100,7 +142,7 @@ export async function cambiarEstado(id, desde, hacia, observaciones = null, conn
 }
 
 /** Fija la cantidad aprobada por línea y pasa la solicitud a APROBADA. */
-export async function aprobar(id, aprobadas, observaciones) {
+export async function aprobar(id, aprobadas, observaciones, notificacion = null) {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
@@ -113,6 +155,7 @@ export async function aprobar(id, aprobadas, observaciones) {
         [a.cantidad, a.detalle_id, id],
       )
     }
+    if (notificacion) await crearNotificacion(notificacion, conn)
     await conn.commit()
   } catch (err) {
     await conn.rollback()

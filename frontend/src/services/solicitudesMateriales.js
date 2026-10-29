@@ -5,6 +5,8 @@ const ruta = '/solicitudes-materiales'
 
 export const solicitudesMaterialesApi = {
   listar: (filtros) => datos(api.get(ruta, { params: sinVacios(filtros) })),
+  // Materiales que se pueden pedir; no requiere el permiso del catálogo de inventario.
+  catalogo: () => datos(api.get(`${ruta}/materiales`)),
   crear: (cuerpo) => datos(api.post(ruta, cuerpo)),
   aprobar: (id, cuerpo) => datos(api.patch(`${ruta}/${id}/aprobar`, cuerpo)),
   rechazar: (id, observaciones) => datos(api.patch(`${ruta}/${id}/rechazar`, { observaciones })),

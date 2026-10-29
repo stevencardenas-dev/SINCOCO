@@ -25,6 +25,7 @@ import serviciosExternosRoutes from './routes/serviciosExternos.js'
 import solicitudesMaterialesRoutes from './routes/solicitudesMateriales.js'
 import entradasInventarioRoutes from './routes/entradasInventario.js'
 import alertasRoutes from './routes/alertas.js'
+import notificacionesRoutes from './routes/notificaciones.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
 import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
@@ -73,6 +74,7 @@ app.use('/api/prestamos-herramientas', rutasSeguras(prestamosHerramientasRoutes)
 app.use('/api/solicitudes-materiales', rutasSeguras(solicitudesMaterialesRoutes))
 app.use('/api/entradas-inventario', rutasSeguras(entradasInventarioRoutes))
 app.use('/api/alertas', rutasSeguras(alertasRoutes))
+app.use('/api/notificaciones', rutasSeguras(notificacionesRoutes))
 
 app.use('/api/incidencias', rutasSeguras(incidenciasRoutes))
 
