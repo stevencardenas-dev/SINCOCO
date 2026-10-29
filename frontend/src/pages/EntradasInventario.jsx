@@ -164,6 +164,14 @@ export default function EntradasInventario() {
               { titulo: 'Factura / remisión', celda: (e) => e.numero_factura_remision },
               { titulo: 'Orden de compra', celda: (e) => e.orden_compra ?? '—' },
               { titulo: 'Responsable', celda: (e) => e.responsable },
+              {
+                titulo: 'Materiales',
+                celda: (e) => (e.detalles ?? []).map((d) => (
+                  <span key={d.material_id} className="block">
+                    {d.material_codigo} · {d.material}: {Number(d.cantidad)} {d.unidad_medida} × {fmtCOP(d.costo_unitario)} = {fmtCOP(d.costo_subtotal)}
+                  </span>
+                )),
+              },
               { titulo: 'Fecha', celda: (e) => fmtFecha(e.fecha_entrada), orden: (e) => e.fecha_entrada },
             ]}
           />

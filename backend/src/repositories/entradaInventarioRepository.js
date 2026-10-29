@@ -27,7 +27,16 @@ export async function findById(id) {
 
 export async function listar() {
   const [rows] = await pool.query(`${SELECT} ORDER BY e.fecha_entrada DESC, e.id DESC`)
-  return rows
+  if (rows.length === 0) return rows
+  // Las líneas (cantidad y costo unitario por material) viajan con la entrada para mostrarlas en la ficha.
+  const [detalles] = await pool.query(
+    `SELECT d.entrada_id, d.material_id, m.codigo AS material_codigo, m.descripcion AS material, m.unidad_medida,
+            d.cantidad, d.costo_unitario, d.costo_subtotal
+       FROM detalles_entrada_inventario d JOIN materiales m ON m.id = d.material_id
+      WHERE d.entrada_id IN (?) ORDER BY d.id`,
+    [rows.map((r) => r.id)],
+  )
+  return rows.map((r) => ({ ...r, detalles: detalles.filter((d) => d.entrada_id === r.id) }))
 }
 
 /** Órdenes de compra que todavía pueden recibir mercancía, con lo pendiente por línea. */
