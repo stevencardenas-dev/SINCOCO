@@ -7,6 +7,7 @@ import Modal from '../components/Modal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { solicitudesMaterialesApi } from '../services/solicitudesMateriales'
 import { notificacionesApi } from '../services/notificaciones'
+import { salidasMaterialesApi } from '../services/salidasMateriales'
 import { mensajeError } from '../lib/errores'
 import { proyectosApi } from '../services/proyectos'
 import { actividadesApi } from '../services/actividades'
@@ -56,6 +57,8 @@ export default function SolicitudesMateriales({ pestanas }) {
   const proyectos = useRecurso(() => proyectosApi.listar(), [], { mensaje: 'No se pudieron cargar los proyectos.' })
   const almacenes = useRecurso(() => (puedeResolver ? herramientasApi.almacenes() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los almacenes.' })
   const trabajadores = useRecurso(() => (puedeResolver ? trabajadoresApi.listar() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los trabajadores.' })
+  // HU-26: existencia por almacén, para ver cuánto hay en el almacén de origen antes de despachar.
+  const existencias = useRecurso(() => (puedeResolver && puede('salidas_materiales.listar') ? salidasMaterialesApi.existencias() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudo cargar la existencia por almacén.' })
 
   useEffect(() => {
     if (!form.proyecto_id) { setActividades([]); return }
@@ -104,7 +107,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       await fn()
       cerrar()
       setErrorAccion('')
-      await solicitudes.recargar()
+      await Promise.all([solicitudes.recargar(), existencias.recargar()])
     } catch (err) {
       setErrorAccion(mensajeError(err, 'No se pudo completar la acción.'))
     }
@@ -291,7 +294,12 @@ export default function SolicitudesMateriales({ pestanas }) {
             <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material (hasta lo aprobado pendiente, según la existencia); el saldo queda pendiente y la existencia se descuenta del inventario.</p>
             {despachando.solicitud.detalles.filter((d) => pendienteDespacho(d) > 0).map((d) => (
               <div key={d.id} className="mb-3">
-                <label htmlFor={`dp-${d.id}`} className="label">{d.material} (pendiente {pendienteDespacho(d)}, existencia {d.existencia_total} {d.unidad_medida})</label>
+                <label htmlFor={`dp-${d.id}`} className="label">
+                  {d.material} (pendiente {pendienteDespacho(d)}, existencia total {d.existencia_total} {d.unidad_medida}
+                  {despachando.almacen
+                    ? `, en el almacén elegido ${(existencias.datos ?? []).find((x) => String(x.almacen_id) === String(despachando.almacen) && x.material_id === d.material_id)?.existencia ?? 0}`
+                    : ', elija el almacén para ver la suya'})
+                </label>
                 <input id={`dp-${d.id}`} type="number" min="0" max={pendienteDespacho(d)} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
                   onChange={(e) => setDespachando({ ...despachando, cantidades: { ...despachando.cantidades, [d.id]: e.target.value } })} />
               </div>

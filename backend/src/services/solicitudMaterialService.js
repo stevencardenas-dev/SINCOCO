@@ -215,6 +215,11 @@ export async function despacharSolicitud(id, body = {}, ctx) {
         const c = indicadas.has(Number(l.id)) ? cantidad(indicadas.get(Number(l.id)), 'cantidad', { permiteCero: true }) : pendiente
         if (c === 0) continue
         if (c > pendiente) throw new AppError(`La cantidad supera lo aprobado pendiente (${pendiente})`, 409, 'cantidad')
+        // HU-26: debe haber existencia suficiente en el almacén de origen (y, por consistencia, en el total).
+        const enAlmacen = Number(l.existencia_almacen ?? l.existencia_total)
+        if (c > enAlmacen) {
+          throw new AppError(`Existencia insuficiente en el almacén de origen (${enAlmacen}) para despachar ${c} de ${l.material}`, 409, 'cantidad')
+        }
         if (c > Number(l.existencia_total)) {
           throw new AppError(`Existencia insuficiente (${l.existencia_total}) para despachar ${c}`, 409, 'cantidad')
         }

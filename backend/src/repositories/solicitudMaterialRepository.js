@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js'
+import { existenciaEnAlmacen } from './existenciaAlmacenRepository.js'
 
 /** Repositorio de `solicitudes_materiales` y `detalles_solicitud_materiales` (HU-08). */
 
@@ -178,14 +179,16 @@ export async function despachar({ id, almacenId, trabajadorId, usuarioId, observ
     const [[sol]] = await conn.query('SELECT * FROM solicitudes_materiales WHERE id = ? AND activo = 1 FOR UPDATE', [id])
     const [lineas] = sol
       ? await conn.query(
-        `SELECT d.*, m.existencia_total, m.costo_referencia FROM detalles_solicitud_materiales d
+        `SELECT d.*, m.descripcion AS material, m.existencia_total, m.costo_referencia FROM detalles_solicitud_materiales d
            JOIN materiales m ON m.id = d.material_id WHERE d.solicitud_id = ? FOR UPDATE`, [id])
       : [[]]
+    // HU-26: la existencia que cuenta es la del almacén de origen (el material ya está bloqueado por la consulta anterior).
+    for (const l of lineas) l.existencia_almacen = await existenciaEnAlmacen(almacenId, l.material_id, conn)
     const salidas = validar(sol, lineas)
     const [ins] = await conn.query(
-      `INSERT INTO salidas_materiales (almacen_origen_id, proyecto_id, actividad_id, entregado_a_trabajador_id, despachado_por_usuario_id, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [almacenId, sol.proyecto_id, sol.actividad_id, trabajadorId, usuarioId, observaciones],
+      `INSERT INTO salidas_materiales (almacen_origen_id, proyecto_id, solicitud_id, actividad_id, entregado_a_trabajador_id, despachado_por_usuario_id, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [almacenId, sol.proyecto_id, sol.id, sol.actividad_id, trabajadorId, usuarioId, observaciones],
     )
     for (const s of salidas) {
       await conn.query(

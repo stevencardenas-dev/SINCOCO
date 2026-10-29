@@ -221,3 +221,31 @@ describe('HU-08 · despacho parcial', () => {
     await assert.rejects(() => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 0 }] }, ctx), { statusCode: 400 })
   })
 })
+
+describe('HU-26 · existencia del almacén de origen', () => {
+  const aprobadaConAlmacen = async (existenciaAlmacen) => {
+    const s = await crearSolicitud(cuerpo(), ctx)
+    estado.solicitudes[0].detalles = LINEAS.map((l) => ({
+      ...l, existencia_total: 20, existencia_almacen: existenciaAlmacen, cantidad_aprobada: 10, cantidad_despachada: 0, costo_referencia: 100,
+    }))
+    estado.solicitudes[0].estado = 'APROBADA'
+    return s
+  }
+  const datos = { almacen_origen_id: 1, entregado_a_trabajador_id: 3 }
+
+  test('Alt: si el almacén de origen tiene menos de lo que se despacha, la salida se impide aunque el total alcance', async () => {
+    const s = await aprobadaConAlmacen(3)
+    await assert.rejects(
+      () => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 4 }] }, ctx),
+      (err) => { assert.equal(err.statusCode, 409); assert.match(err.message, /almacén de origen \(3\)/); return true },
+    )
+    assert.deepEqual(estado.salidas, [])
+  })
+
+  test('con existencia suficiente en el almacén de origen la salida se confirma', async () => {
+    const s = await aprobadaConAlmacen(10)
+    await despacharSolicitud(s.id, datos, ctx)
+    assert.equal(estado.salidas[0].cantidad, 10)
+    assert.equal(estado.salidas[0].costo, 100)
+  })
+})
