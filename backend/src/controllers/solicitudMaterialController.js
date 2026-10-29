@@ -1,5 +1,5 @@
 import {
-  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud, catalogoMateriales,
+  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud, catalogoMateriales, cancelarSaldoSolicitud,
 } from '../services/solicitudMaterialService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
@@ -22,3 +22,6 @@ export const cancelar = asyncHandler(async (req, res) =>
 
 export const despachar = asyncHandler(async (req, res) =>
   res.json({ message: 'Despacho registrado', solicitud: await despacharSolicitud(req.params.id, req.body, contexto(req)) }))
+
+export const cancelarSaldo = asyncHandler(async (req, res) =>
+  res.json({ message: 'Saldo cancelado: la solicitud se cerró con lo despachado', solicitud: await cancelarSaldoSolicitud(req.params.id, req.body, contexto(req)) }))

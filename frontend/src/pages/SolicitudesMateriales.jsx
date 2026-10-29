@@ -25,14 +25,17 @@ import { fmtFecha } from '../lib/format.js'
 const ESTADOS = {
   PENDIENTE: 'bg-amber-50 text-amber-700 ring-amber-200',
   APROBADA: 'bg-sky-50 text-sky-700 ring-sky-200',
+  APROBADA_PARCIAL: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
   RECHAZADA: 'bg-red-50 text-red-700 ring-red-200',
   DESPACHADA_PARCIAL: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
   DESPACHADA_TOTAL: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   CANCELADA: 'bg-slate-100 text-slate-500 ring-slate-200',
 }
+// HU-36: estados desde los que se puede despachar (incluido el saldo de una aprobación parcial).
+const ESTADOS_DESPACHABLES = ['APROBADA', 'APROBADA_PARCIAL', 'DESPACHADA_PARCIAL']
 const LINEA = { material_id: '', cantidad: '' }
 // Lo aprobado que aún no se despacha de una línea (redondeado a 2 decimales como en la base).
-const pendienteDespacho = (d) => Math.round((Number(d.cantidad_aprobada) - Number(d.cantidad_despachada)) * 100) / 100
+const pendienteDespacho = (d) => Math.max(0, Math.round((Number(d.cantidad_aprobada) - Number(d.cantidad_despachada)) * 100) / 100)
 const VACIO = { proyecto_id: '', actividad_id: '', fecha_requerida: '', observaciones: '' }
 
 export default function SolicitudesMateriales({ pestanas }) {
@@ -50,6 +53,7 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [aprobando, setAprobando] = useState(null) // { solicitud, cantidades }
   const [despachando, setDespachando] = useState(null) // { solicitud, almacen, trabajador, cantidades }
   const [rechazando, setRechazando] = useState(null) // { solicitud, motivo }
+  const [cancelandoSaldo, setCancelandoSaldo] = useState(null) // { solicitud, motivo }
   const [errorAccion, setErrorAccion] = useState('')
   const solicitudes = useRecurso(() => solicitudesMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las solicitudes.' })
   const materiales = useRecurso(() => (puedeCrear ? solicitudesMaterialesApi.catalogo() : Promise.resolve([])), [puedeCrear], { mensaje: 'No se pudieron cargar los materiales.' })
@@ -66,8 +70,6 @@ export default function SolicitudesMateriales({ pestanas }) {
   }, [form.proyecto_id])
 
   const cambiarLinea = (i, campo) => (e) => { setLineas(lineas.map((l, j) => (j === i ? { ...l, [campo]: e.target.value } : l))); setError(''); setExcesos([]); setConfirmaExceso(false) }
-  const esParcial = (s) => s.estado !== 'PENDIENTE' && s.estado !== 'RECHAZADA' && s.estado !== 'CANCELADA'
-    && s.detalles.some((d) => Number(d.cantidad_aprobada) < Number(d.cantidad_solicitada))
   const marcarLeida = (n) => notificaciones.ejecutar(() => notificacionesApi.marcarLeida(n.id), { error: 'No se pudo marcar la notificación.' })
 
   const enviar = async (e) => {
@@ -115,7 +117,12 @@ export default function SolicitudesMateriales({ pestanas }) {
 
   const abrirAprobar = (s) => {
     setErrorAccion('')
-    setAprobando({ solicitud: s, cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(d.cantidad_solicitada)])) })
+    // Por defecto se propone aprobar lo solicitado, sin pasar de la existencia; lo demás queda como saldo.
+    setAprobando({
+      solicitud: s,
+      cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(Math.min(Number(d.cantidad_solicitada), Number(d.existencia_total)))])),
+      observaciones: {},
+    })
   }
 
   return (
@@ -217,17 +224,25 @@ export default function SolicitudesMateriales({ pestanas }) {
           <article key={s.id} className="card p-5">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-sm font-semibold text-slate-800">{s.codigo} · {s.proyecto}{s.actividad ? ` · ${s.actividad}` : ''}</h2>
-              <span className={`badge ring-1 ${ESTADOS[s.estado] ?? ''}`}>{s.estado.replace('_', ' ')}{esParcial(s) ? ' · cantidad parcial' : ''}</span>
+              <span className={`badge ring-1 ${ESTADOS[s.estado] ?? ''}`}>{s.estado.replace('_', ' ')}{s.estado === 'DESPACHADA_TOTAL' && s.saldo_cancelado ? ' · saldo cancelado' : ''}</span>
               {Boolean(s.excede_presupuesto) && <span className="badge bg-amber-50 text-amber-700 ring-1 ring-amber-200">Excede lo presupuestado</span>}
               <span className="text-xs text-slate-500">{s.solicitante} · {fmtFecha(s.fecha_solicitud)}</span>
             </div>
             {s.observaciones && <p className="mt-1 text-xs text-slate-500">{s.observaciones}</p>}
+            {Boolean(s.saldo_cancelado) && <p className="mt-1 text-xs text-slate-500">Saldo cancelado por bodega: {s.saldo_cancelado_observacion}</p>}
             <ul className="mt-3 divide-y divide-slate-100 text-sm">
               {s.detalles.map((d) => (
                 <li key={d.id} className="flex flex-wrap justify-between gap-2 py-1.5">
-                  <span>{d.material_codigo} · {d.material}</span>
+                  <span>
+                    {d.material_codigo} · {d.material}
+                    {d.observacion_aprobacion && <span className="block text-xs text-slate-500">Observación de bodega: {d.observacion_aprobacion}</span>}
+                  </span>
                   <span className="tabular-nums text-slate-600">
-                    solicitado {d.cantidad_solicitada} · aprobado {d.cantidad_aprobada} · despachado {d.cantidad_despachada} {d.unidad_medida}
+                    solicitado {d.cantidad_solicitada} · aprobado {d.cantidad_aprobada} · despachado {d.cantidad_despachada}
+                    {s.estado !== 'PENDIENTE' && s.estado !== 'RECHAZADA' && (
+                      <strong className={d.saldo_pendiente > 0 ? 'text-amber-700' : 'text-slate-500'}> · saldo pendiente {d.saldo_pendiente}</strong>
+                    )}
+                    {' '}{d.unidad_medida}
                   </span>
                 </li>
               ))}
@@ -239,10 +254,15 @@ export default function SolicitudesMateriales({ pestanas }) {
                   <button type="button" className="btn-ghost text-xs" onClick={() => { setErrorAccion(''); setRechazando({ solicitud: s, motivo: '' }) }}>Rechazar</button>
                 </>
               )}
-              {puedeResolver && (s.estado === 'APROBADA' || s.estado === 'DESPACHADA_PARCIAL') && (
-                <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(pendienteDespacho(d))])) }) }}>Despachar</button>
+              {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && (
+                <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(pendienteDespacho(d))])) }) }}>
+                  {s.estado === 'DESPACHADA_PARCIAL' || s.detalles.some((d) => d.saldo_pendiente > pendienteDespacho(d)) ? 'Despachar (incluye el saldo)' : 'Despachar'}
+                </button>
               )}
-              {(s.estado === 'PENDIENTE' || s.estado === 'APROBADA') && (
+              {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && s.detalles.some((d) => d.saldo_pendiente > 0) && (
+                <button type="button" className="btn-ghost text-xs" onClick={() => { setErrorAccion(''); setCancelandoSaldo({ solicitud: s, motivo: '' }) }}>Cancelar saldo</button>
+              )}
+              {(s.estado === 'PENDIENTE' || s.estado === 'APROBADA' || s.estado === 'APROBADA_PARCIAL') && (
                 <button type="button" className="btn-ghost text-xs" onClick={() => accion(solicitudesMaterialesApi.cancelar, s, 'Cancelada')}>Cancelar</button>
               )}
             </div>
@@ -253,19 +273,32 @@ export default function SolicitudesMateriales({ pestanas }) {
       <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" onCerrar={() => setAprobando(null)} ancho="max-w-md">
         {aprobando && (
           <>
-            <p className="mb-3 text-xs text-slate-500">Puede aprobar una cantidad menor a la solicitada según la disponibilidad.</p>
-            {aprobando.solicitud.detalles.map((d) => (
-              <div key={d.id} className="mb-3">
-                <label htmlFor={`ap-${d.id}`} className="label">{d.material} (solicitado {d.cantidad_solicitada}, existencia {d.existencia_total})</label>
-                <input id={`ap-${d.id}`} type="number" min="0" max={d.cantidad_solicitada} step="0.01" className="input" value={aprobando.cantidades[d.id]}
-                  onChange={(e) => setAprobando({ ...aprobando, cantidades: { ...aprobando.cantidades, [d.id]: e.target.value } })} />
-              </div>
-            ))}
+            <p className="mb-3 text-xs text-slate-500">Ajuste lo que aprueba según el stock real: no puede superar lo solicitado ni la existencia. Lo que no apruebe queda como saldo pendiente y se avisa al solicitante. Una línea en cero exige observación.</p>
+            {aprobando.solicitud.detalles.map((d) => {
+              const tope = Math.min(Number(d.cantidad_solicitada), Number(d.existencia_total))
+              const valor = aprobando.cantidades[d.id]
+              const saldo = Math.round((Number(d.cantidad_solicitada) - Number(valor || 0)) * 100) / 100
+              return (
+                <div key={d.id} className="mb-3">
+                  <label htmlFor={`ap-${d.id}`} className="label">{d.material} (solicitado {d.cantidad_solicitada}, existencia {d.existencia_total} {d.unidad_medida})</label>
+                  <input id={`ap-${d.id}`} type="number" min="0" max={tope} step="0.01" className="input" value={valor}
+                    onChange={(e) => setAprobando({ ...aprobando, cantidades: { ...aprobando.cantidades, [d.id]: e.target.value } })} />
+                  {saldo > 0 && <p className="mt-1 text-xs text-amber-700">Saldo pendiente: {saldo} {d.unidad_medida}</p>}
+                  {Number(valor) === 0 && (
+                    <input aria-label={`Observación de ${d.material}`} placeholder="Observación (obligatoria si aprueba cero)" maxLength={500} className="input mt-2"
+                      value={aprobando.observaciones[d.id] ?? ''}
+                      onChange={(e) => setAprobando({ ...aprobando, observaciones: { ...aprobando.observaciones, [d.id]: e.target.value } })} />
+                  )}
+                </div>
+              )
+            })}
             {errorAccion && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorAccion}</p>}
             <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
               <button type="button" className="btn-primary" onClick={() => confirmar(
                 () => solicitudesMaterialesApi.aprobar(aprobando.solicitud.id, {
-                  detalles: aprobando.solicitud.detalles.map((d) => ({ detalle_id: d.id, cantidad_aprobada: Number(aprobando.cantidades[d.id]) })),
+                  detalles: aprobando.solicitud.detalles.map((d) => ({
+                    detalle_id: d.id, cantidad_aprobada: Number(aprobando.cantidades[d.id]), observacion: (aprobando.observaciones[d.id] ?? '').trim() || undefined,
+                  })),
                 }), () => setAprobando(null))}>Aprobar</button>
               <button type="button" className="btn-ghost" onClick={() => setAprobando(null)}>Cancelar</button>
             </div>
@@ -288,19 +321,42 @@ export default function SolicitudesMateriales({ pestanas }) {
         )}
       </Modal>
 
+      {/* HU-36: cancelar el saldo pendiente con una observación obligatoria. */}
+      <Modal abierto={cancelandoSaldo !== null} titulo="Cancelar el saldo pendiente" onCerrar={() => setCancelandoSaldo(null)} ancho="max-w-md">
+        {cancelandoSaldo && (
+          <>
+            <p className="mb-3 text-xs text-slate-500">La solicitud se cierra con lo despachado y se avisa al solicitante. Saldo que se cancela:</p>
+            <ul className="mb-3 list-disc pl-5 text-sm text-slate-700">
+              {cancelandoSaldo.solicitud.detalles.filter((d) => d.saldo_pendiente > 0).map((d) => (
+                <li key={d.id}>{d.material}: {d.saldo_pendiente} {d.unidad_medida}</li>
+              ))}
+            </ul>
+            <label htmlFor="cs-motivo" className="label">Observación (obligatoria)</label>
+            <textarea id="cs-motivo" className="input" rows={3} maxLength={500} value={cancelandoSaldo.motivo}
+              onChange={(e) => setCancelandoSaldo({ ...cancelandoSaldo, motivo: e.target.value })} />
+            {errorAccion && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorAccion}</p>}
+            <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
+              <button type="button" className="btn-primary" onClick={() => confirmar(
+                () => solicitudesMaterialesApi.cancelarSaldo(cancelandoSaldo.solicitud.id, cancelandoSaldo.motivo.trim()), () => setCancelandoSaldo(null))}>Cancelar saldo</button>
+              <button type="button" className="btn-ghost" onClick={() => setCancelandoSaldo(null)}>Volver</button>
+            </div>
+          </>
+        )}
+      </Modal>
+
       <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} ancho="max-w-md">
         {despachando && (
           <>
-            <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material (hasta lo aprobado pendiente, según la existencia); el saldo queda pendiente y la existencia se descuenta del inventario.</p>
-            {despachando.solicitud.detalles.filter((d) => pendienteDespacho(d) > 0).map((d) => (
+            <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material: por defecto lo aprobado que falta, y puede llegar hasta el saldo pendiente si ya hay existencia. La solicitud se cierra al llegar el saldo a cero.</p>
+            {despachando.solicitud.detalles.filter((d) => d.saldo_pendiente > 0).map((d) => (
               <div key={d.id} className="mb-3">
                 <label htmlFor={`dp-${d.id}`} className="label">
-                  {d.material} (pendiente {pendienteDespacho(d)}, existencia total {d.existencia_total} {d.unidad_medida}
+                  {d.material} (aprobado pendiente {pendienteDespacho(d)}, saldo pendiente {d.saldo_pendiente}, existencia total {d.existencia_total} {d.unidad_medida}
                   {despachando.almacen
                     ? `, en el almacén elegido ${(existencias.datos ?? []).find((x) => String(x.almacen_id) === String(despachando.almacen) && x.material_id === d.material_id)?.existencia ?? 0}`
                     : ', elija el almacén para ver la suya'})
                 </label>
-                <input id={`dp-${d.id}`} type="number" min="0" max={pendienteDespacho(d)} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
+                <input id={`dp-${d.id}`} type="number" min="0" max={d.saldo_pendiente} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
                   onChange={(e) => setDespachando({ ...despachando, cantidades: { ...despachando.cantidades, [d.id]: e.target.value } })} />
               </div>
             ))}
@@ -319,7 +375,7 @@ export default function SolicitudesMateriales({ pestanas }) {
               <button type="button" className="btn-primary" onClick={() => confirmar(
                 () => solicitudesMaterialesApi.despachar(despachando.solicitud.id, {
                   almacen_origen_id: despachando.almacen, entregado_a_trabajador_id: despachando.trabajador,
-                  detalles: despachando.solicitud.detalles.filter((d) => pendienteDespacho(d) > 0)
+                  detalles: despachando.solicitud.detalles.filter((d) => d.saldo_pendiente > 0)
                     .map((d) => ({ detalle_id: d.id, cantidad: Number(despachando.cantidades[d.id] || 0) })),
                 }), () => setDespachando(null))}>Despachar</button>
               <button type="button" className="btn-ghost" onClick={() => setDespachando(null)}>Cancelar</button>

@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
-import { listar, crear, aprobar, rechazar, cancelar, despachar, catalogo } from '../controllers/solicitudMaterialController.js'
+import { listar, crear, aprobar, rechazar, cancelar, despachar, catalogo, cancelarSaldo } from '../controllers/solicitudMaterialController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -15,5 +15,7 @@ router.patch('/:id/aprobar', requirePermiso('solicitudes_materiales.resolver'), 
 router.patch('/:id/rechazar', requirePermiso('solicitudes_materiales.resolver'), rechazar)
 router.patch('/:id/despachar', requirePermiso('solicitudes_materiales.resolver'), despachar)
 router.patch('/:id/cancelar', requirePermiso('solicitudes_materiales.listar'), cancelar)
+// HU-36: el saldo pendiente que no se va a atender se cancela con una observación obligatoria.
+router.patch('/:id/cancelar-saldo', requirePermiso('solicitudes_materiales.resolver'), cancelarSaldo)
 
 export default router
