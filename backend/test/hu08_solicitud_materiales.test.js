@@ -15,6 +15,7 @@ const estado = {
   yaSolicitado: [],
   creaciones: [],
   notificaciones: [],
+  salidas: [],
 }
 
 const LINEAS = [{ id: 1, material_id: 10, material: 'Cemento', unidad_medida: 'BOLSA', cantidad_solicitada: 10, cantidad_aprobada: 0, cantidad_despachada: 0, existencia_total: 4 }]
@@ -54,7 +55,12 @@ mock.module('../src/repositories/solicitudMaterialRepository.js', {
       return true
     },
     crearNotificacion: async (n) => { estado.notificaciones.push(n) },
-    despachar: async () => 1,
+    // Ejecuta la validación del service con la solicitud y líneas en memoria, como hace el repositorio.
+    despachar: async ({ id, validar }) => {
+      const sol = estado.solicitudes.find((x) => x.id === Number(id))
+      estado.salidas = validar(sol, sol.detalles)
+      return 1
+    },
   },
 })
 mock.module('../src/repositories/proyectoRepository.js', { namedExports: { findById: async (id) => (id === 1 ? { id: 1 } : null) } })
@@ -63,7 +69,7 @@ mock.module('../src/middleware/permisos.js', { namedExports: { rolTienePermiso: 
 mock.module('../src/db/bitacora.js', { namedExports: { registrar: async () => {} } })
 
 const {
-  crearSolicitud, aprobarSolicitud, rechazarSolicitud, catalogoMateriales,
+  crearSolicitud, aprobarSolicitud, rechazarSolicitud, catalogoMateriales, despacharSolicitud,
 } = await import('../src/services/solicitudMaterialService.js')
 
 const ctx = { usuario: { id: 7, rol: 'MAESTRO_OBRA' }, usuarioId: 7, ip: '127.0.0.1' }
@@ -175,5 +181,43 @@ describe('HU-08 · revisión de bodega', () => {
     const r = await rechazarSolicitud(s.id, { observaciones: 'Sin stock' }, ctx)
     assert.equal(r.estado, 'RECHAZADA')
     assert.match(estado.notificaciones[0].mensaje, /Sin stock/)
+  })
+})
+
+describe('HU-08 · despacho parcial', () => {
+  const aprobada = async () => {
+    const s = await crearSolicitud(cuerpo(), ctx)
+    estado.solicitudes[0].detalles = LINEAS.map((l) => ({ ...l, existencia_total: 20, cantidad_aprobada: 10, cantidad_despachada: 0, costo_referencia: 100 }))
+    estado.solicitudes[0].estado = 'APROBADA'
+    return s
+  }
+  const datos = { almacen_origen_id: 1, entregado_a_trabajador_id: 3 }
+
+  test('sin cantidades despacha todo lo aprobado pendiente', async () => {
+    const s = await aprobada()
+    await despacharSolicitud(s.id, datos, ctx)
+    assert.equal(estado.salidas[0].cantidad, 10)
+  })
+
+  test('con una cantidad menor despacha solo esa y deja el saldo pendiente', async () => {
+    const s = await aprobada()
+    await despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 4 }] }, ctx)
+    assert.equal(estado.salidas[0].cantidad, 4)
+  })
+
+  test('no deja despachar más de lo aprobado pendiente', async () => {
+    const s = await aprobada()
+    await assert.rejects(() => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 11 }] }, ctx), { statusCode: 409 })
+  })
+
+  test('no deja despachar más de la existencia', async () => {
+    const s = await aprobada()
+    estado.solicitudes[0].detalles[0].existencia_total = 3
+    await assert.rejects(() => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 4 }] }, ctx), { statusCode: 409 })
+  })
+
+  test('todo en cero no despacha nada', async () => {
+    const s = await aprobada()
+    await assert.rejects(() => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 0 }] }, ctx), { statusCode: 400 })
   })
 })

@@ -30,6 +30,8 @@ const ESTADOS = {
   CANCELADA: 'bg-slate-100 text-slate-500 ring-slate-200',
 }
 const LINEA = { material_id: '', cantidad: '' }
+// Lo aprobado que aún no se despacha de una línea (redondeado a 2 decimales como en la base).
+const pendienteDespacho = (d) => Math.round((Number(d.cantidad_aprobada) - Number(d.cantidad_despachada)) * 100) / 100
 const VACIO = { proyecto_id: '', actividad_id: '', fecha_requerida: '', observaciones: '' }
 
 export default function SolicitudesMateriales({ pestanas }) {
@@ -45,7 +47,7 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [aprobando, setAprobando] = useState(null) // { solicitud, cantidades }
-  const [despachando, setDespachando] = useState(null) // { solicitud, almacen, trabajador }
+  const [despachando, setDespachando] = useState(null) // { solicitud, almacen, trabajador, cantidades }
   const [rechazando, setRechazando] = useState(null) // { solicitud, motivo }
   const [errorAccion, setErrorAccion] = useState('')
   const solicitudes = useRecurso(() => solicitudesMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las solicitudes.' })
@@ -235,7 +237,7 @@ export default function SolicitudesMateriales({ pestanas }) {
                 </>
               )}
               {puedeResolver && (s.estado === 'APROBADA' || s.estado === 'DESPACHADA_PARCIAL') && (
-                <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '' }) }}>Despachar</button>
+                <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(pendienteDespacho(d))])) }) }}>Despachar</button>
               )}
               {(s.estado === 'PENDIENTE' || s.estado === 'APROBADA') && (
                 <button type="button" className="btn-ghost text-xs" onClick={() => accion(solicitudesMaterialesApi.cancelar, s, 'Cancelada')}>Cancelar</button>
@@ -286,7 +288,14 @@ export default function SolicitudesMateriales({ pestanas }) {
       <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} ancho="max-w-md">
         {despachando && (
           <>
-            <p className="mb-3 text-xs text-slate-500">Se despacha lo aprobado pendiente; la existencia se descuenta del inventario.</p>
+            <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material (hasta lo aprobado pendiente, según la existencia); el saldo queda pendiente y la existencia se descuenta del inventario.</p>
+            {despachando.solicitud.detalles.filter((d) => pendienteDespacho(d) > 0).map((d) => (
+              <div key={d.id} className="mb-3">
+                <label htmlFor={`dp-${d.id}`} className="label">{d.material} (pendiente {pendienteDespacho(d)}, existencia {d.existencia_total} {d.unidad_medida})</label>
+                <input id={`dp-${d.id}`} type="number" min="0" max={pendienteDespacho(d)} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
+                  onChange={(e) => setDespachando({ ...despachando, cantidades: { ...despachando.cantidades, [d.id]: e.target.value } })} />
+              </div>
+            ))}
             <label htmlFor="dp-almacen" className="label">Almacén de origen</label>
             <select id="dp-almacen" className="input" value={despachando.almacen} onChange={(e) => setDespachando({ ...despachando, almacen: e.target.value })}>
               <option value="">Seleccione…</option>
@@ -302,6 +311,8 @@ export default function SolicitudesMateriales({ pestanas }) {
               <button type="button" className="btn-primary" onClick={() => confirmar(
                 () => solicitudesMaterialesApi.despachar(despachando.solicitud.id, {
                   almacen_origen_id: despachando.almacen, entregado_a_trabajador_id: despachando.trabajador,
+                  detalles: despachando.solicitud.detalles.filter((d) => pendienteDespacho(d) > 0)
+                    .map((d) => ({ detalle_id: d.id, cantidad: Number(despachando.cantidades[d.id] || 0) })),
                 }), () => setDespachando(null))}>Despachar</button>
               <button type="button" className="btn-ghost" onClick={() => setDespachando(null)}>Cancelar</button>
             </div>
