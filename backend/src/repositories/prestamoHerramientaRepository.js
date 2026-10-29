@@ -9,11 +9,14 @@ export async function listar({ estado = '' } = {}) {
     `SELECT p.id, p.solicitud_id, s.codigo AS solicitud, h.codigo_serial, h.nombre AS herramienta,
             CONCAT(t.nombres, ' ', t.apellidos) AS trabajador, pr.nombre AS proyecto,
             p.fecha_prestamo, p.fecha_estimada_devolucion, p.fecha_real_devolucion,
-            p.estado_entrega, p.estado_devolucion, p.estado_prestamo
+            p.estado_entrega, p.estado_devolucion, p.estado_prestamo,
+            COALESCE(CONCAT(te.nombres, ' ', te.apellidos), ue.username) AS entregado_por, p.observaciones_entrega
        FROM prestamos_herramientas p
        JOIN herramientas h ON h.id = p.herramienta_id
        JOIN trabajadores t ON t.id = p.trabajador_id
        JOIN proyectos pr ON pr.id = p.proyecto_id
+       LEFT JOIN usuarios ue ON ue.id = p.entregado_por_usuario_id
+       LEFT JOIN trabajadores te ON te.id = ue.trabajador_id
        LEFT JOIN solicitudes_herramientas s ON s.id = p.solicitud_id
        ${where}
       ORDER BY p.fecha_prestamo DESC, p.id DESC`,
@@ -59,11 +62,13 @@ export async function findById(id) {
   const [rows] = await pool.query(
     `SELECT p.id, p.solicitud_id, h.codigo_serial, h.nombre AS herramienta, CONCAT(t.nombres, ' ', t.apellidos) AS trabajador,
             pr.nombre AS proyecto, p.fecha_prestamo, p.fecha_estimada_devolucion, p.estado_entrega, p.estado_prestamo,
-            p.observaciones_entrega
+            p.observaciones_entrega, COALESCE(CONCAT(te.nombres, ' ', te.apellidos), ue.username) AS entregado_por
        FROM prestamos_herramientas p
        JOIN herramientas h ON h.id = p.herramienta_id
        JOIN trabajadores t ON t.id = p.trabajador_id
        JOIN proyectos pr ON pr.id = p.proyecto_id
+       LEFT JOIN usuarios ue ON ue.id = p.entregado_por_usuario_id
+       LEFT JOIN trabajadores te ON te.id = ue.trabajador_id
       WHERE p.id = ? LIMIT 1`, [id])
   return rows[0] || null
 }
