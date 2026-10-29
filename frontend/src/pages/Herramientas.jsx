@@ -19,6 +19,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha } from '../lib/format.js'
+import { mensajeError } from '../lib/errores'
 import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
 import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
 
@@ -145,9 +146,20 @@ function CatalogoHerramientas({ pestanas }) {
   const editando = formulario.registro
   const campo = formulario.claseCampo
 
+  // HU-37: historial de reparaciones de la herramienta que se está editando.
+  const [historial, setHistorial] = useState(null)
+  const herramientaEditadaId = editando?.id ?? null
+  useEffect(() => {
+    if (!herramientaEditadaId) { setHistorial(null); return }
+    setHistorial(null)
+    herramientasApi.reparaciones(herramientaEditadaId).then(setHistorial).catch(() => setHistorial([]))
+  }, [herramientaEditadaId])
+
   /** HU-18: confirmación de «Dar de baja» (`registro` es la herramienta). */
-  const baja = useFormulario(null, {
-    enviar: (_, h) => herramientasApi.baja(h.id),
+  const baja = useFormulario({ motivo: '' }, {
+    // HU-37: la baja se registra con su motivo (queda en la bitácora y cierra una reparación abierta).
+    enviar: (v, h) => herramientasApi.cambiarEstado(h.id, { accion: 'DE_BAJA', motivo: v.motivo.trim() }),
+    validar: (v) => (v.motivo.trim() ? null : 'Todo cambio de estado exige un motivo.'),
     alGuardar: (_, { registro: h }) => {
       formulario.cerrar()
       setError('')
@@ -163,7 +175,7 @@ function CatalogoHerramientas({ pestanas }) {
     setGuardandoCambio(true)
     try {
       await herramientasApi.cambiarEstado(cambio.herramienta.id, {
-        accion: cambio.accion, motivo: cambio.motivo.trim(), costo: cambio.costo,
+        accion: cambio.accion, motivo: cambio.motivo.trim(), costo: cambio.costo, fecha_salida: cambio.fecha_salida,
       })
       const h = cambio.herramienta
       setCambio(null)
@@ -172,7 +184,7 @@ function CatalogoHerramientas({ pestanas }) {
       setAviso(`${h.nombre} (${h.codigo_serial}) ${cambio.accion === 'EN_REPARACION' ? 'pasó a reparación' : 'volvió a estar disponible'}.`)
       await recargar()
     } catch (e) {
-      setErrorCambio(e?.response?.data?.message || 'No se pudo cambiar el estado de la herramienta.')
+      setErrorCambio(mensajeError(e, 'No se pudo cambiar el estado de la herramienta.'))
     } finally {
       setGuardandoCambio(false)
     }
@@ -344,7 +356,7 @@ function CatalogoHerramientas({ pestanas }) {
                     onClick={() => {
                       setErrorCambio('')
                       setCambio({
-                        herramienta: editando, motivo: '', costo: '',
+                        herramienta: editando, motivo: '', costo: '', fecha_salida: new Date().toLocaleDateString('en-CA'),
                         accion: editando.estado_operativo === 'EN_MANTENIMIENTO' ? 'DISPONIBLE' : 'EN_REPARACION',
                       })
                     }}
@@ -353,7 +365,7 @@ function CatalogoHerramientas({ pestanas }) {
                   </button>
                 )}
                 {puedeBaja && (
-                  <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir(null, editando)}>
+                  <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir({ motivo: '' }, editando)}>
                     <span aria-hidden="true">⚠️</span> Dar de baja
                   </button>
                 )}
@@ -442,15 +454,17 @@ function CatalogoHerramientas({ pestanas }) {
                 className={campo('estado_operativo')}
                 value={form.estado_operativo}
                 onChange={(e) => formulario.cambiar('estado_operativo', e.target.value)}
+                disabled={Boolean(editando) && editando.estado_operativo === 'EN_MANTENIMIENTO'}
               >
                 {ESTADOS.map((e) => (
-                  <option key={e.value} value={e.value}>
+                  <option key={e.value} value={e.value} disabled={Boolean(editando) && e.value === 'EN_MANTENIMIENTO' && editando.estado_operativo !== 'EN_MANTENIMIENTO'}>
                     {e.label}
                   </option>
                 ))}
               </select>
               <p className="mt-1 text-xs text-slate-500">
                 Dañada o en mantenimiento no se puede prestar.
+                {editando && ' Para enviarla a reparación o sacarla de ella use los botones de abajo, que piden el motivo.'}
               </p>
             </div>
             <div className="sm:col-span-2">
@@ -466,6 +480,31 @@ function CatalogoHerramientas({ pestanas }) {
               />
             </div>
           </div>
+          {editando && (
+            <section className="mt-5 border-t border-slate-100 pt-4" aria-label="Historial de reparaciones">
+              <h3 className="text-sm font-semibold text-slate-800">Historial de reparaciones</h3>
+              {historial === null ? (
+                <p className="mt-2 text-xs text-slate-500">Cargando…</p>
+              ) : historial.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">Esta herramienta no tiene reparaciones registradas.</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-slate-100 text-sm">
+                  {historial.map((r) => (
+                    <li key={r.id} className="py-2">
+                      <p className="font-medium text-slate-700">{r.descripcion}</p>
+                      <p className="text-xs text-slate-500">
+                        Ingresó {fmtFecha(r.fecha_ingreso)} · {r.ingresada_por}
+                        {' · '}
+                        {r.fecha_salida
+                          ? `Salió ${fmtFecha(r.fecha_salida)}${r.costo !== null && r.costo !== undefined ? ` · Costo $ ${Number(r.costo).toLocaleString('es-CO')}` : ''}${r.observaciones_salida ? ` · ${r.observaciones_salida}` : ''}`
+                          : 'En reparación'}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
         </ModalFormulario>
       )}
 
@@ -483,6 +522,9 @@ function CatalogoHerramientas({ pestanas }) {
               onChange={(e) => { setCambio({ ...cambio, motivo: e.target.value }); setErrorCambio('') }} />
             {cambio.accion === 'DISPONIBLE' && (
               <>
+                <label htmlFor="he-fecha" className="label mt-4">Fecha de salida de reparación</label>
+                <input id="he-fecha" type="date" className="input" max={new Date().toLocaleDateString('en-CA')} value={cambio.fecha_salida}
+                  onChange={(e) => setCambio({ ...cambio, fecha_salida: e.target.value })} />
                 <label htmlFor="he-costo" className="label mt-4">Costo de la reparación (opcional)</label>
                 <input id="he-costo" type="number" min="0" step="0.01" className="input" value={cambio.costo}
                   onChange={(e) => setCambio({ ...cambio, costo: e.target.value })} />
@@ -514,6 +556,9 @@ function CatalogoHerramientas({ pestanas }) {
         <p className="mt-3 rounded-xl bg-accent-50 px-4 py-3 text-xs text-brand-800 ring-1 ring-accent-200">
           Si está prestada o en traslado, primero hay que registrar su devolución.
         </p>
+        <label htmlFor="hb-motivo" className="label mt-4">Motivo de la baja</label>
+        <textarea id="hb-motivo" className="input" rows={3} maxLength={500} value={baja.valores.motivo}
+          onChange={(e) => baja.cambiar('motivo', e.target.value)} />
         {baja.error && (
           <div className="mt-3">
             <AlertaFormulario mensaje={baja.error} />

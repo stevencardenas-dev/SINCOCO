@@ -36,9 +36,9 @@ export async function cambiarEstado(herramientaId, usuarioId, decidir) {
     if (plan.cerrarReparacion && abierta) {
       await conn.query(
         `UPDATE reparaciones_herramientas
-            SET fecha_salida = NOW(), costo = ?, observaciones_salida = ?, salida_por_usuario_id = ?
+            SET fecha_salida = COALESCE(?, NOW()), costo = ?, observaciones_salida = ?, salida_por_usuario_id = ?
           WHERE id = ?`,
-        [plan.costo ?? null, plan.motivo, usuarioId, abierta.id],
+        [plan.fechaSalida ?? null, plan.costo ?? null, plan.motivo, usuarioId, abierta.id],
       )
     }
     if (plan.nuevaReparacion) {

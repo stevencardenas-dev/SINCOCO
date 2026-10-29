@@ -3,6 +3,7 @@ import * as herramientaRepository from '../repositories/herramientaRepository.js
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
 import { textoOpcional, revisarLargo, montoOpcional } from '../utils/campos.js'
+import { aFechaDia } from '../utils/fechas.js'
 
 /**
  * HU-37: cambio de estado operativo de una herramienta.
@@ -19,6 +20,13 @@ export async function cambiarEstado(id, body = {}, ctx) {
   if (!motivo) throw new AppError('Todo cambio de estado exige un motivo', 400, 'motivo')
   revisarLargo(motivo, 500, 'motivo')
   const costo = accion === 'DISPONIBLE' ? montoOpcional(body.costo, 'costo') : null
+  // Fecha de salida de reparación (opcional; por defecto, ahora): no puede ser futura.
+  const hoy = aFechaDia(new Date())
+  const fechaSalida = accion === 'DISPONIBLE' && body.fecha_salida ? aFechaDia(body.fecha_salida) : null
+  if (fechaSalida !== null) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaSalida)) throw new AppError('La fecha de salida no es válida', 400, 'fecha_salida')
+    if (fechaSalida > hoy) throw new AppError('La fecha de salida no puede ser posterior a hoy', 400, 'fecha_salida')
+  }
 
   const { anterior, plan } = await repo.cambiarEstado(id, ctx.usuarioId, (h, abierta, prestada) => {
     if (!h) throw new AppError('Herramienta no encontrada', 404)
@@ -35,8 +43,13 @@ export async function cambiarEstado(id, body = {}, ctx) {
     }
     if (!enReparacion) throw new AppError('Solo una herramienta en reparación puede volver a disponible', 409)
     const previo = abierta?.estado_previo
+    if (fechaSalida && abierta && fechaSalida < aFechaDia(abierta.fecha_ingreso)) {
+      throw new AppError('La fecha de salida no puede ser anterior a la de ingreso a reparación', 400, 'fecha_salida')
+    }
     return {
       cerrarReparacion: true, motivo, costo,
+      // Hoy (o sin fecha) = el momento actual; un día pasado = ese día al mediodía.
+      fechaSalida: fechaSalida && fechaSalida < hoy ? `${fechaSalida} 12:00:00` : null,
       estadoOperativo: PRESTABLES.includes(previo) ? previo : 'BUENO',
     }
   })

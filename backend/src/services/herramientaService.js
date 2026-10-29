@@ -211,7 +211,16 @@ export async function actualizarHerramienta(id, cambios = {}, ctx = {}) {
     campos.almacen_id = almacenId
   }
   if (cambios.estado_operativo !== undefined) {
-    campos.estado_operativo = revisarEstadoOperativo(cambios.estado_operativo)
+    const nuevo = revisarEstadoOperativo(cambios.estado_operativo)
+    // HU-37: entrar o salir de «En mantenimiento» es una reparación y exige motivo, no tener préstamo
+    // vigente y dejar historial; eso solo lo hace PATCH /:id/estado, no la edición general.
+    if (nuevo !== actual.estado_operativo && (nuevo === 'EN_MANTENIMIENTO' || actual.estado_operativo === 'EN_MANTENIMIENTO')) {
+      throw new AppError(
+        'Pasar a reparación o sacar de ella se registra con su motivo desde «Enviar a reparación» o «Volver a disponible».',
+        409, 'estado_operativo',
+      )
+    }
+    campos.estado_operativo = nuevo
   }
 
   if (Object.keys(campos).length === 0) {
