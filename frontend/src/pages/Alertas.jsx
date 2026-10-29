@@ -32,7 +32,7 @@ export default function Alertas() {
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={alertas.recargar} />} title="Alertas de inventario" subtitle="Materiales que llegaron a su nivel mínimo" />
+      <PageHeader accion={<BotonActualizar onClick={alertas.recargar} />} title="Alertas de inventario" subtitle="Materiales en nivel mínimo y nuevas solicitudes de materiales" />
       <div className="flex gap-2">
         {FILTROS.map((f) => (
           <button key={f.etiqueta} type="button" className={atendida === f.valor ? 'btn-primary text-xs' : 'btn-ghost text-xs'} onClick={() => setAtendida(f.valor)}>

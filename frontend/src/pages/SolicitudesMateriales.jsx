@@ -6,7 +6,8 @@ import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import Modal from '../components/Modal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { solicitudesMaterialesApi } from '../services/solicitudesMateriales'
-import { materialesApi } from '../services/materiales'
+import { notificacionesApi } from '../services/notificaciones'
+import { mensajeError } from '../lib/errores'
 import { proyectosApi } from '../services/proyectos'
 import { actividadesApi } from '../services/actividades'
 import { trabajadoresApi } from '../services/trabajadores'
@@ -39,6 +40,8 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [lineas, setLineas] = useState([{ ...LINEA }])
   const [actividades, setActividades] = useState([])
   const [error, setError] = useState('')
+  const [excesos, setExcesos] = useState([]) // materiales que superan lo presupuestado (CU-08 Alt 1)
+  const [confirmaExceso, setConfirmaExceso] = useState(false)
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [aprobando, setAprobando] = useState(null) // { solicitud, cantidades }
@@ -46,7 +49,8 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [rechazando, setRechazando] = useState(null) // { solicitud, motivo }
   const [errorAccion, setErrorAccion] = useState('')
   const solicitudes = useRecurso(() => solicitudesMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las solicitudes.' })
-  const materiales = useRecurso(() => materialesApi.listar(), [], { mensaje: 'No se pudieron cargar los materiales.' })
+  const materiales = useRecurso(() => (puedeCrear ? solicitudesMaterialesApi.catalogo() : Promise.resolve([])), [puedeCrear], { mensaje: 'No se pudieron cargar los materiales.' })
+  const notificaciones = useRecurso(() => notificacionesApi.listar({ soloNoLeidas: true }), [], { mensaje: 'No se pudieron cargar las notificaciones.' })
   const proyectos = useRecurso(() => proyectosApi.listar(), [], { mensaje: 'No se pudieron cargar los proyectos.' })
   const almacenes = useRecurso(() => (puedeResolver ? herramientasApi.almacenes() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los almacenes.' })
   const trabajadores = useRecurso(() => (puedeResolver ? trabajadoresApi.listar() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los trabajadores.' })
@@ -56,7 +60,10 @@ export default function SolicitudesMateriales({ pestanas }) {
     actividadesApi.listar({ proyecto_id: form.proyecto_id }).then(setActividades).catch(() => setActividades([]))
   }, [form.proyecto_id])
 
-  const cambiarLinea = (i, campo) => (e) => { setLineas(lineas.map((l, j) => (j === i ? { ...l, [campo]: e.target.value } : l))); setError('') }
+  const cambiarLinea = (i, campo) => (e) => { setLineas(lineas.map((l, j) => (j === i ? { ...l, [campo]: e.target.value } : l))); setError(''); setExcesos([]); setConfirmaExceso(false) }
+  const esParcial = (s) => s.estado !== 'PENDIENTE' && s.estado !== 'RECHAZADA' && s.estado !== 'CANCELADA'
+    && s.detalles.some((d) => Number(d.cantidad_aprobada) < Number(d.cantidad_solicitada))
+  const marcarLeida = (n) => notificaciones.ejecutar(() => notificacionesApi.marcarLeida(n.id), { error: 'No se pudo marcar la notificación.' })
 
   const enviar = async (e) => {
     e.preventDefault()
@@ -64,14 +71,24 @@ export default function SolicitudesMateriales({ pestanas }) {
     setAviso('')
     try {
       const { solicitud } = await solicitudesMaterialesApi.crear({
-        ...form, observaciones: form.observaciones.trim(), detalles: lineas,
+        ...form, observaciones: form.observaciones.trim(), detalles: lineas, confirmar_exceso: confirmaExceso,
       })
-      setAviso(`Solicitud ${solicitud.codigo} registrada: bodega fue notificada.`)
+      setAviso(`Solicitud ${solicitud.codigo} registrada${solicitud.excede_presupuesto ? ' (excede lo presupuestado)' : ''}: bodega fue notificada.`)
       setForm(VACIO)
       setLineas([{ ...LINEA }])
+      setExcesos([])
+      setConfirmaExceso(false)
       await solicitudes.recargar()
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo registrar la solicitud.')
+      const data = err?.response?.data
+      if (data?.codigo === 'EXCEDE_PRESUPUESTO') {
+        // CU-08 Alt 1: se alerta y se exige confirmar (con justificación) antes de continuar.
+        setExcesos(data.excesos ?? [])
+        setConfirmaExceso(false)
+        setError('')
+      } else {
+        setError(mensajeError(err, 'No se pudo registrar la solicitud.'))
+      }
     } finally {
       setGuardando(false)
     }
@@ -87,7 +104,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       setErrorAccion('')
       await solicitudes.recargar()
     } catch (err) {
-      setErrorAccion(err?.response?.data?.message || 'No se pudo completar la acción.')
+      setErrorAccion(mensajeError(err, 'No se pudo completar la acción.'))
     }
   }
 
@@ -103,6 +120,21 @@ export default function SolicitudesMateriales({ pestanas }) {
       {solicitudes.error && <AlertaFormulario mensaje={solicitudes.error} />}
       {solicitudes.aviso && <AlertaFormulario tipo="aviso" mensaje={solicitudes.aviso} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+      {materiales.error && <AlertaFormulario mensaje={materiales.error} />}
+
+      {(notificaciones.datos ?? []).length > 0 && (
+        <section aria-label="Notificaciones" className="card space-y-2 border-l-4 border-l-brand-500 p-4">
+          {notificaciones.datos.map((n) => (
+            <div key={n.id} className="flex flex-wrap items-start justify-between gap-3 text-sm">
+              <div>
+                <p className="font-semibold text-slate-800">{n.titulo}</p>
+                <p className="text-xs text-slate-600">{n.mensaje}</p>
+              </div>
+              <button type="button" className="btn-ghost text-xs" onClick={() => marcarLeida(n)}>Marcar como leída</button>
+            </div>
+          ))}
+        </section>
+      )}
 
       {puedeCrear && (
         <form className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={enviar}>
@@ -128,7 +160,7 @@ export default function SolicitudesMateriales({ pestanas }) {
           </div>
           <div>
             <label htmlFor="sm-obs" className="label">Observaciones</label>
-            <input id="sm-obs" className="input" maxLength={500} value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
+            <input id="sm-obs" className="input" maxLength={500} required={excesos.length > 0} value={form.observaciones} onChange={(e) => setForm({ ...form, observaciones: e.target.value })} />
           </div>
           <div className="space-y-3 sm:col-span-2">
             <p className="label">Materiales</p>
@@ -149,8 +181,22 @@ export default function SolicitudesMateriales({ pestanas }) {
             </button>
           </div>
           {error && <p role="alert" className="text-xs font-medium text-red-600 sm:col-span-2">{error}</p>}
+          {excesos.length > 0 && (
+            <div role="alert" className="space-y-2 rounded-xl bg-amber-50 p-4 text-sm text-amber-800 sm:col-span-2">
+              <p className="font-semibold">Alerta: la cantidad solicitada supera lo presupuestado para la actividad.</p>
+              <ul className="list-disc pl-5 text-xs">
+                {excesos.map((x) => (
+                  <li key={x.material_id}>{x.material}: presupuestado {x.presupuestado}, ya solicitado {x.ya_solicitado}, ahora solicita {x.solicitado}</li>
+                ))}
+              </ul>
+              <label className="flex items-start gap-2 text-xs font-medium">
+                <input type="checkbox" className="mt-0.5" checked={confirmaExceso} onChange={(e) => setConfirmaExceso(e.target.checked)} />
+                <span>Confirmo que necesito esta cantidad adicional. Justifíquela en Observaciones; bodega lo verá al revisar.</span>
+              </label>
+            </div>
+          )}
           <div className="sm:col-span-2">
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando}>{guardando ? 'Enviando…' : 'Solicitar materiales'}</button>
+            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando || (excesos.length > 0 && !confirmaExceso)}>{guardando ? 'Enviando…' : 'Solicitar materiales'}</button>
           </div>
         </form>
       )}
@@ -166,7 +212,8 @@ export default function SolicitudesMateriales({ pestanas }) {
           <article key={s.id} className="card p-5">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-sm font-semibold text-slate-800">{s.codigo} · {s.proyecto}{s.actividad ? ` · ${s.actividad}` : ''}</h2>
-              <span className={`badge ring-1 ${ESTADOS[s.estado] ?? ''}`}>{s.estado.replace('_', ' ')}</span>
+              <span className={`badge ring-1 ${ESTADOS[s.estado] ?? ''}`}>{s.estado.replace('_', ' ')}{esParcial(s) ? ' · cantidad parcial' : ''}</span>
+              {Boolean(s.excede_presupuesto) && <span className="badge bg-amber-50 text-amber-700 ring-1 ring-amber-200">Excede lo presupuestado</span>}
               <span className="text-xs text-slate-500">{s.solicitante} · {fmtFecha(s.fecha_solicitud)}</span>
             </div>
             {s.observaciones && <p className="mt-1 text-xs text-slate-500">{s.observaciones}</p>}

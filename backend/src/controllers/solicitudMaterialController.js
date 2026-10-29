@@ -1,12 +1,14 @@
 import {
-  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud,
+  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud, catalogoMateriales,
 } from '../services/solicitudMaterialService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 export const listar = asyncHandler(async (req, res) =>
   res.json(await listarSolicitudes({ estado: req.query.estado }, req.user)))
 
-export const crear = asyncHandler(async (req, res) =>
+export const catalogo = asyncHandler(async (req, res) => res.json(await catalogoMateriales()))
+
+export const crear =asyncHandler(async (req, res) =>
   res.status(201).json({ message: 'Solicitud registrada: bodega fue notificada', solicitud: await crearSolicitud(req.body, contexto(req)) }))
 
 export const aprobar = asyncHandler(async (req, res) =>

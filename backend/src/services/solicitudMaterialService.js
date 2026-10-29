@@ -70,14 +70,55 @@ export async function crearSolicitud(body = {}, ctx) {
     if (!m || !m.activo) throw new AppError(`El material ${d.material_id} no existe o está dado de baja`, 404, 'detalles')
   }
 
-  const id = await repo.crear({ proyectoId, actividadId, usuarioId: ctx.usuarioId, fechaRequerida: fecha, observaciones, detalles })
+  // CU-08 Alt 1: si lo pedido supera lo presupuestado, se alerta y se exige confirmación con justificación.
+  const excesos = await calcularExcesos(actividadId, detalles, materiales)
+  if (excesos.length > 0) {
+    if (!(body.confirmar_exceso === true || body.confirmar_exceso === 'true')) {
+      throw new AppError(
+        'La cantidad solicitada supera lo presupuestado para la actividad. Confirme para continuar.',
+        409, 'detalles', { codigo: 'EXCEDE_PRESUPUESTO', excesos },
+      )
+    }
+    if (!observaciones) throw new AppError('Justifique en las observaciones por qué excede lo presupuestado', 400, 'observaciones')
+  }
+
+  const id = await repo.crear({
+    proyectoId, actividadId, usuarioId: ctx.usuarioId, fechaRequerida: fecha, observaciones, detalles, excedePresupuesto: excesos.length > 0,
+  })
   const solicitud = await repo.findById(id)
   await bitacora({
     usuarioId: ctx.usuarioId, accion: 'SOLICITAR_MATERIALES', tabla: 'solicitudes_materiales', registroId: id,
-    detalles: { codigo: solicitud.codigo, proyecto_id: proyectoId, actividad_id: actividadId, lineas: detalles.length }, ip: ctx.ip,
+    detalles: { codigo: solicitud.codigo, proyecto_id: proyectoId, actividad_id: actividadId, lineas: detalles.length, excede_presupuesto: excesos.length > 0 }, ip: ctx.ip,
   })
   return solicitud
 }
+
+/**
+ * Materiales cuya cantidad (lo ya pedido en solicitudes vigentes + esta solicitud) supera lo
+ * presupuestado para la actividad. Si la actividad no tiene presupuesto de materiales no hay
+ * contra qué comparar; si lo tiene, un material fuera del presupuesto cuenta como presupuestado 0.
+ */
+async function calcularExcesos(actividadId, detalles, materiales) {
+  const presupuesto = await repo.presupuestoActividad(actividadId)
+  if (presupuesto.length === 0) return []
+  const previo = await repo.yaSolicitadoActividad(actividadId, detalles.map((d) => d.material_id))
+  const excesos = []
+  for (const d of detalles) {
+    const presupuestado = Number(presupuesto.find((p) => Number(p.material_id) === d.material_id)?.cantidad_presupuestada ?? 0)
+    const yaSolicitado = Number(previo.find((p) => Number(p.material_id) === d.material_id)?.cantidad ?? 0)
+    if (yaSolicitado + d.cantidad > presupuestado) {
+      excesos.push({
+        material_id: d.material_id,
+        material: materiales.find((m) => Number(m.id) === d.material_id)?.descripcion,
+        presupuestado, ya_solicitado: yaSolicitado, solicitado: d.cantidad,
+      })
+    }
+  }
+  return excesos
+}
+
+/** Catálogo de materiales para quien solicita (sin existencias ni costos). */
+export const catalogoMateriales = () => repo.catalogoMateriales()
 
 /** Bodega aprueba (todo o una cantidad menor por línea, CU-08 Alt 2). */
 export async function aprobarSolicitud(id, body = {}, ctx) {
@@ -96,8 +137,23 @@ export async function aprobarSolicitud(id, body = {}, ctx) {
   }
   const observaciones = textoOpcional(body.observaciones)
   revisarLargo(observaciones, 500, 'observaciones')
+  // CU-08 Alt 2: se avisa al solicitante, y se detalla lo que difiere de lo pedido.
+  const diferencias = aprobadas.flatMap((a, i) => {
+    const l = s.detalles[i]
+    return a.cantidad < Number(l.cantidad_solicitada)
+      ? [`${l.material}: solicitado ${l.cantidad_solicitada}, aprobado ${a.cantidad} ${l.unidad_medida}`]
+      : []
+  })
+  const notificacion = {
+    usuarioId: s.solicitado_por_usuario_id,
+    referenciaId: Number(id),
+    titulo: diferencias.length > 0 ? `Solicitud ${s.codigo} aprobada parcialmente` : `Solicitud ${s.codigo} aprobada`,
+    mensaje: diferencias.length > 0
+      ? `Bodega aprobó una cantidad distinta a la solicitada. ${diferencias.join('; ')}.${observaciones ? ` Observación: ${observaciones}` : ''}`
+      : 'Bodega aprobó la solicitud con las cantidades solicitadas.',
+  }
   try {
-    await repo.aprobar(id, aprobadas, observaciones)
+    await repo.aprobar(id, aprobadas, observaciones, notificacion)
   } catch (err) {
     if (err.codigo === 'ESTADO') throw new AppError('La solicitud ya fue resuelta por otra persona', 409)
     throw err
@@ -117,6 +173,10 @@ export async function rechazarSolicitud(id, body = {}, ctx) {
   if (!(await repo.cambiarEstado(id, ['PENDIENTE'], 'RECHAZADA', observacion))) {
     throw new AppError(`No se puede rechazar una solicitud en estado ${s.estado}`, 409)
   }
+  await repo.crearNotificacion({
+    usuarioId: s.solicitado_por_usuario_id, referenciaId: Number(id),
+    titulo: `Solicitud ${s.codigo} rechazada`, mensaje: `Bodega rechazó la solicitud. Motivo: ${observacion}`,
+  })
   await bitacora({ usuarioId: ctx.usuarioId, accion: 'RECHAZAR_SOLICITUD_MATERIALES', tabla: 'solicitudes_materiales', registroId: Number(id), detalles: { codigo: s.codigo, observacion }, ip: ctx.ip })
   return repo.findById(id)
 }
