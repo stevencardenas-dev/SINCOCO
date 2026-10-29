@@ -27,6 +27,7 @@ import entradasInventarioRoutes from './routes/entradasInventario.js'
 import alertasRoutes from './routes/alertas.js'
 import notificacionesRoutes from './routes/notificaciones.js'
 import devolucionesMaterialesRoutes from './routes/devolucionesMateriales.js'
+import consumosMaterialesRoutes from './routes/consumosMateriales.js'
 import { errorHandler } from './middleware/errorHandler.js'
 import { rutasSeguras } from './middleware/rutasSeguras.js'
 import { programarCierreAutomatico } from './services/cierreAsignacionesService.js'
@@ -77,6 +78,7 @@ app.use('/api/entradas-inventario', rutasSeguras(entradasInventarioRoutes))
 app.use('/api/alertas', rutasSeguras(alertasRoutes))
 app.use('/api/notificaciones', rutasSeguras(notificacionesRoutes))
 app.use('/api/devoluciones-materiales', rutasSeguras(devolucionesMaterialesRoutes))
+app.use('/api/consumos-materiales', rutasSeguras(consumosMaterialesRoutes))
 
 app.use('/api/incidencias', rutasSeguras(incidenciasRoutes))
 
