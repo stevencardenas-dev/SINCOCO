@@ -38,6 +38,12 @@ export default function PrestamosHerramientas({ pestanas }) {
   const { puede } = useAuth()
   const puedeResolver = puede('solicitudes_herramientas.resolver')
   const puedeEntregar = puede('prestamos_herramientas.crear')
+  const puedeReemplazar = puede('prestamos_herramientas.reemplazar')
+  // HU-35: avería de una herramienta prestada y su reemplazo.
+  const [averia, setAveria] = useState(null) // { prestamo, novedad, reemplazo, opciones }
+  const [errorAveria, setErrorAveria] = useState('')
+  const [guardandoAveria, setGuardandoAveria] = useState(false)
+  const [avisoAveria, setAvisoAveria] = useState('')
   const [porEntregarSol, setPorEntregarSol] = useState(null)
   const [entrega, setEntrega] = useState({ fecha_estimada_devolucion: '', observaciones: '' })
   const [errorEntrega, setErrorEntrega] = useState('')
@@ -49,6 +55,37 @@ export default function PrestamosHerramientas({ pestanas }) {
 
   const porEntregar = (sol.datos ?? []).filter((s) => s.estado === 'PENDIENTE' || s.estado === 'APROBADA')
   const recargar = () => Promise.all([sol.recargar(), pre.recargar()])
+
+  const VIGENTES = ['ACTIVO', 'ATRASADO', 'CON_NOVEDAD']
+  const abrirAveria = async (p) => {
+    setErrorAveria('')
+    setAveria({ prestamo: p, novedad: '', reemplazo: '', opciones: null })
+    try {
+      const opciones = await prestamosHerramientasApi.reemplazos(p.id)
+      setAveria((a) => (a ? { ...a, opciones } : a))
+    } catch (e) {
+      setAveria((a) => (a ? { ...a, opciones: [] } : a))
+      setErrorAveria(mensajeError(e, 'No se pudieron cargar las herramientas de reemplazo.'))
+    }
+  }
+  const confirmarAveria = async () => {
+    if (!averia.novedad.trim()) return setErrorAveria('Debe describir la avería (novedad) para registrar el reemplazo.')
+    setGuardandoAveria(true)
+    try {
+      const r = await prestamosHerramientasApi.reemplazar(averia.prestamo.id, {
+        novedad: averia.novedad.trim(), herramienta_reemplazo_id: averia.reemplazo || undefined,
+      })
+      setAveria(null)
+      await recargar()
+      setAvisoAveria(r.sugerir_solicitud
+        ? 'Avería registrada y préstamo cerrado sin reemplazo. Registre una solicitud de herramienta (Solicitudes) para que el trabajador siga con su labor.'
+        : `Avería registrada: el reemplazo (${r.prestamo_reemplazo.herramienta}) quedó entregado a ${r.prestamo_reemplazo.trabajador} con devolución estimada el ${fmtFecha(r.prestamo_reemplazo.fecha_estimada_devolucion)}.`)
+    } catch (e) {
+      setErrorAveria(mensajeError(e, 'No se pudo registrar la avería.'))
+    } finally {
+      setGuardandoAveria(false)
+    }
+  }
 
   const accion = (fn, s, exito) =>
     sol.ejecutar(() => fn(s.id), { exito: `${exito} ${s.codigo}.`, error: 'No se pudo completar la acción.' }).then(() => pre.recargar())
@@ -106,6 +143,7 @@ export default function PrestamosHerramientas({ pestanas }) {
 
       {(sol.error || pre.error) && <AlertaFormulario mensaje={sol.error || pre.error} />}
       {sol.aviso && <AlertaFormulario tipo="aviso" mensaje={sol.aviso} />}
+      {avisoAveria && <AlertaFormulario tipo="aviso" mensaje={avisoAveria} />}
 
       <section className="card overflow-hidden">
         <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">
@@ -144,6 +182,20 @@ export default function PrestamosHerramientas({ pestanas }) {
               { titulo: 'Estado al entregar', celda: (p) => p.estado_entrega },
               { titulo: 'Entregó', celda: (p) => p.entregado_por ?? '—' },
               { titulo: 'Condiciones de entrega', celda: (p) => p.observaciones_entrega || '—' },
+              { titulo: 'Recibió', celda: (p) => (p.fecha_real_devolucion ? p.recibido_por ?? '—' : '—') },
+              { titulo: 'Condición al devolver', celda: (p) => p.estado_devolucion ?? '—' },
+              { titulo: 'Novedad al devolver', celda: (p) => p.observaciones_devolucion || '—' },
+              { titulo: 'Reemplaza a', celda: (p) => p.reemplaza_a ?? '—' },
+              { titulo: 'Reemplazado por', celda: (p) => p.reemplazado_por ?? '—' },
+              { titulo: 'Incidencia', celda: (p) => (p.incidencia_id ? `#${p.incidencia_id}` : '—') },
+              {
+                titulo: 'Acciones',
+                acciones: true,
+                derecha: true,
+                celda: (p, enFicha) => (enFicha && puedeReemplazar && VIGENTES.includes(p.estado_prestamo)
+                  ? <button type="button" className="btn-primary text-xs" onClick={() => abrirAveria(p)}>Registrar avería y reemplazo</button>
+                  : null),
+              },
             ]}
           />
         )}
@@ -166,6 +218,41 @@ export default function PrestamosHerramientas({ pestanas }) {
           <button type="button" className="btn-primary" onClick={entregar}>Registrar entrega</button>
           <button type="button" className="btn-ghost" onClick={() => setPorEntregarSol(null)}>Cancelar</button>
         </div>
+      </Modal>
+
+      {/* HU-35: avería de una herramienta prestada, con su reemplazo. */}
+      <Modal abierto={averia !== null} titulo="Registrar avería y reemplazo" onCerrar={() => !guardandoAveria && setAveria(null)} ancho="max-w-md">
+        {averia && (
+          <>
+            <p className="mb-3 text-sm text-slate-600">
+              {averia.prestamo.herramienta} ({averia.prestamo.codigo_serial}) prestada a {averia.prestamo.trabajador} · devolución estimada {fmtFecha(averia.prestamo.fecha_estimada_devolucion)}
+            </p>
+            <label htmlFor="av-novedad" className="label">Novedad: descripción de la avería</label>
+            <textarea id="av-novedad" className="input" rows={3} maxLength={500} value={averia.novedad}
+              onChange={(e) => { setAveria({ ...averia, novedad: e.target.value }); setErrorAveria('') }} />
+            <label htmlFor="av-reemplazo" className="label mt-4">Herramienta de reemplazo</label>
+            <select id="av-reemplazo" className="input" value={averia.reemplazo} disabled={averia.opciones === null}
+              onChange={(e) => setAveria({ ...averia, reemplazo: e.target.value })}>
+              <option value="">{averia.opciones === null ? 'Cargando…' : 'Sin reemplazo (cierra solo el préstamo averiado)'}</option>
+              {(averia.opciones ?? []).map((h) => (
+                <option key={h.id} value={h.id}>{h.nombre} ({h.codigo_serial}) · {h.almacen}{h.equivalente ? ' · equivalente' : ''}</option>
+              ))}
+            </select>
+            {averia.opciones && averia.opciones.length === 0 && (
+              <p className="mt-1 text-xs text-amber-700">No hay una herramienta operativa disponible: se cerrará solo el préstamo averiado y deberá registrar una solicitud de herramienta.</p>
+            )}
+            <p className="mt-3 text-xs text-slate-500">
+              La herramienta averiada pasa a reparación y se genera la incidencia. El reemplazo se entrega al mismo trabajador, con la misma fecha estimada de devolución.
+            </p>
+            {errorAveria && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorAveria}</p>}
+            <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
+              <button type="button" className="btn-primary disabled:opacity-60" disabled={guardandoAveria} onClick={confirmarAveria}>
+                {guardandoAveria ? 'Registrando…' : 'Confirmar'}
+              </button>
+              <button type="button" className="btn-ghost" disabled={guardandoAveria} onClick={() => setAveria(null)}>Cancelar</button>
+            </div>
+          </>
+        )}
       </Modal>
 
       <Modal abierto={porRechazar !== null} titulo="Rechazar solicitud" onCerrar={() => setPorRechazar(null)} ancho="max-w-md">

@@ -15,6 +15,7 @@ import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { herramientasApi } from '../services/herramientas'
+import { prestamosHerramientasApi } from '../services/prestamosHerramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -154,6 +155,14 @@ function CatalogoHerramientas({ pestanas }) {
     setHistorial(null)
     herramientasApi.reparaciones(herramientaEditadaId).then(setHistorial).catch(() => setHistorial([]))
   }, [herramientaEditadaId])
+  // HU-35: historial de préstamos, con el vínculo entre el préstamo averiado y el de su reemplazo.
+  const puedeVerPrestamos = puede('prestamos_herramientas.listar')
+  const [prestamosHistorial, setPrestamosHistorial] = useState(null)
+  useEffect(() => {
+    if (!herramientaEditadaId || !puedeVerPrestamos) { setPrestamosHistorial(null); return }
+    setPrestamosHistorial(null)
+    prestamosHerramientasApi.listar({ herramienta_id: herramientaEditadaId }).then(setPrestamosHistorial).catch(() => setPrestamosHistorial([]))
+  }, [herramientaEditadaId, puedeVerPrestamos])
 
   /** HU-18: confirmación de «Dar de baja» (`registro` es la herramienta). */
   const baja = useFormulario({ motivo: '' }, {
@@ -499,6 +508,32 @@ function CatalogoHerramientas({ pestanas }) {
                           ? `Salió ${fmtFecha(r.fecha_salida)}${r.costo !== null && r.costo !== undefined ? ` · Costo $ ${Number(r.costo).toLocaleString('es-CO')}` : ''}${r.observaciones_salida ? ` · ${r.observaciones_salida}` : ''}`
                           : 'En reparación'}
                       </p>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+          {editando && puedeVerPrestamos && (
+            <section className="mt-5 border-t border-slate-100 pt-4" aria-label="Historial de préstamos">
+              <h3 className="text-sm font-semibold text-slate-800">Historial de préstamos</h3>
+              {prestamosHistorial === null ? (
+                <p className="mt-2 text-xs text-slate-500">Cargando…</p>
+              ) : prestamosHistorial.length === 0 ? (
+                <p className="mt-2 text-xs text-slate-500">Esta herramienta no se ha prestado.</p>
+              ) : (
+                <ul className="mt-2 divide-y divide-slate-100 text-sm">
+                  {prestamosHistorial.map((p) => (
+                    <li key={p.id} className="py-2">
+                      <p className="font-medium text-slate-700">{p.trabajador} · {p.proyecto}</p>
+                      <p className="text-xs text-slate-500">
+                        Prestada {fmtFecha(p.fecha_prestamo)}
+                        {p.fecha_real_devolucion
+                          ? ` · devuelta ${fmtFecha(p.fecha_real_devolucion)}${p.estado_devolucion ? ` (${p.estado_devolucion})` : ''}${p.recibido_por ? ` · la recibió ${p.recibido_por}` : ''}`
+                          : ` · devolución estimada ${fmtFecha(p.fecha_estimada_devolucion)}`}
+                      </p>
+                      {p.reemplaza_a && <p className="text-xs text-sky-700">Reemplazo de {p.reemplaza_a} por avería.</p>}
+                      {p.incidencia_id && <p className="text-xs text-amber-700">Averiada{p.reemplazado_por ? `: reemplazada por ${p.reemplazado_por}` : ': préstamo cerrado sin reemplazo'} · incidencia #{p.incidencia_id}.</p>}
                     </li>
                   ))}
                 </ul>
