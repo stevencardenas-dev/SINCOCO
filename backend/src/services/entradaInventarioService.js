@@ -20,6 +20,8 @@ const ESTADOS_ORDEN = ['APROBADA', 'ENVIADA_PROVEEDOR', 'RECIBIDA_PARCIAL']
 
 export const listarEntradas = () => repo.listar()
 export const ordenesRecibibles = () => repo.ordenesRecibibles()
+/** Proveedores para el selector del ingreso: quien ingresa no necesita el permiso del módulo de proveedores. */
+export const proveedoresParaIngreso = () => repo.proveedoresActivos()
 
 export async function obtenerEntrada(id) {
   const e = await repo.findById(id)
