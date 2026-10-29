@@ -19,6 +19,7 @@ const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
 const DevolucionesMateriales = lazy(() => import('./pages/DevolucionesMateriales.jsx'))
+const ConsumosMateriales = lazy(() => import('./pages/ConsumosMateriales.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
@@ -113,6 +114,15 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['devoluciones_materiales.listar']}>
                 <DevolucionesMateriales />
+              </RutaPorPermiso>
+            }
+          />
+          {/* HU-20: consumo real de materiales por actividad. */}
+          <Route
+            path="consumos"
+            element={
+              <RutaPorPermiso permisos={['consumos_materiales.listar']}>
+                <ConsumosMateriales />
               </RutaPorPermiso>
             }
           />
