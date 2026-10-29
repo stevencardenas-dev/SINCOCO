@@ -59,6 +59,9 @@ export default function Alertas() {
             columnas={[
               { titulo: 'Alerta', movil: true, celda: (a) => a.titulo },
               { titulo: 'Detalle', movil: true, tdClase: 'text-slate-600', celda: (a) => a.descripcion },
+              { titulo: 'Material', celda: (a) => a.material_codigo ?? '—' },
+              { titulo: 'Existencia actual', celda: (a) => (a.material_codigo ? `${Number(a.existencia_total)} ${a.unidad_medida}` : '—') },
+              { titulo: 'Nivel mínimo', celda: (a) => (a.material_codigo ? `${Number(a.nivel_minimo)} ${a.unidad_medida}` : '—') },
               { titulo: 'Generada', celda: (a) => fmtFecha(a.fecha_generacion), orden: (a) => a.fecha_generacion },
               { titulo: 'Estado', movil: true, celda: (a) => (a.atendida ? `Atendida ${fmtFecha(a.fecha_atencion)}` : 'Pendiente') },
               {
