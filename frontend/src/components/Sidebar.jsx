@@ -20,6 +20,7 @@ import {
   XMarkIcon,
   ArrowDownTrayIcon,
   ArrowUturnLeftIcon,
+  ArrowUpTrayIcon,
   ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline'
 
@@ -52,6 +53,7 @@ const NAV = [
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardDocumentListIcon, permiso: ['solicitudes_herramientas.listar'] },
       { to: '/ingresos', label: 'Ingreso', icon: ArrowDownTrayIcon, permiso: ['entradas_inventario.listar'] },
+      { to: '/salidas', label: 'Salidas', icon: ArrowUpTrayIcon, permiso: ['salidas_materiales.listar'] },
       { to: '/devoluciones', label: 'Devoluciones', icon: ArrowUturnLeftIcon, permiso: ['devoluciones_materiales.listar'] },
       { to: '/consumos', label: 'Consumos', icon: ClipboardDocumentCheckIcon, permiso: ['consumos_materiales.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, permiso: ['alertas.listar'] },

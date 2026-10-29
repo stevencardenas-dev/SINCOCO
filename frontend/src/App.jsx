@@ -20,6 +20,7 @@ const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
 const DevolucionesMateriales = lazy(() => import('./pages/DevolucionesMateriales.jsx'))
 const ConsumosMateriales = lazy(() => import('./pages/ConsumosMateriales.jsx'))
+const SalidasMateriales = lazy(() => import('./pages/SalidasMateriales.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
@@ -114,6 +115,15 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['devoluciones_materiales.listar']}>
                 <DevolucionesMateriales />
+              </RutaPorPermiso>
+            }
+          />
+          {/* HU-26: salida efectiva de materiales (constancia de lo despachado). */}
+          <Route
+            path="salidas"
+            element={
+              <RutaPorPermiso permisos={['salidas_materiales.listar']}>
+                <SalidasMateriales />
               </RutaPorPermiso>
             }
           />
