@@ -116,3 +116,9 @@ export async function registrar({ almacenId, proveedorId, usuarioId, numero, ord
     conn.release()
   }
 }
+
+/** Proveedores activos para el selector del ingreso (id y razón social, nada más). */
+export async function proveedoresActivos() {
+  const [rows] = await pool.query('SELECT id, razon_social FROM proveedores WHERE activo = 1 ORDER BY razon_social')
+  return rows
+}

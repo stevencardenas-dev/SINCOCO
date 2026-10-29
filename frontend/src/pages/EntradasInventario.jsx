@@ -7,7 +7,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { entradasInventarioApi } from '../services/entradasInventario'
 import { materialesApi } from '../services/materiales'
-import { proveedoresApi } from '../services/proveedores'
+import { mensajeError } from '../lib/errores'
 import { herramientasApi } from '../services/herramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
@@ -32,7 +32,7 @@ export default function EntradasInventario() {
   const entradas = useRecurso(() => entradasInventarioApi.listar(), [], { mensaje: 'No se pudieron cargar los ingresos.' })
   const ordenes = useRecurso(() => entradasInventarioApi.ordenes(), [], { mensaje: 'No se pudieron cargar las órdenes de compra.' })
   const materiales = useRecurso(() => materialesApi.listar(), [], { mensaje: 'No se pudieron cargar los materiales.' })
-  const proveedores = useRecurso(() => proveedoresApi.listar(), [], { mensaje: 'No se pudieron cargar los proveedores.' })
+  const proveedores = useRecurso(() => entradasInventarioApi.proveedores(), [],{ mensaje: 'No se pudieron cargar los proveedores.' })
   const almacenes = useRecurso(() => herramientasApi.almacenes(), [], { mensaje: 'No se pudieron cargar los almacenes.' })
 
   const cambiar = (campo) => (e) => { setForm({ ...form, [campo]: e.target.value }); setError('') }
@@ -72,7 +72,7 @@ export default function EntradasInventario() {
       setLineas([{ ...LINEA }])
       await Promise.all([entradas.recargar(), ordenes.recargar()])
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo registrar el ingreso.')
+      setError(mensajeError(err, 'No se pudo registrar el ingreso.'))
     } finally {
       setGuardando(false)
     }
@@ -89,6 +89,7 @@ export default function EntradasInventario() {
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={entradas.recargar} />} title="Ingreso de materiales" subtitle="Entradas al inventario por almacén y proveedor" />
       {entradas.error && <AlertaFormulario mensaje={entradas.error} />}
+      {proveedores.error && <AlertaFormulario mensaje={proveedores.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       {puedeCrear && (
