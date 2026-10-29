@@ -18,6 +18,7 @@ const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
+const DevolucionesMateriales = lazy(() => import('./pages/DevolucionesMateriales.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
@@ -103,6 +104,15 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['entradas_inventario.listar']}>
                 <EntradasInventario />
+              </RutaPorPermiso>
+            }
+          />
+          {/* HU-09: devolución de materiales sobrantes. */}
+          <Route
+            path="devoluciones"
+            element={
+              <RutaPorPermiso permisos={['devoluciones_materiales.listar']}>
+                <DevolucionesMateriales />
               </RutaPorPermiso>
             }
           />

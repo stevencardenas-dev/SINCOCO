@@ -19,6 +19,7 @@ import {
   ClipboardDocumentListIcon,
   XMarkIcon,
   ArrowDownTrayIcon,
+  ArrowUturnLeftIcon,
 } from '@heroicons/react/24/outline'
 
 const ADMIN = 'ADMINISTRADOR'
@@ -50,6 +51,7 @@ const NAV = [
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardDocumentListIcon, permiso: ['solicitudes_herramientas.listar'] },
       { to: '/ingresos', label: 'Ingreso', icon: ArrowDownTrayIcon, permiso: ['entradas_inventario.listar'] },
+      { to: '/devoluciones', label: 'Devoluciones', icon: ArrowUturnLeftIcon, permiso: ['devoluciones_materiales.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, permiso: ['alertas.listar'] },
     ],
   },
