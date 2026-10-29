@@ -12,4 +12,6 @@ export const solicitudesMaterialesApi = {
   rechazar: (id, observaciones) => datos(api.patch(`${ruta}/${id}/rechazar`, { observaciones })),
   despachar: (id, cuerpo) => datos(api.patch(`${ruta}/${id}/despachar`, cuerpo)),
   cancelar: (id) => datos(api.patch(`${ruta}/${id}/cancelar`)),
+  // HU-36: cancela el saldo pendiente (observación obligatoria); la solicitud se cierra con lo despachado.
+  cancelarSaldo: (id, observaciones) => datos(api.patch(`${ruta}/${id}/cancelar-saldo`, { observaciones })),
 }

@@ -5,7 +5,8 @@ import { existenciaEnAlmacen } from './existenciaAlmacenRepository.js'
 
 const SELECT = `SELECT s.id, s.codigo, s.proyecto_id, p.nombre AS proyecto, s.actividad_id, a.nombre AS actividad,
                        s.solicitado_por_usuario_id, u.username AS solicitante,
-                       s.fecha_solicitud, s.fecha_requerida, s.estado, s.observaciones, s.excede_presupuesto
+                       s.fecha_solicitud, s.fecha_requerida, s.estado, s.observaciones, s.excede_presupuesto,
+                       s.saldo_cancelado, s.saldo_cancelado_observacion, s.saldo_cancelado_en
                   FROM solicitudes_materiales s
                   JOIN proyectos p ON p.id = s.proyecto_id
                   LEFT JOIN actividades a ON a.id = s.actividad_id
@@ -15,12 +16,20 @@ async function conDetalles(solicitudes) {
   if (solicitudes.length === 0) return solicitudes
   const [detalles] = await pool.query(
     `SELECT d.id, d.solicitud_id, d.material_id, m.codigo AS material_codigo, m.descripcion AS material,
-            m.unidad_medida, m.existencia_total, d.cantidad_solicitada, d.cantidad_aprobada, d.cantidad_despachada
+            m.unidad_medida, m.existencia_total, d.cantidad_solicitada, d.cantidad_aprobada, d.cantidad_despachada,
+            d.observacion_aprobacion
        FROM detalles_solicitud_materiales d JOIN materiales m ON m.id = d.material_id
       WHERE d.solicitud_id IN (?) ORDER BY d.id`,
     [solicitudes.map((s) => s.id)],
   )
-  return solicitudes.map((s) => ({ ...s, detalles: detalles.filter((d) => d.solicitud_id === s.id) }))
+  return solicitudes.map((s) => ({
+    ...s,
+    // HU-36: saldo pendiente = lo solicitado que aún no se despachó (cero si el saldo se canceló).
+    detalles: detalles.filter((d) => d.solicitud_id === s.id).map((d) => ({
+      ...d,
+      saldo_pendiente: s.saldo_cancelado ? 0 : Math.max(0, Math.round((Number(d.cantidad_solicitada) - Number(d.cantidad_despachada)) * 100) / 100),
+    })),
+  }))
 }
 
 export async function findById(id) {
@@ -142,18 +151,21 @@ export async function cambiarEstado(id, desde, hacia, observaciones = null, conn
   return r.affectedRows > 0
 }
 
-/** Fija la cantidad aprobada por línea y pasa la solicitud a APROBADA. */
-export async function aprobar(id, aprobadas, observaciones, notificacion = null) {
+/**
+ * Fija la cantidad aprobada (y su observación) por línea y pasa la solicitud a `estadoNuevo`: APROBADA si se
+ * aprobó todo lo solicitado, APROBADA_PARCIAL si alguna línea quedó por debajo (HU-36: el resto es saldo pendiente).
+ */
+export async function aprobar(id, aprobadas, observaciones, notificacion = null, estadoNuevo = 'APROBADA') {
   const conn = await pool.getConnection()
   try {
     await conn.beginTransaction()
-    if (!(await cambiarEstado(id, ['PENDIENTE'], 'APROBADA', observaciones, conn))) {
+    if (!(await cambiarEstado(id, ['PENDIENTE'], estadoNuevo, observaciones, conn))) {
       throw Object.assign(new Error('estado'), { codigo: 'ESTADO' })
     }
     for (const a of aprobadas) {
       await conn.query(
-        'UPDATE detalles_solicitud_materiales SET cantidad_aprobada = ? WHERE id = ? AND solicitud_id = ?',
-        [a.cantidad, a.detalle_id, id],
+        'UPDATE detalles_solicitud_materiales SET cantidad_aprobada = ?, observacion_aprobacion = ? WHERE id = ? AND solicitud_id = ?',
+        [a.cantidad, a.observacion ?? null, a.detalle_id, id],
       )
     }
     if (notificacion) await crearNotificacion(notificacion, conn)
@@ -195,15 +207,52 @@ export async function despachar({ id, almacenId, trabajadorId, usuarioId, observ
         'INSERT INTO detalles_salida_materiales (salida_id, material_id, cantidad_despachada, costo_unitario_momento) VALUES (?, ?, ?, ?)',
         [ins.insertId, s.material_id, s.cantidad, s.costo],
       )
-      await conn.query('UPDATE detalles_solicitud_materiales SET cantidad_despachada = cantidad_despachada + ? WHERE id = ?', [s.cantidad, s.detalle_id])
+      // HU-36: despachar parte del saldo también lo aprueba (la aprobación nunca queda por debajo de lo despachado).
+      await conn.query(
+        `UPDATE detalles_solicitud_materiales
+            SET cantidad_despachada = cantidad_despachada + ?, cantidad_aprobada = GREATEST(cantidad_aprobada, cantidad_despachada)
+          WHERE id = ?`,
+        [s.cantidad, s.detalle_id],
+      )
     }
+    // La solicitud solo queda despachada cuando el saldo (solicitado - despachado) llega a cero.
     const [[pend]] = await conn.query(
-      'SELECT COUNT(*) AS n FROM detalles_solicitud_materiales WHERE solicitud_id = ? AND cantidad_despachada < cantidad_aprobada',
+      'SELECT COUNT(*) AS n FROM detalles_solicitud_materiales WHERE solicitud_id = ? AND cantidad_despachada < cantidad_solicitada',
       [id],
     )
     await conn.query('UPDATE solicitudes_materiales SET estado = ? WHERE id = ?', [Number(pend.n) === 0 ? 'DESPACHADA_TOTAL' : 'DESPACHADA_PARCIAL', id])
     await conn.commit()
     return ins.insertId
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}
+
+/**
+ * HU-36: cancela el saldo pendiente con una observación. Si ya se despachó algo, la solicitud se cierra con lo
+ * despachado (DESPACHADA_TOTAL con `saldo_cancelado`); si no se despachó nada, queda CANCELADA. Devuelve el estado final,
+ * o null si la solicitud ya no estaba en un estado que admita cancelar el saldo.
+ */
+export async function cancelarSaldo(id, usuarioId, observacion, notificacion = null) {
+  const conn = await pool.getConnection()
+  try {
+    await conn.beginTransaction()
+    const [[s]] = await conn.query('SELECT estado FROM solicitudes_materiales WHERE id = ? AND activo = 1 FOR UPDATE', [id])
+    if (!s || !['APROBADA_PARCIAL', 'DESPACHADA_PARCIAL', 'APROBADA'].includes(s.estado)) { await conn.rollback(); return null }
+    const [[d]] = await conn.query('SELECT COALESCE(SUM(cantidad_despachada), 0) AS despachado FROM detalles_solicitud_materiales WHERE solicitud_id = ?', [id])
+    const final = Number(d.despachado) > 0 ? 'DESPACHADA_TOTAL' : 'CANCELADA'
+    await conn.query(
+      `UPDATE solicitudes_materiales
+          SET estado = ?, saldo_cancelado = 1, saldo_cancelado_observacion = ?, saldo_cancelado_por_usuario_id = ?, saldo_cancelado_en = NOW()
+        WHERE id = ?`,
+      [final, observacion, usuarioId, id],
+    )
+    if (notificacion) await crearNotificacion(notificacion, conn)
+    await conn.commit()
+    return final
   } catch (err) {
     await conn.rollback()
     throw err
