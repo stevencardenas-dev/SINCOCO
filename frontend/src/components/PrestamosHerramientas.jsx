@@ -11,6 +11,7 @@ import { prestamosHerramientasApi } from '../services/prestamosHerramientas'
 import { solicitudesHerramientasApi } from '../services/solicitudesHerramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtFecha } from '../lib/format.js'
+import { mensajeError } from '../lib/errores'
 
 /**
  * HU-11 panel de préstamos para bodega (pestaña de Herramientas).
@@ -75,7 +76,7 @@ export default function PrestamosHerramientas({ pestanas }) {
       setPorEntregarSol(null)
       await recargar()
     } catch (e) {
-      setErrorEntrega(e?.response?.data?.message || 'No se pudo registrar la entrega.')
+      setErrorEntrega(mensajeError(e, 'No se pudo registrar la entrega.'))
     }
   }
 
@@ -141,6 +142,8 @@ export default function PrestamosHerramientas({ pestanas }) {
               { titulo: 'Devolución estimada', celda: (p) => fmtFecha(p.fecha_estimada_devolucion) },
               { titulo: 'Devuelta', celda: (p) => (p.fecha_real_devolucion ? fmtFecha(p.fecha_real_devolucion) : '—') },
               { titulo: 'Estado al entregar', celda: (p) => p.estado_entrega },
+              { titulo: 'Entregó', celda: (p) => p.entregado_por ?? '—' },
+              { titulo: 'Condiciones de entrega', celda: (p) => p.observaciones_entrega || '—' },
             ]}
           />
         )}
