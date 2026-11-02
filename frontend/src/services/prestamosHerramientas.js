@@ -7,4 +7,6 @@ export const prestamosHerramientasApi = {
   // HU-35: herramientas que pueden reemplazar a la de un préstamo vigente y registro de la avería con su reemplazo.
   reemplazos: (id) => datos(api.get(`/prestamos-herramientas/${id}/reemplazos`)),
   reemplazar: (id, cuerpo) => datos(api.post(`/prestamos-herramientas/${id}/reemplazo`, cuerpo)),
+  // HU-12: devolución de una herramienta prestada.
+  devolver: (id, cuerpo) => datos(api.post(`/prestamos-herramientas/${id}/devolucion`, cuerpo)),
 }
