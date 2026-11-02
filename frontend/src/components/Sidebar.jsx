@@ -20,6 +20,7 @@ import {
   XMarkIcon,
   ArrowDownTrayIcon,
   ArrowUturnLeftIcon,
+  ArrowsRightLeftIcon,
   ArrowUpTrayIcon,
   ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline'
@@ -55,6 +56,7 @@ const NAV = [
       { to: '/ingresos', label: 'Ingreso', icon: ArrowDownTrayIcon, permiso: ['entradas_inventario.listar'] },
       { to: '/salidas', label: 'Salidas', icon: ArrowUpTrayIcon, permiso: ['salidas_materiales.listar'] },
       { to: '/devoluciones', label: 'Devoluciones', icon: ArrowUturnLeftIcon, permiso: ['devoluciones_materiales.listar'] },
+      { to: '/traslados', label: 'Traslados', icon: ArrowsRightLeftIcon, permiso: ['traslados_materiales.listar'] },
       { to: '/consumos', label: 'Consumos', icon: ClipboardDocumentCheckIcon, permiso: ['consumos_materiales.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, permiso: ['alertas.listar'] },
     ],

@@ -19,6 +19,7 @@ const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
 const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
 const DevolucionesMateriales = lazy(() => import('./pages/DevolucionesMateriales.jsx'))
+const TrasladosMateriales = lazy(() => import('./pages/TrasladosMateriales.jsx'))
 const ConsumosMateriales = lazy(() => import('./pages/ConsumosMateriales.jsx'))
 const SalidasMateriales = lazy(() => import('./pages/SalidasMateriales.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
@@ -124,6 +125,15 @@ export default function App() {
             element={
               <RutaPorPermiso permisos={['salidas_materiales.listar']}>
                 <SalidasMateriales />
+              </RutaPorPermiso>
+            }
+          />
+          {/* HU-29: traslado de materiales entre almacenes. */}
+          <Route
+            path="traslados"
+            element={
+              <RutaPorPermiso permisos={['traslados_materiales.listar']}>
+                <TrasladosMateriales />
               </RutaPorPermiso>
             }
           />
