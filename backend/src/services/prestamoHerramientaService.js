@@ -122,12 +122,15 @@ export async function reemplazarHerramienta(prestamoId, body = {}, ctx) {
   }
 }
 
-export const CONDICIONES_DEVOLUCION = ['EXCELENTE', 'BUENO', 'REGULAR']
+export const CONDICIONES_DEVOLUCION = ['EXCELENTE', 'BUENO', 'REGULAR', 'DANIADA', 'PERDIDA']
+/** Condiciones que exigen una observación y generan una incidencia. */
+const CON_NOVEDAD = ['DANIADA', 'PERDIDA']
 
 /**
  * HU-12: devolución de una herramienta prestada.
  * Captura la condición de entrada y la fecha real de devolución (hoy si no se indica; no puede ser futura ni anterior al
- * préstamo). Al cerrar el préstamo, la herramienta queda disponible con esa condición y se registra quien la recibe.
+ * préstamo). Si la herramienta vuelve dañada o perdida la observación es obligatoria y se genera una incidencia. Al cerrar
+ * el préstamo, la herramienta queda disponible, en reparación (dañada) o de baja (perdida), y se registra quien la recibe.
  */
 export async function registrarDevolucion(prestamoId, body = {}, ctx) {
   const id = Number(prestamoId)
@@ -138,6 +141,9 @@ export async function registrarDevolucion(prestamoId, body = {}, ctx) {
   }
   const observaciones = textoOpcional(body.observaciones)
   revisarLargo(observaciones, 500, 'observaciones')
+  if (CON_NOVEDAD.includes(condicion) && !observaciones) {
+    throw new AppError('Una herramienta devuelta dañada o perdida exige una observación', 400, 'observaciones')
+  }
   // Fecha real (opcional): hoy o sin fecha = el momento actual; un día pasado = ese día al mediodía.
   const hoy = aFechaDia(new Date())
   const fecha = body.fecha_real_devolucion ? aFechaDia(body.fecha_real_devolucion) : null
@@ -156,7 +162,14 @@ export async function registrarDevolucion(prestamoId, body = {}, ctx) {
       if (fecha && fecha < aFechaDia(prestamo.fecha_prestamo)) {
         throw new AppError('La fecha de devolución no puede ser anterior a la del préstamo', 400, 'fecha_real_devolucion')
       }
-      return null
+      if (!CON_NOVEDAD.includes(condicion)) return null
+      const perdida = condicion === 'PERDIDA'
+      return {
+        tipo: perdida ? 'ACCIDENTE' : 'AVERIA',
+        severidad: perdida ? 'ALTA' : 'MEDIA',
+        titulo: `${perdida ? 'Herramienta perdida' : 'Herramienta devuelta dañada'}: ${herramienta.nombre} (${herramienta.codigo_serial})`.slice(0, 150),
+        descripcion: `${observaciones}\n\nPréstamo ${id}: ${herramienta.nombre} (${herramienta.codigo_serial}) prestada al trabajador ${prestamo.trabajador_id}.`,
+      }
     },
   })
   await bitacora({
