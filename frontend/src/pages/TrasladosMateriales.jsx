@@ -81,13 +81,23 @@ export default function TrasladosMateriales() {
             <select id="tr-material" className="input" value={form.material_id} onChange={cambiar('material_id')} disabled={!form.almacen_origen_id} required>
               <option value="">{form.almacen_origen_id ? (materiales.length ? 'Seleccione…' : 'Sin existencias en el origen') : 'Elija primero el origen'}</option>
               {materiales.map((m) => (
-                <option key={m.material_id} value={m.material_id}>{m.material_codigo} · {m.material} (disponible {m.existencia} {m.unidad_medida})</option>
+                <option key={m.material_id} value={m.material_id}>{m.material_codigo} · {m.material}</option>
               ))}
             </select>
           </div>
           <div>
-            <label htmlFor="tr-cantidad" className="label">Cantidad</label>
+            <p className="label">Disponible en el almacén de origen</p>
+            <p className="input flex items-center bg-slate-50 text-slate-600">
+              {disponible ? `${Number(disponible.existencia)} ${disponible.unidad_medida}` : '—'}
+            </p>
+          </div>
+          <div>
+            <label htmlFor="tr-cantidad" className="label">Cantidad a trasladar</label>
             <input id="tr-cantidad" type="number" min="0.01" max={disponible?.existencia} step="0.01" className="input" value={form.cantidad} onChange={cambiar('cantidad')} required />
+          </div>
+          <div>
+            <p className="label">Unidad de medida</p>
+            <p className="input flex items-center bg-slate-50 text-slate-600">{disponible?.unidad_medida ?? '—'}</p>
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="tr-observaciones" className="label">Observaciones (opcional)</label>
