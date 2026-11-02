@@ -6,7 +6,7 @@ import { existenciaEnAlmacen, existenciasPorAlmacen } from './existenciaAlmacenR
 const SELECT = `SELECT t.id, CONCAT('TR-', LPAD(t.id, 5, '0')) AS comprobante,
                        t.almacen_origen_id, ao.nombre AS almacen_origen, t.almacen_destino_id, ad.nombre AS almacen_destino,
                        t.material_id, m.codigo AS material_codigo, m.descripcion AS material, m.unidad_medida,
-                       t.cantidad,
+                       t.cantidad, t.costo_unitario, t.costo_total,
                        t.responsable_usuario_id, COALESCE(CONCAT(tr.nombres, ' ', tr.apellidos), u.username) AS responsable,
                        t.fecha_traslado, t.observaciones
                   FROM traslados_materiales t
@@ -33,7 +33,10 @@ export async function opciones() {
   return { almacenes, existencias }
 }
 
-/** Registra el traslado en una transacción: bloquea el material y deja que `validar` revise almacenes, material y la existencia del origen. */
+/**
+ * Registra el traslado en una transacción: bloquea el material, deja que `validar` revise almacenes, material y
+ * existencia del origen, y guarda el costo unitario vigente (que `validar` devuelve) con su total reasignado al destino.
+ */
 export async function registrar({ origenId, destinoId, materialId, cantidad, usuarioId, observaciones, validar }) {
   const conn = await pool.getConnection()
   try {
@@ -42,13 +45,14 @@ export async function registrar({ origenId, destinoId, materialId, cantidad, usu
     const [[destino]] = await conn.query('SELECT * FROM almacenes WHERE id = ?', [destinoId])
     const [[material]] = await conn.query('SELECT * FROM materiales WHERE id = ? FOR UPDATE', [materialId])
     const existenciaOrigen = origen && material ? await existenciaEnAlmacen(origenId, materialId, conn) : 0
-    validar({ origen, destino, material, existenciaOrigen })
+    const costoUnitario = validar({ origen, destino, material, existenciaOrigen })
+    const costoTotal = Math.round(cantidad * costoUnitario * 100) / 100
 
     const [ins] = await conn.query(
       `INSERT INTO traslados_materiales
-         (almacen_origen_id, almacen_destino_id, material_id, cantidad, responsable_usuario_id, observaciones)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [origenId, destinoId, materialId, cantidad, usuarioId, observaciones],
+         (almacen_origen_id, almacen_destino_id, material_id, cantidad, costo_unitario, costo_total, responsable_usuario_id, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [origenId, destinoId, materialId, cantidad, costoUnitario, costoTotal, usuarioId, observaciones],
     )
     await conn.commit()
     return ins.insertId

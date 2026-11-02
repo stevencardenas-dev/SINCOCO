@@ -5,8 +5,9 @@ import { textoOpcional, revisarLargo } from '../utils/campos.js'
 
 /**
  * HU-29: traslado de materiales entre almacenes.
- * Un traslado mueve un material de un almacén de origen a uno de destino, obligatorios y distintos entre sí, sin compra
- * ni salida hacia un proyecto. Queda con un comprobante consecutivo y el responsable que lo ejecuta.
+ * Un traslado mueve existencia de un almacén a otro sin compra ni salida hacia un proyecto: no cambia la existencia
+ * total del material, solo su ubicación. El costo del material (costo de referencia vigente) se reasigna del almacén de
+ * origen al de destino y queda registrado en el traslado junto con su comprobante consecutivo y el responsable.
  */
 
 const entero = (v, campo) => {
@@ -48,6 +49,8 @@ export async function registrarTraslado(body = {}, ctx) {
       if (cantidad > existenciaOrigen) {
         throw new AppError(`Existencia insuficiente en el almacén de origen (disponible: ${existenciaOrigen})`, 409, 'cantidad')
       }
+      // El costo del material viaja con él: se reasigna al destino con el costo de referencia vigente.
+      return Number(material.costo_referencia ?? 0)
     },
   })
   const traslado = await repo.findById(id)
@@ -55,7 +58,7 @@ export async function registrarTraslado(body = {}, ctx) {
     usuarioId: ctx.usuarioId, accion: 'REGISTRAR_TRASLADO_MATERIALES', tabla: 'traslados_materiales', registroId: id,
     detalles: {
       comprobante: traslado.comprobante, material_id: materialId, cantidad, almacen_origen_id: origenId,
-      almacen_destino_id: destinoId,
+      almacen_destino_id: destinoId, costo_total: traslado.costo_total,
     },
     ip: ctx.ip,
   })
