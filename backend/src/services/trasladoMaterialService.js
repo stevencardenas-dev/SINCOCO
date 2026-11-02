@@ -41,10 +41,13 @@ export async function registrarTraslado(body = {}, ctx) {
 
   const id = await repo.registrar({
     origenId, destinoId, materialId, cantidad, usuarioId: ctx.usuarioId, observaciones,
-    validar: ({ origen, destino, material }) => {
+    validar: ({ origen, destino, material, existenciaOrigen }) => {
       if (!origen || !origen.activo) throw new AppError('El almacén de origen no existe o está dado de baja', 404, 'almacen_origen_id')
       if (!destino || !destino.activo) throw new AppError('El almacén de destino no existe o está dado de baja', 404, 'almacen_destino_id')
       if (!material || !material.activo) throw new AppError('El material no existe o está dado de baja', 404, 'material_id')
+      if (cantidad > existenciaOrigen) {
+        throw new AppError(`Existencia insuficiente en el almacén de origen (disponible: ${existenciaOrigen})`, 409, 'cantidad')
+      }
     },
   })
   const traslado = await repo.findById(id)

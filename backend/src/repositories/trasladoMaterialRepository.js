@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js'
+import { existenciaEnAlmacen, existenciasPorAlmacen } from './existenciaAlmacenRepository.js'
 
 /** Repositorio de `traslados_materiales` (HU-29). El comprobante consecutivo se deriva del id: TR-00001. */
 
@@ -25,16 +26,14 @@ export async function findById(id) {
   return rows[0] || null
 }
 
-/** Almacenes y materiales activos para el formulario de traslado. */
+/** Almacenes activos y existencia por almacén (solo lo que tiene saldo): el formulario ofrece lo que hay en el origen. */
 export async function opciones() {
   const [almacenes] = await pool.query('SELECT id, codigo, nombre FROM almacenes WHERE activo = 1 ORDER BY nombre')
-  const [materiales] = await pool.query(
-    'SELECT id, codigo, descripcion, unidad_medida FROM materiales WHERE activo = 1 ORDER BY codigo',
-  )
-  return { almacenes, materiales }
+  const existencias = (await existenciasPorAlmacen()).filter((e) => e.existencia > 0)
+  return { almacenes, existencias }
 }
 
-/** Registra el traslado en una transacción; `validar` revisa almacenes y material antes de guardar. */
+/** Registra el traslado en una transacción: bloquea el material y deja que `validar` revise almacenes, material y la existencia del origen. */
 export async function registrar({ origenId, destinoId, materialId, cantidad, usuarioId, observaciones, validar }) {
   const conn = await pool.getConnection()
   try {
@@ -42,7 +41,8 @@ export async function registrar({ origenId, destinoId, materialId, cantidad, usu
     const [[origen]] = await conn.query('SELECT * FROM almacenes WHERE id = ?', [origenId])
     const [[destino]] = await conn.query('SELECT * FROM almacenes WHERE id = ?', [destinoId])
     const [[material]] = await conn.query('SELECT * FROM materiales WHERE id = ? FOR UPDATE', [materialId])
-    validar({ origen, destino, material })
+    const existenciaOrigen = origen && material ? await existenciaEnAlmacen(origenId, materialId, conn) : 0
+    validar({ origen, destino, material, existenciaOrigen })
 
     const [ins] = await conn.query(
       `INSERT INTO traslados_materiales
