@@ -146,3 +146,61 @@ export async function reemplazar({ prestamoId, reemplazoId, usuarioId, novedad, 
     conn.release()
   }
 }
+
+/**
+ * HU-12: devolución de una herramienta prestada, en una sola transacción. Cierra el préstamo con la condición, la fecha
+ * real, la observación y quien recibe, y actualiza la herramienta según el resultado: buena (EXCELENTE, BUENO o REGULAR)
+ * vuelve a DISPONIBLE; DANIADA pasa a reparación (HU-37) y PERDIDA se da de baja. Una devolución dañada o perdida genera
+ * la incidencia. `validar({ prestamo, herramienta })` lanza si no procede y devuelve { titulo, descripcion, tipo, severidad }
+ * de la incidencia cuando corresponde (o null).
+ */
+export async function devolver({ prestamoId, usuarioId, condicion, fechaReal, observaciones, validar }) {
+  const conn = await pool.getConnection()
+  try {
+    await conn.beginTransaction()
+    const [[prestamo]] = await conn.query('SELECT * FROM prestamos_herramientas WHERE id = ? FOR UPDATE', [prestamoId])
+    const [[herramienta]] = prestamo
+      ? await conn.query('SELECT * FROM herramientas WHERE id = ? FOR UPDATE', [prestamo.herramienta_id])
+      : [[null]]
+    const incidencia = validar({ prestamo, herramienta })
+
+    let incidenciaId = null
+    if (incidencia) {
+      const [inc] = await conn.query(
+        `INSERT INTO incidencias (proyecto_id, reportado_por_usuario_id, tipo, titulo, descripcion, severidad)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [prestamo.proyecto_id, usuarioId, incidencia.tipo, incidencia.titulo, incidencia.descripcion, incidencia.severidad],
+      )
+      incidenciaId = inc.insertId
+    }
+    await conn.query(
+      `UPDATE prestamos_herramientas
+          SET estado_prestamo = 'DEVUELTO', fecha_real_devolucion = COALESCE(?, NOW()), estado_devolucion = ?,
+              recibido_por_usuario_id = ?, observaciones_devolucion = ?, incidencia_id = ?
+        WHERE id = ?`,
+      [fechaReal, condicion, usuarioId, observaciones, incidenciaId, prestamoId],
+    )
+    if (condicion === 'DANIADA') {
+      await conn.query(
+        `INSERT INTO reparaciones_herramientas (herramienta_id, descripcion, estado_previo, ingresado_por_usuario_id)
+         VALUES (?, ?, ?, ?)`,
+        [herramienta.id, observaciones, herramienta.estado_operativo, usuarioId],
+      )
+      await conn.query("UPDATE herramientas SET estado_operativo = 'EN_MANTENIMIENTO', disponibilidad = 'DISPONIBLE' WHERE id = ?", [herramienta.id])
+    } else if (condicion === 'PERDIDA') {
+      await conn.query(
+        "UPDATE herramientas SET activo = 0, fecha_baja = NOW(), baja_por_usuario_id = ?, disponibilidad = 'BAJA' WHERE id = ?",
+        [usuarioId, herramienta.id],
+      )
+    } else {
+      await conn.query("UPDATE herramientas SET estado_operativo = ?, disponibilidad = 'DISPONIBLE' WHERE id = ?", [condicion, herramienta.id])
+    }
+    await conn.commit()
+    return { incidenciaId, prestamo, herramienta }
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}

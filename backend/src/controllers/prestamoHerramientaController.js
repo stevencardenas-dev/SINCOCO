@@ -1,4 +1,4 @@
-import { listarPrestamos, registrarEntrega, reemplazosPosibles, reemplazarHerramienta } from '../services/prestamoHerramientaService.js'
+import { listarPrestamos, registrarEntrega, reemplazosPosibles, reemplazarHerramienta, registrarDevolucion } from '../services/prestamoHerramientaService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 export const listar = asyncHandler(async (req, res) =>
@@ -17,4 +17,9 @@ export const reemplazar = asyncHandler(async (req, res) => {
       : 'Avería registrada: el reemplazo quedó entregado al trabajador',
     ...r,
   })
+})
+
+export const devolver = asyncHandler(async (req, res) => {
+  const r = await registrarDevolucion(req.params.id, req.body, contexto(req))
+  res.status(201).json({ message: 'Devolución registrada', ...r })
 })

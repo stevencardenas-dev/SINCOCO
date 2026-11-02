@@ -24,6 +24,11 @@ const ESTADOS_PRESTAMO = {
   ATRASADO: 'bg-red-50 text-red-700 ring-red-200',
   CON_NOVEDAD: 'bg-amber-50 text-amber-700 ring-amber-200',
 }
+// HU-12: condiciones con que vuelve la herramienta; las dos últimas exigen observación y generan una incidencia.
+const CONDICIONES = [
+  ['EXCELENTE', 'Excelente'], ['BUENO', 'Bueno'], ['REGULAR', 'Regular'], ['DANIADA', 'Dañada'], ['PERDIDA', 'Perdida'],
+]
+const CON_NOVEDAD = ['DANIADA', 'PERDIDA']
 const insignia = (mapa, valor) => (
   <span className={`badge badge-tabla ring-1 ${mapa[valor] ?? 'bg-slate-100 text-slate-500 ring-slate-200'}`}>{valor}</span>
 )
@@ -39,6 +44,12 @@ export default function PrestamosHerramientas({ pestanas }) {
   const puedeResolver = puede('solicitudes_herramientas.resolver')
   const puedeEntregar = puede('prestamos_herramientas.crear')
   const puedeReemplazar = puede('prestamos_herramientas.reemplazar')
+  const puedeDevolver = puede('prestamos_herramientas.devolver')
+  // HU-12: devolución de una herramienta prestada.
+  const [devolucion, setDevolucion] = useState(null) // { prestamo, condicion, fecha, observaciones }
+  const [errorDevolucion, setErrorDevolucion] = useState('')
+  const [guardandoDevolucion, setGuardandoDevolucion] = useState(false)
+  const [avisoDevolucion, setAvisoDevolucion] = useState('')
   // HU-35: avería de una herramienta prestada y su reemplazo.
   const [averia, setAveria] = useState(null) // { prestamo, novedad, reemplazo, opciones }
   const [errorAveria, setErrorAveria] = useState('')
@@ -66,6 +77,32 @@ export default function PrestamosHerramientas({ pestanas }) {
     } catch (e) {
       setAveria((a) => (a ? { ...a, opciones: [] } : a))
       setErrorAveria(mensajeError(e, 'No se pudieron cargar las herramientas de reemplazo.'))
+    }
+  }
+  const abrirDevolucion = (p) => {
+    setErrorDevolucion('')
+    setDevolucion({ prestamo: p, condicion: p.estado_entrega || 'BUENO', fecha: '', observaciones: '' })
+  }
+  const confirmarDevolucion = async () => {
+    const { prestamo, condicion, fecha, observaciones } = devolucion
+    const conNovedad = CON_NOVEDAD.includes(condicion)
+    if (conNovedad && !observaciones.trim()) return setErrorDevolucion('Una herramienta dañada o perdida exige una observación.')
+    setGuardandoDevolucion(true)
+    try {
+      const r = await prestamosHerramientasApi.devolver(prestamo.id, {
+        condicion, fecha_real_devolucion: fecha || undefined, observaciones: observaciones.trim() || undefined,
+      })
+      setDevolucion(null)
+      await recargar()
+      setAvisoDevolucion(
+        r.incidencia_id
+          ? `Devolución registrada: ${prestamo.herramienta} ${condicion === 'PERDIDA' ? 'se dio de baja por pérdida' : 'pasó a reparación'} y se generó la incidencia #${r.incidencia_id}.`
+          : `Devolución registrada: ${prestamo.herramienta} quedó disponible en estado ${condicion}.`,
+      )
+    } catch (e) {
+      setErrorDevolucion(mensajeError(e, 'No se pudo registrar la devolución.'))
+    } finally {
+      setGuardandoDevolucion(false)
     }
   }
   const confirmarAveria = async () => {
@@ -144,6 +181,7 @@ export default function PrestamosHerramientas({ pestanas }) {
       {(sol.error || pre.error) && <AlertaFormulario mensaje={sol.error || pre.error} />}
       {sol.aviso && <AlertaFormulario tipo="aviso" mensaje={sol.aviso} />}
       {avisoAveria && <AlertaFormulario tipo="aviso" mensaje={avisoAveria} />}
+      {avisoDevolucion && <AlertaFormulario tipo="aviso" mensaje={avisoDevolucion} />}
 
       <section className="card overflow-hidden">
         <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">
@@ -192,9 +230,12 @@ export default function PrestamosHerramientas({ pestanas }) {
                 titulo: 'Acciones',
                 acciones: true,
                 derecha: true,
-                celda: (p, enFicha) => (enFicha && puedeReemplazar && VIGENTES.includes(p.estado_prestamo)
-                  ? <button type="button" className="btn-primary text-xs" onClick={() => abrirAveria(p)}>Registrar avería y reemplazo</button>
-                  : null),
+                celda: (p, enFicha) => (enFicha && VIGENTES.includes(p.estado_prestamo) ? (
+                  <>
+                    {puedeDevolver && <button type="button" className="btn-primary text-xs" onClick={() => abrirDevolucion(p)}>Registrar devolución</button>}
+                    {puedeReemplazar && <button type="button" className="btn-ghost text-xs" onClick={() => abrirAveria(p)}>Registrar avería y reemplazo</button>}
+                  </>
+                ) : null),
               },
             ]}
           />
@@ -218,6 +259,44 @@ export default function PrestamosHerramientas({ pestanas }) {
           <button type="button" className="btn-primary" onClick={entregar}>Registrar entrega</button>
           <button type="button" className="btn-ghost" onClick={() => setPorEntregarSol(null)}>Cancelar</button>
         </div>
+      </Modal>
+
+      {/* HU-12: devolución de una herramienta prestada. */}
+      <Modal abierto={devolucion !== null} titulo="Registrar devolución" onCerrar={() => !guardandoDevolucion && setDevolucion(null)} ancho="max-w-md">
+        {devolucion && (
+          <>
+            <p className="mb-3 text-sm text-slate-600">
+              {devolucion.prestamo.herramienta} ({devolucion.prestamo.codigo_serial}) prestada a {devolucion.prestamo.trabajador} · devolución estimada {fmtFecha(devolucion.prestamo.fecha_estimada_devolucion)}
+            </p>
+            <label htmlFor="dv-condicion" className="label">Condición de la herramienta al devolverla</label>
+            <select id="dv-condicion" className="input" value={devolucion.condicion}
+              onChange={(e) => { setDevolucion({ ...devolucion, condicion: e.target.value }); setErrorDevolucion('') }}>
+              {CONDICIONES.map(([valor, texto]) => <option key={valor} value={valor}>{texto}</option>)}
+            </select>
+            <label htmlFor="dv-fecha" className="label mt-4">Fecha de devolución (opcional)</label>
+            <input id="dv-fecha" type="date" className="input" value={devolucion.fecha}
+              min={String(devolucion.prestamo.fecha_prestamo ?? '').slice(0, 10)} max={new Date().toLocaleDateString('en-CA')}
+              onChange={(e) => { setDevolucion({ ...devolucion, fecha: e.target.value }); setErrorDevolucion('') }} />
+            <p className="mt-1 text-xs text-slate-500">Si no la indica, se registra la fecha y hora actuales.</p>
+            <label htmlFor="dv-obs" className="label mt-4">
+              Observaciones{CON_NOVEDAD.includes(devolucion.condicion) ? ' (obligatorias)' : ' (opcionales)'}
+            </label>
+            <textarea id="dv-obs" className="input" rows={3} maxLength={500} value={devolucion.observaciones}
+              onChange={(e) => { setDevolucion({ ...devolucion, observaciones: e.target.value }); setErrorDevolucion('') }} />
+            <p className="mt-3 text-xs text-slate-500">
+              {devolucion.condicion === 'DANIADA' && 'La herramienta pasará a reparación y se generará una incidencia.'}
+              {devolucion.condicion === 'PERDIDA' && 'La herramienta se dará de baja y se generará una incidencia.'}
+              {!CON_NOVEDAD.includes(devolucion.condicion) && 'La herramienta quedará disponible con esa condición.'}
+            </p>
+            {errorDevolucion && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorDevolucion}</p>}
+            <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
+              <button type="button" className="btn-primary disabled:opacity-60" disabled={guardandoDevolucion} onClick={confirmarDevolucion}>
+                {guardandoDevolucion ? 'Registrando…' : 'Confirmar devolución'}
+              </button>
+              <button type="button" className="btn-ghost" disabled={guardandoDevolucion} onClick={() => setDevolucion(null)}>Cancelar</button>
+            </div>
+          </>
+        )}
       </Modal>
 
       {/* HU-35: avería de una herramienta prestada, con su reemplazo. */}
