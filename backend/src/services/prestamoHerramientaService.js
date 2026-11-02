@@ -121,3 +121,47 @@ export async function reemplazarHerramienta(prestamoId, body = {}, ctx) {
     sugerir_solicitud: !r.reemplazoPrestamoId,
   }
 }
+
+export const CONDICIONES_DEVOLUCION = ['EXCELENTE', 'BUENO', 'REGULAR']
+
+/**
+ * HU-12: devolución de una herramienta prestada.
+ * Captura la condición de entrada y la fecha real de devolución (hoy si no se indica; no puede ser futura ni anterior al
+ * préstamo). Al cerrar el préstamo, la herramienta queda disponible con esa condición y se registra quien la recibe.
+ */
+export async function registrarDevolucion(prestamoId, body = {}, ctx) {
+  const id = Number(prestamoId)
+  if (!Number.isInteger(id) || id <= 0) throw new AppError('prestamo_id no es válido', 400)
+  const condicion = String(body.condicion ?? '').trim().toUpperCase()
+  if (!CONDICIONES_DEVOLUCION.includes(condicion)) {
+    throw new AppError(`condicion debe ser una de: ${CONDICIONES_DEVOLUCION.join(', ')}`, 400, 'condicion')
+  }
+  const observaciones = textoOpcional(body.observaciones)
+  revisarLargo(observaciones, 500, 'observaciones')
+  // Fecha real (opcional): hoy o sin fecha = el momento actual; un día pasado = ese día al mediodía.
+  const hoy = aFechaDia(new Date())
+  const fecha = body.fecha_real_devolucion ? aFechaDia(body.fecha_real_devolucion) : null
+  if (fecha !== null && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+    throw new AppError('La fecha de devolución no es válida', 400, 'fecha_real_devolucion')
+  }
+  if (fecha !== null && fecha > hoy) throw new AppError('La fecha de devolución no puede ser posterior a hoy', 400, 'fecha_real_devolucion')
+  const fechaReal = fecha && fecha < hoy ? `${fecha} 12:00:00` : null
+
+  const r = await repo.devolver({
+    prestamoId: id, usuarioId: ctx.usuarioId, condicion, fechaReal, observaciones,
+    validar: ({ prestamo, herramienta }) => {
+      if (!prestamo) throw new AppError('Préstamo no encontrado', 404)
+      if (!VIGENTES.includes(prestamo.estado_prestamo)) throw new AppError('El préstamo ya fue cerrado: solo se devuelve un préstamo vigente', 409)
+      if (!herramienta) throw new AppError('La herramienta del préstamo no existe', 404)
+      if (fecha && fecha < aFechaDia(prestamo.fecha_prestamo)) {
+        throw new AppError('La fecha de devolución no puede ser anterior a la del préstamo', 400, 'fecha_real_devolucion')
+      }
+      return null
+    },
+  })
+  await bitacora({
+    usuarioId: ctx.usuarioId, accion: 'DEVOLVER_HERRAMIENTA', tabla: 'prestamos_herramientas', registroId: id,
+    detalles: { herramienta_id: r.herramienta.id, condicion, fecha_real_devolucion: fecha ?? hoy, incidencia_id: r.incidenciaId }, ip: ctx.ip,
+  })
+  return { prestamo: await repo.findById(id), incidencia_id: r.incidenciaId }
+}

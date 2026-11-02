@@ -146,3 +146,36 @@ export async function reemplazar({ prestamoId, reemplazoId, usuarioId, novedad, 
     conn.release()
   }
 }
+
+/**
+ * HU-12: devolución de una herramienta prestada, en una sola transacción. Cierra el préstamo con la condición, la fecha
+ * real, la observación y quien recibe, y la herramienta vuelve a DISPONIBLE con la condición con que llegó.
+ * `validar({ prestamo, herramienta })` lanza si no procede.
+ */
+export async function devolver({ prestamoId, usuarioId, condicion, fechaReal, observaciones, validar }) {
+  const conn = await pool.getConnection()
+  try {
+    await conn.beginTransaction()
+    const [[prestamo]] = await conn.query('SELECT * FROM prestamos_herramientas WHERE id = ? FOR UPDATE', [prestamoId])
+    const [[herramienta]] = prestamo
+      ? await conn.query('SELECT * FROM herramientas WHERE id = ? FOR UPDATE', [prestamo.herramienta_id])
+      : [[null]]
+    const incidencia = validar({ prestamo, herramienta })
+    const incidenciaId = null
+    await conn.query(
+      `UPDATE prestamos_herramientas
+          SET estado_prestamo = 'DEVUELTO', fecha_real_devolucion = COALESCE(?, NOW()), estado_devolucion = ?,
+              recibido_por_usuario_id = ?, observaciones_devolucion = ?
+        WHERE id = ?`,
+      [fechaReal, condicion, usuarioId, observaciones, prestamoId],
+    )
+    await conn.query("UPDATE herramientas SET estado_operativo = ?, disponibilidad = 'DISPONIBLE' WHERE id = ?", [condicion, herramienta.id])
+    await conn.commit()
+    return { incidenciaId, prestamo, herramienta }
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
+}
