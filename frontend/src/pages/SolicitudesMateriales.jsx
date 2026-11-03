@@ -4,6 +4,12 @@ import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import Modal from '../components/Modal.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import Paginacion from '../components/Paginacion.jsx'
+import { useFiltros } from '../hooks/useFiltros'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { coincide } from '../lib/busqueda.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { solicitudesMaterialesApi } from '../services/solicitudesMateriales'
 import { notificacionesApi } from '../services/notificaciones'
@@ -36,6 +42,7 @@ const ESTADOS_DESPACHABLES = ['APROBADA', 'APROBADA_PARCIAL', 'DESPACHADA_PARCIA
 const LINEA = { material_id: '', cantidad: '' }
 // Lo aprobado que aún no se despacha de una línea (redondeado a 2 decimales como en la base).
 const pendienteDespacho = (d) => Math.max(0, Math.round((Number(d.cantidad_aprobada) - Number(d.cantidad_despachada)) * 100) / 100)
+const FILTROS_VACIOS = { buscar: '', estado: '', proyecto: '', desde: '' }
 const VACIO = { proyecto_id: '', actividad_id: '', fecha_requerida: '', observaciones: '' }
 
 export default function SolicitudesMateriales({ pestanas }) {
@@ -50,6 +57,9 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [confirmaExceso, setConfirmaExceso] = useState(false)
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
+  const controles = useFiltros(FILTROS_VACIOS)
+  const { filtros } = controles
   const [aprobando, setAprobando] = useState(null) // { solicitud, cantidades }
   const [despachando, setDespachando] = useState(null) // { solicitud, almacen, trabajador, cantidades }
   const [rechazando, setRechazando] = useState(null) // { solicitud, motivo }
@@ -85,6 +95,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       setLineas([{ ...LINEA }])
       setExcesos([])
       setConfirmaExceso(false)
+      setAbierto(false)
       await solicitudes.recargar()
     } catch (err) {
       const data = err?.response?.data
@@ -125,9 +136,23 @@ export default function SolicitudesMateriales({ pestanas }) {
     })
   }
 
+  const filtradas = (solicitudes.datos ?? []).filter((s) =>
+    coincide(filtros.buscar, s.codigo, s.proyecto, s.actividad, s.solicitante, ...s.detalles.map((d) => `${d.material_codigo} ${d.material}`))
+    && (!filtros.estado || s.estado === filtros.estado)
+    && (!filtros.proyecto || s.proyecto === filtros.proyecto)
+    && (!filtros.desde || String(s.fecha_solicitud).slice(0, 10) >= filtros.desde))
+  const proyectosFila = [...new Set((solicitudes.datos ?? []).map((s) => s.proyecto).filter(Boolean))].sort()
+  const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) })
+
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={solicitudes.recargar} />} title="Solicitudes" subtitle="Solicitudes de materiales al inventario" />
+      <PageHeader accion={<BotonActualizar onClick={solicitudes.recargar} />} title="Solicitud de materiales" subtitle="Pida materiales al inventario para una actividad y siga su aprobación y despacho">
+        {puedeCrear && (
+          <button type="button" className="btn-primary" onClick={() => { setAviso(''); setError(''); setAbierto(true) }}>
+            <PlusIcon className="h-5 w-5" /> Nueva solicitud
+          </button>
+        )}
+      </PageHeader>
       {pestanas}
       {solicitudes.error && <AlertaFormulario mensaje={solicitudes.error} />}
       {solicitudes.aviso && <AlertaFormulario tipo="aviso" mensaje={solicitudes.aviso} />}
@@ -149,7 +174,11 @@ export default function SolicitudesMateriales({ pestanas }) {
       )}
 
       {puedeCrear && (
-        <form className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={enviar}>
+        <ModalFormulario abierto={abierto} titulo="Nueva solicitud de materiales" subtitulo="Bodega recibe el aviso para aprobarla" ancho="max-w-3xl"
+          onGuardar={enviar} onCerrar={() => setAbierto(false)} guardando={guardando} error={error}
+          deshabilitado={excesos.length > 0 && !confirmaExceso}
+          textoGuardar="Solicitar materiales" textoGuardando="Enviando…" espaciado="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="sm-proyecto" className="label">Proyecto</label>
             <select id="sm-proyecto" className="input" value={form.proyecto_id} required
@@ -192,7 +221,6 @@ export default function SolicitudesMateriales({ pestanas }) {
               <PlusIcon className="h-4 w-4" /> Agregar material
             </button>
           </div>
-          {error && <p role="alert" className="text-xs font-medium text-red-600 sm:col-span-2">{error}</p>}
           {excesos.length > 0 && (
             <div role="alert" className="space-y-2 rounded-xl bg-amber-50 p-4 text-sm text-amber-800 sm:col-span-2">
               <p className="font-semibold">Alerta: la cantidad solicitada supera lo presupuestado para la actividad.</p>
@@ -207,20 +235,47 @@ export default function SolicitudesMateriales({ pestanas }) {
               </label>
             </div>
           )}
-          <div className="sm:col-span-2">
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando || (excesos.length > 0 && !confirmaExceso)}>{guardando ? 'Enviando…' : 'Solicitar materiales'}</button>
-          </div>
-        </form>
+        </div>
+        </ModalFormulario>
       )}
+
+      <FiltrosDesplegable titulo="Buscar solicitudes" ariaLabel="Filtros de solicitudes de materiales" activos={controles.activos}>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label htmlFor="sm-f-buscar" className="label">Búsqueda</label>
+            <input id="sm-f-buscar" type="search" className="input" placeholder="Código, proyecto, actividad, solicitante o material"
+              value={filtros.buscar} onChange={(e) => controles.cambiar('buscar', e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="sm-f-estado" className="label">Estado</label>
+            <select id="sm-f-estado" className="input" value={filtros.estado} onChange={(e) => controles.cambiar('estado', e.target.value)}>
+              <option value="">Todos</option>
+              {Object.keys(ESTADOS).map((k) => <option key={k} value={k}>{k.replaceAll('_', ' ').toLowerCase().replace(/^./, (c) => c.toUpperCase())}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sm-f-proyecto" className="label">Proyecto</label>
+            <select id="sm-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => controles.cambiar('proyecto', e.target.value)}>
+              <option value="">Todos</option>
+              {proyectosFila.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sm-f-desde" className="label">Solicitada desde</label>
+            <input id="sm-f-desde" type="date" className="input" value={filtros.desde} onChange={(e) => controles.cambiar('desde', e.target.value)} />
+          </div>
+        </div>
+        {controles.activos > 0 && <button type="button" className="btn-ghost text-xs" onClick={controles.limpiar}>Limpiar filtros</button>}
+      </FiltrosDesplegable>
 
       <section className="space-y-3">
         {solicitudes.datos === null ? (
           <p className="card flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
             <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
           </p>
-        ) : solicitudes.datos.length === 0 ? (
-          <p className="card px-5 py-6 text-sm text-slate-500">No hay solicitudes de materiales.</p>
-        ) : solicitudes.datos.map((s) => (
+        ) : filtradas.length === 0 ? (
+          <p className="card px-5 py-6 text-sm text-slate-500">{solicitudes.datos.length === 0 ? 'No hay solicitudes de materiales.' : 'Ninguna solicitud coincide con los filtros.'}</p>
+        ) : paginacion.visibles.map((s) => (
           <article key={s.id} className="card p-5">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="text-sm font-semibold text-slate-800">{s.codigo} · {s.proyecto}{s.actividad ? ` · ${s.actividad}` : ''}</h2>
@@ -268,6 +323,7 @@ export default function SolicitudesMateriales({ pestanas }) {
             </div>
           </article>
         ))}
+        {filtradas.length > 0 && <div className="card"><Paginacion paginacion={paginacion} /></div>}
       </section>
 
       <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" onCerrar={() => setAprobando(null)} ancho="max-w-md">

@@ -4,12 +4,18 @@ import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
+import FiltrosMovimiento, { enRango } from '../components/FiltrosMovimiento.jsx'
+import Paginacion from '../components/Paginacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { entradasInventarioApi } from '../services/entradasInventario'
 import { materialesApi } from '../services/materiales'
 import { mensajeError } from '../lib/errores'
 import { herramientasApi } from '../services/herramientas'
 import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
 
 /**
@@ -19,6 +25,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  * actualiza lo recibido y el estado de la orden (parcial deja la diferencia pendiente).
  */
 const LINEA = { material_id: '', cantidad: '', costo_unitario: '' }
+const FILTROS_VACIOS = { buscar: '', almacen: '', desde: '', hasta: '' }
 const VACIO = { almacen_id: '', proveedor_id: '', numero_factura_remision: '', orden_compra_id: '', observaciones: '' }
 
 export default function EntradasInventario({ pestanas }) {
@@ -29,6 +36,7 @@ export default function EntradasInventario({ pestanas }) {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
   const entradas = useRecurso(() => entradasInventarioApi.listar(), [], { mensaje: 'No se pudieron cargar los ingresos.' })
   const ordenes = useRecurso(() => entradasInventarioApi.ordenes(), [], { mensaje: 'No se pudieron cargar las órdenes de compra.' })
   const materiales = useRecurso(() => materialesApi.listar(), [], { mensaje: 'No se pudieron cargar los materiales.' })
@@ -70,6 +78,7 @@ export default function EntradasInventario({ pestanas }) {
       setAviso(`Ingreso ${entrada.comprobante} registrado por ${fmtCOP(entrada.costo_total)}.`)
       setForm(VACIO)
       setLineas([{ ...LINEA }])
+      setAbierto(false)
       await Promise.all([entradas.recargar(), ordenes.recargar()])
     } catch (err) {
       setError(mensajeError(err, 'No se pudo registrar el ingreso.'))
@@ -85,16 +94,37 @@ export default function EntradasInventario({ pestanas }) {
     </select>
   )
 
+  const controles = useFiltros(FILTROS_VACIOS)
+  const { filtros } = controles
+  const filtradas = (entradas.datos ?? []).filter((e) =>
+    coincide(filtros.buscar, e.comprobante, e.proveedor, e.numero_factura_remision, e.orden_compra, e.responsable,
+      ...(e.detalles ?? []).map((d) => `${d.material_codigo} ${d.material}`))
+    && (!filtros.almacen || String(e.almacen_id) === filtros.almacen)
+    && enRango(e.fecha_entrada, filtros))
+  const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) })
+
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={entradas.recargar} />} title="Ingreso de materiales" subtitle="Entradas al inventario por almacén y proveedor" />
+      <PageHeader accion={<BotonActualizar onClick={entradas.recargar} />} title="Ingreso de materiales" subtitle="Entradas al inventario por almacén y proveedor">
+        {puedeCrear && (
+          <button type="button" className="btn-primary" onClick={() => { setAviso(''); setError(''); setAbierto(true) }}>
+            <PlusIcon className="h-5 w-5" /> Registrar ingreso
+          </button>
+        )}
+      </PageHeader>
       {pestanas}
       {entradas.error && <AlertaFormulario mensaje={entradas.error} />}
       {proveedores.error && <AlertaFormulario mensaje={proveedores.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
+      <FiltrosMovimiento id="ei-f" titulo="Buscar ingresos" placeholder="Comprobante, proveedor, factura o material"
+        controles={controles} almacenes={(almacenes.datos ?? []).map((a) => [String(a.id), a.nombre])} />
+
       {puedeCrear && (
-        <form className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={enviar}>
+        <ModalFormulario abierto={abierto} titulo="Registrar ingreso" subtitulo="Entrada de materiales a un almacén" ancho="max-w-3xl"
+          onGuardar={enviar} onCerrar={() => setAbierto(false)} guardando={guardando} error={error}
+          textoGuardar="Registrar ingreso" textoGuardando="Registrando…" espaciado="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="ei-orden" className="label">Orden de compra (opcional)</label>
             {selectDe('ei-orden', form.orden_compra_id, elegirOrden,
@@ -135,13 +165,8 @@ export default function EntradasInventario({ pestanas }) {
             <label htmlFor="ei-obs" className="label">Observaciones</label>
             <input id="ei-obs" className="input" maxLength={500} value={form.observaciones} onChange={cambiar('observaciones')} />
           </div>
-          {error && <p role="alert" className="text-xs font-medium text-red-600 sm:col-span-2">{error}</p>}
-          <div className="sm:col-span-2">
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando}>
-              {guardando ? 'Registrando…' : 'Registrar ingreso'}
-            </button>
-          </div>
-        </form>
+        </div>
+        </ModalFormulario>
       )}
 
       <section className="card overflow-hidden">
@@ -149,11 +174,12 @@ export default function EntradasInventario({ pestanas }) {
           <p className="flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
             <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
           </p>
-        ) : entradas.datos.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">Aún no hay ingresos registrados.</p>
+        ) : filtradas.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-500">{entradas.datos.length === 0 ? 'Aún no hay ingresos registrados.' : 'Ningún ingreso coincide con los filtros.'}</p>
         ) : (
+          <>
           <TablaFicha
-            filas={entradas.datos}
+            filas={paginacion.visibles}
             compacta
             minWidth="md:min-w-0"
             ficha={{ titulo: (e) => e.comprobante, subtitulo: (e) => e.proveedor }}
@@ -176,6 +202,8 @@ export default function EntradasInventario({ pestanas }) {
               { titulo: 'Fecha', celda: (e) => fmtFecha(e.fecha_entrada), orden: (e) => e.fecha_entrada },
             ]}
           />
+          <Paginacion paginacion={paginacion} />
+          </>
         )}
       </section>
     </div>

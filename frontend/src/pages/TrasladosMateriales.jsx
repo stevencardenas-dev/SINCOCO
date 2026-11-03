@@ -1,13 +1,19 @@
 import { useState } from 'react'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
+import FiltrosMovimiento, { enRango } from '../components/FiltrosMovimiento.jsx'
+import Paginacion from '../components/Paginacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { trasladosMaterialesApi } from '../services/trasladosMateriales'
 import { mensajeError } from '../lib/errores'
 import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
 
 /**
@@ -16,6 +22,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  * por una salida hacia un proyecto. El sistema valida la existencia del origen, reasigna el costo al destino y deja un
  * comprobante consecutivo con el responsable que lo ejecuta.
  */
+const FILTROS_VACIOS = { buscar: '', almacen: '', desde: '', hasta: '' }
 const VACIO = { almacen_origen_id: '', almacen_destino_id: '', material_id: '', cantidad: '', observaciones: '' }
 
 export default function TrasladosMateriales({ pestanas }) {
@@ -25,6 +32,7 @@ export default function TrasladosMateriales({ pestanas }) {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
   const traslados = useRecurso(() => trasladosMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar los traslados.' })
   const opciones = useRecurso(() => (puedeCrear ? trasladosMaterialesApi.opciones() : Promise.resolve(null)), [puedeCrear], { mensaje: 'No se pudieron cargar las opciones del formulario.' })
 
@@ -45,6 +53,7 @@ export default function TrasladosMateriales({ pestanas }) {
         `Traslado ${traslado.comprobante} registrado: ${Number(traslado.cantidad)} ${traslado.unidad_medida} de ${traslado.material} pasan de ${traslado.almacen_origen} a ${traslado.almacen_destino}; costo reasignado: ${fmtCOP(traslado.costo_total)}.`,
       )
       setForm(VACIO)
+      setAbierto(false)
       await traslados.recargar()
     } catch (err) {
       setError(mensajeError(err, 'No se pudo registrar el traslado.'))
@@ -53,16 +62,37 @@ export default function TrasladosMateriales({ pestanas }) {
     }
   }
 
+  const controles = useFiltros(FILTROS_VACIOS)
+  const { filtros } = controles
+  const filtradas = (traslados.datos ?? []).filter((t) =>
+    coincide(filtros.buscar, t.comprobante, t.material_codigo, t.material, t.responsable, t.observaciones)
+    && (!filtros.almacen || t.almacen_origen === filtros.almacen || t.almacen_destino === filtros.almacen)
+    && enRango(t.fecha_traslado, filtros))
+  const almacenesFila = [...new Set((traslados.datos ?? []).flatMap((t) => [t.almacen_origen, t.almacen_destino]))].sort()
+  const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) })
+
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={traslados.recargar} />} title="Traslado de materiales" subtitle="Reubicación de existencias entre almacenes" />
+      <PageHeader accion={<BotonActualizar onClick={traslados.recargar} />} title="Traslado de materiales" subtitle="Reubicación de existencias entre almacenes">
+        {puedeCrear && (
+          <button type="button" className="btn-primary" onClick={() => { setAviso(''); setError(''); setAbierto(true) }}>
+            <PlusIcon className="h-5 w-5" /> Registrar traslado
+          </button>
+        )}
+      </PageHeader>
       {pestanas}
       {traslados.error && <AlertaFormulario mensaje={traslados.error} />}
       {opciones.error && <AlertaFormulario mensaje={opciones.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
+      <FiltrosMovimiento id="tr-f" titulo="Buscar traslados" placeholder="Comprobante, material o responsable"
+        controles={controles} almacenes={almacenesFila.map((a) => [a, a])} />
+
       {puedeCrear && (
-        <form className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={enviar}>
+        <ModalFormulario abierto={abierto} titulo="Registrar traslado" subtitulo="Mueve existencia de un almacén a otro" ancho="max-w-3xl"
+          onGuardar={enviar} onCerrar={() => setAbierto(false)} guardando={guardando} error={error}
+          textoGuardar="Registrar traslado" textoGuardando="Registrando…" espaciado="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="tr-origen" className="label">Almacén de origen</label>
             <select id="tr-origen" className="input" value={form.almacen_origen_id} onChange={elegirOrigen} required>
@@ -104,13 +134,8 @@ export default function TrasladosMateriales({ pestanas }) {
             <label htmlFor="tr-observaciones" className="label">Observaciones (opcional)</label>
             <textarea id="tr-observaciones" className="input" rows={2} maxLength={500} value={form.observaciones} onChange={cambiar('observaciones')} />
           </div>
-          {error && <p role="alert" className="text-xs font-medium text-red-600 sm:col-span-2">{error}</p>}
-          <div className="sm:col-span-2">
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando}>
-              {guardando ? 'Registrando…' : 'Registrar traslado'}
-            </button>
-          </div>
-        </form>
+        </div>
+        </ModalFormulario>
       )}
 
       <section className="card overflow-hidden">
@@ -118,11 +143,12 @@ export default function TrasladosMateriales({ pestanas }) {
           <p className="flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
             <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
           </p>
-        ) : traslados.datos.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">Aún no hay traslados registrados.</p>
+        ) : filtradas.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-500">{traslados.datos.length === 0 ? 'Aún no hay traslados registrados.' : 'Ningún traslado coincide con los filtros.'}</p>
         ) : (
+          <>
           <TablaFicha
-            filas={traslados.datos}
+            filas={paginacion.visibles}
             compacta
             minWidth="md:min-w-0"
             ficha={{ titulo: (t) => t.comprobante, subtitulo: (t) => t.material }}
@@ -138,6 +164,8 @@ export default function TrasladosMateriales({ pestanas }) {
               { titulo: 'Fecha', celda: (t) => fmtFecha(t.fecha_traslado), orden: (t) => t.fecha_traslado },
             ]}
           />
+          <Paginacion paginacion={paginacion} />
+          </>
         )}
       </section>
     </div>

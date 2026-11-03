@@ -6,6 +6,11 @@ import TablaSolicitudes, { ESTADOS_SOLICITUD as ESTADOS } from '../components/Ta
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import Paginacion from '../components/Paginacion.jsx'
+import { useFiltros } from '../hooks/useFiltros'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { coincide } from '../lib/busqueda.js'
 import { useAuth } from '../context/AuthContext.jsx'
 import { solicitudesHerramientasApi as api } from '../services/solicitudesHerramientas'
 import { herramientasApi } from '../services/herramientas'
@@ -23,6 +28,7 @@ import { useFormulario } from '../hooks/useFormulario'
  */
 
 const VACIO = { herramienta_id: '', para_trabajador_id: '', proyecto_id: '', fecha_requerida: '', fecha_estimada_devolucion: '', observaciones: '' }
+const FILTROS_VACIOS = { buscar: '', proyecto: '', desde: '' }
 const hoy = () => new Date().toLocaleDateString('en-CA')
 
 export default function SolicitudesHerramientas({ pestanas }) {
@@ -30,6 +36,7 @@ export default function SolicitudesHerramientas({ pestanas }) {
   const puedeCrear = puede('solicitudes_herramientas.crear')
 
   const [estado, setEstado] = useState('')
+  const { filtros, cambiar: cambiarFiltro, limpiar, activos } = useFiltros(FILTROS_VACIOS)
   const [opciones, setOpciones] = useState({ herramientas: [], trabajadores: [], proyectos: [] })
 
   const { datos, error, aviso, setAviso, recargar, ejecutar } = useRecurso(
@@ -70,6 +77,13 @@ export default function SolicitudesHerramientas({ pestanas }) {
       .catch(() => setIdsDelProyecto(new Set()))
   }, [form.proyecto_id])
 
+  const filtradas = (datos ?? []).filter((s) =>
+    coincide(filtros.buscar, s.codigo, s.herramienta, s.codigo_serial, s.trabajador, s.solicitante)
+    && (!filtros.proyecto || s.proyecto === filtros.proyecto)
+    && (!filtros.desde || String(s.fecha_solicitud).slice(0, 10) >= filtros.desde))
+  const proyectosFila = [...new Set((datos ?? []).map((s) => s.proyecto).filter(Boolean))].sort()
+  const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) + estado })
+
   const accion = (fn, s, exito) =>
     ejecutar(() => fn(s.id), { exito: `${exito} ${s.codigo}.`, error: 'No se pudo completar la acción.' })
 
@@ -85,13 +99,40 @@ export default function SolicitudesHerramientas({ pestanas }) {
             <PlusIcon className="h-5 w-5" /> Nueva solicitud
           </button>
         )}
-        <select className="input w-auto" aria-label="Filtrar por estado" value={estado} onChange={(e) => setEstado(e.target.value)}>
-          <option value="">Todos los estados</option>
-          {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.texto}</option>)}
-        </select>
       </PageHeader>
 
       {pestanas}
+
+      <FiltrosDesplegable titulo="Buscar solicitudes" ariaLabel="Filtros de solicitudes de herramientas" activos={activos}>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label htmlFor="sh-f-buscar" className="label">Búsqueda</label>
+            <input id="sh-f-buscar" type="search" className="input" placeholder="Código, herramienta, trabajador o solicitante"
+              value={filtros.buscar} onChange={(e) => cambiarFiltro('buscar', e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="sh-f-estado" className="label">Estado</label>
+            <select id="sh-f-estado" className="input" value={estado} onChange={(e) => { setEstado(e.target.value); paginacion.setPagina(1) }}>
+              <option value="">Todos</option>
+              {Object.entries(ESTADOS).map(([k, v]) => <option key={k} value={k}>{v.texto}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sh-f-proyecto" className="label">Proyecto</label>
+            <select id="sh-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => cambiarFiltro('proyecto', e.target.value)}>
+              <option value="">Todos</option>
+              {proyectosFila.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="sh-f-desde" className="label">Solicitada desde</label>
+            <input id="sh-f-desde" type="date" className="input" value={filtros.desde} onChange={(e) => cambiarFiltro('desde', e.target.value)} />
+          </div>
+        </div>
+        {(activos > 0 || estado) && (
+          <button type="button" className="btn-ghost text-xs" onClick={() => { limpiar(); setEstado('') }}>Limpiar filtros</button>
+        )}
+      </FiltrosDesplegable>
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
@@ -102,17 +143,19 @@ export default function SolicitudesHerramientas({ pestanas }) {
         </div>
       )}
 
-      {datos !== null && datos.length === 0 && !error && (
+      {datos !== null && filtradas.length === 0 && !error && (
         <div className="card flex flex-col items-center gap-2 px-6 py-16 text-center">
           <ClipboardDocumentListIcon className="h-10 w-10 text-slate-300" />
-          <p className="text-sm font-semibold text-slate-700">No hay solicitudes de herramientas</p>
+          <p className="text-sm font-semibold text-slate-700">
+            {datos.length === 0 && !estado ? 'No hay solicitudes de herramientas' : 'Ninguna solicitud coincide con los filtros'}
+          </p>
         </div>
       )}
 
-      {datos !== null && datos.length > 0 && (
+      {datos !== null && filtradas.length > 0 && (
         <div className="card overflow-hidden">
           <TablaSolicitudes
-            filas={datos}
+            filas={paginacion.visibles}
             acciones={(s) =>
               (s.estado === 'PENDIENTE' || s.estado === 'APROBADA') && Number(s.solicitado_por_usuario_id) === Number(user?.id) ? (
                 <button type="button" className="btn-ghost text-xs" onClick={() => accion(api.cancelar, s, 'Cancelada')}>
@@ -120,6 +163,7 @@ export default function SolicitudesHerramientas({ pestanas }) {
                 </button>
               ) : null}
           />
+          <Paginacion paginacion={paginacion} />
         </div>
       )}
 
