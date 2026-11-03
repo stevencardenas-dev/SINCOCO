@@ -13,7 +13,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  * material, la cantidad y el costo unitario al momento de la salida. Las salidas se registran al despachar una solicitud
  * aprobada (Solicitudes → Materiales), que valida la existencia del almacén de origen. Abajo, la existencia por almacén.
  */
-export default function SalidasMateriales() {
+export default function SalidasMateriales({ pestanas }) {
   const salidas = useRecurso(() => salidasMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las salidas.' })
   const existencias = useRecurso(() => salidasMaterialesApi.existencias(), [], { mensaje: 'No se pudo cargar la existencia por almacén.' })
   const recargar = () => Promise.all([salidas.recargar(), existencias.recargar()])
@@ -21,6 +21,7 @@ export default function SalidasMateriales() {
   return (
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={recargar} />} title="Salidas de materiales" subtitle="Constancia de lo despachado a proyectos y actividades" />
+      {pestanas}
       {salidas.error && <AlertaFormulario mensaje={salidas.error} />}
       {existencias.error && <AlertaFormulario mensaje={existencias.error} />}
       <p className="text-xs text-slate-500">Para registrar una salida, despache una solicitud aprobada desde Solicitudes → Materiales.</p>

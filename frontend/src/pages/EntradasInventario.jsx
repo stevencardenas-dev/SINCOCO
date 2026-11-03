@@ -21,7 +21,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
 const LINEA = { material_id: '', cantidad: '', costo_unitario: '' }
 const VACIO = { almacen_id: '', proveedor_id: '', numero_factura_remision: '', orden_compra_id: '', observaciones: '' }
 
-export default function EntradasInventario() {
+export default function EntradasInventario({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('entradas_inventario.crear')
   const [form, setForm] = useState(VACIO)
@@ -88,6 +88,7 @@ export default function EntradasInventario() {
   return (
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={entradas.recargar} />} title="Ingreso de materiales" subtitle="Entradas al inventario por almacén y proveedor" />
+      {pestanas}
       {entradas.error && <AlertaFormulario mensaje={entradas.error} />}
       {proveedores.error && <AlertaFormulario mensaje={proveedores.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}

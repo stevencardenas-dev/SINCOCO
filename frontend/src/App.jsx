@@ -17,11 +17,8 @@ const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
-const EntradasInventario = lazy(() => import('./pages/EntradasInventario.jsx'))
-const DevolucionesMateriales = lazy(() => import('./pages/DevolucionesMateriales.jsx'))
-const TrasladosMateriales = lazy(() => import('./pages/TrasladosMateriales.jsx'))
 const ConsumosMateriales = lazy(() => import('./pages/ConsumosMateriales.jsx'))
-const SalidasMateriales = lazy(() => import('./pages/SalidasMateriales.jsx'))
+const Movimientos = lazy(() => import('./pages/Movimientos.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
@@ -102,41 +99,21 @@ export default function App() {
               </RutaPorPermiso>
             }
           />
+          {/* Movimientos de materiales (HU-19, HU-26, HU-09, HU-29): cada pestaña lleva su propio permiso. */}
           <Route
-            path="ingresos"
+            path="movimientos"
             element={
-              <RutaPorPermiso permisos={['entradas_inventario.listar']}>
-                <EntradasInventario />
+              <RutaPorPermiso
+                permisos={['entradas_inventario.listar', 'salidas_materiales.listar', 'devoluciones_materiales.listar', 'traslados_materiales.listar']}
+              >
+                <Movimientos />
               </RutaPorPermiso>
             }
           />
-          {/* HU-09: devolución de materiales sobrantes. */}
-          <Route
-            path="devoluciones"
-            element={
-              <RutaPorPermiso permisos={['devoluciones_materiales.listar']}>
-                <DevolucionesMateriales />
-              </RutaPorPermiso>
-            }
-          />
-          {/* HU-26: salida efectiva de materiales (constancia de lo despachado). */}
-          <Route
-            path="salidas"
-            element={
-              <RutaPorPermiso permisos={['salidas_materiales.listar']}>
-                <SalidasMateriales />
-              </RutaPorPermiso>
-            }
-          />
-          {/* HU-29: traslado de materiales entre almacenes. */}
-          <Route
-            path="traslados"
-            element={
-              <RutaPorPermiso permisos={['traslados_materiales.listar']}>
-                <TrasladosMateriales />
-              </RutaPorPermiso>
-            }
-          />
+          <Route path="ingresos" element={<Navigate to="/movimientos?tab=ingresos" replace />} />
+          <Route path="salidas" element={<Navigate to="/movimientos?tab=salidas" replace />} />
+          <Route path="devoluciones" element={<Navigate to="/movimientos?tab=devoluciones" replace />} />
+          <Route path="traslados" element={<Navigate to="/movimientos?tab=traslados" replace />} />
           {/* HU-20: consumo real de materiales por actividad. */}
           <Route
             path="consumos"
