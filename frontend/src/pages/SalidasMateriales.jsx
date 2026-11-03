@@ -16,16 +16,13 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  * HU-26 (CU-26): salida efectiva de materiales.
  * Constancia de lo despachado: almacén de origen, proyecto, actividad, quién despacha, a quién se entrega y, por cada
  * material, la cantidad y el costo unitario al momento de la salida. Las salidas se registran al despachar una solicitud
- * aprobada (Solicitudes → Materiales), que valida la existencia del almacén de origen. Abajo, la existencia por almacén.
+ * aprobada (Solicitudes → Materiales), que valida la existencia del almacén de origen. La existencia por almacén se
+ * consulta en Materiales.
  */
 const FILTROS_VACIOS = { buscar: '', almacen: '', desde: '', hasta: '' }
 
 export default function SalidasMateriales({ pestanas }) {
   const salidas = useRecurso(() => salidasMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las salidas.' })
-  const existencias = useRecurso(() => salidasMaterialesApi.existencias(), [], { mensaje: 'No se pudo cargar la existencia por almacén.' })
-  const recargar = () => Promise.all([salidas.recargar(), existencias.recargar()])
-
-  // Los filtros de almacén y búsqueda valen para las dos listas; el rango de fechas, solo para las salidas.
   const controles = useFiltros(FILTROS_VACIOS)
   const { filtros } = controles
   const salidasFiltradas = (salidas.datos ?? []).filter((s) =>
@@ -33,45 +30,17 @@ export default function SalidasMateriales({ pestanas }) {
       ...s.detalles.map((d) => `${d.material_codigo} ${d.material}`))
     && (!filtros.almacen || s.almacen_origen === filtros.almacen)
     && enRango(s.fecha_salida, filtros))
-  const existenciasFiltradas = (existencias.datos ?? []).filter((x) =>
-    coincide(filtros.buscar, x.material_codigo, x.material) && (!filtros.almacen || x.almacen === filtros.almacen))
-  const almacenesFila = [...new Set([...(salidas.datos ?? []).map((s) => s.almacen_origen), ...(existencias.datos ?? []).map((x) => x.almacen)])].sort()
-  const clave = JSON.stringify(filtros)
-  const pagSalidas = usePaginacion(salidasFiltradas, { clave })
-  const pagExistencias = usePaginacion(existenciasFiltradas, { clave })
+  const almacenesFila = [...new Set((salidas.datos ?? []).map((s) => s.almacen_origen))].sort()
+  const pagSalidas = usePaginacion(salidasFiltradas, { clave: JSON.stringify(filtros) })
 
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={recargar} />} title="Salidas de materiales" subtitle="Constancia de lo despachado a proyectos y actividades" />
+      <PageHeader accion={<BotonActualizar onClick={salidas.recargar} />} title="Salidas de materiales" subtitle="Constancia de lo despachado a proyectos y actividades" />
       {pestanas}
       {salidas.error && <AlertaFormulario mensaje={salidas.error} />}
-      {existencias.error && <AlertaFormulario mensaje={existencias.error} />}
-      <FiltrosMovimiento id="sa-f" titulo="Buscar salidas y existencias" placeholder="Comprobante, proyecto, material o responsable"
+      <FiltrosMovimiento id="sa-f" titulo="Buscar salidas" placeholder="Comprobante, proyecto, material o responsable"
         controles={controles} almacenes={almacenesFila.map((a) => [a, a])} />
       <p className="text-xs text-slate-500">Para registrar una salida, despache una solicitud aprobada desde Solicitudes → Materiales.</p>
-
-      <section className="card overflow-hidden">
-        <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">Existencia por almacén</h2>
-        {existencias.datos === null ? (
-          <p className="flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
-            <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
-          </p>
-        ) : existenciasFiltradas.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">{existencias.datos.length === 0 ? 'No hay existencias registradas en los almacenes.' : 'Ninguna existencia coincide con los filtros.'}</p>
-        ) : (
-          <>
-          <ul className="divide-y divide-slate-100 text-sm">
-            {pagExistencias.visibles.map((x) => (
-              <li key={`${x.almacen_id}-${x.material_id}`} className="flex flex-wrap justify-between gap-2 px-5 py-2">
-                <span className="text-slate-700">{x.almacen} · {x.material_codigo} · {x.material}</span>
-                <span className="tabular-nums text-slate-600">{x.existencia} {x.unidad_medida}</span>
-              </li>
-            ))}
-          </ul>
-          <Paginacion paginacion={pagExistencias} />
-          </>
-        )}
-      </section>
 
       <section className="card overflow-hidden">
         <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-800">Salidas</h2>
