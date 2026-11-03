@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import ModalFormulario from '../components/ModalFormulario.jsx'
+import FiltrosMovimiento, { enRango } from '../components/FiltrosMovimiento.jsx'
+import Paginacion from '../components/Paginacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { devolucionesMaterialesApi } from '../services/devolucionesMateriales'
 import { mensajeError } from '../lib/errores'
 import { useRecurso } from '../hooks/useRecurso'
+import { useFiltros } from '../hooks/useFiltros'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
 
 /**
@@ -16,6 +22,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  * si aplica, la salida que lo originó; quién lo entrega, quién lo recibe, la cantidad y el motivo (obligatorio).
  * Si el material es apto suma a la existencia y ajusta el costo de la actividad; si no, se registra sin sumarlo.
  */
+const FILTROS_VACIOS = { buscar: '', almacen: '', desde: '', hasta: '', apto: '' }
 const VACIO = {
   proyecto_id: '', actividad_id: '', salida_origen_id: '', almacen_id: '', devuelto_por_trabajador_id: '',
   material_id: '', cantidad: '', apto: true, motivo: '',
@@ -30,6 +37,7 @@ export default function DevolucionesMateriales({ pestanas }) {
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [abierto, setAbierto] = useState(false)
   const devoluciones = useRecurso(() => devolucionesMaterialesApi.listar(), [], { mensaje: 'No se pudieron cargar las devoluciones.' })
   const opciones = useRecurso(() => (puedeCrear ? devolucionesMaterialesApi.opciones() : Promise.resolve(null)), [puedeCrear], { mensaje: 'No se pudieron cargar las opciones del formulario.' })
 
@@ -66,6 +74,7 @@ export default function DevolucionesMateriales({ pestanas }) {
           : `Devolución ${devolucion.comprobante} registrada como material no apto: no se sumó a la existencia.`,
       )
       setForm(VACIO)
+      setAbierto(false)
       await devoluciones.recargar()
     } catch (err) {
       setError(mensajeError(err, 'No se pudo registrar la devolución.'))
@@ -81,16 +90,47 @@ export default function DevolucionesMateriales({ pestanas }) {
     </select>
   )
 
+  const controles = useFiltros(FILTROS_VACIOS)
+  const { filtros } = controles
+  const filtradas = (devoluciones.datos ?? []).filter((d) =>
+    coincide(filtros.buscar, d.comprobante, d.material_codigo, d.material, d.proyecto, d.actividad, d.salida_origen, d.devuelto_por, d.recibido_por, d.motivo)
+    && (!filtros.almacen || d.almacen === filtros.almacen)
+    && (!filtros.apto || String(Number(d.apto)) === filtros.apto)
+    && enRango(d.fecha_devolucion, filtros))
+  const almacenesFila = [...new Set((devoluciones.datos ?? []).map((d) => d.almacen))].sort()
+  const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) })
+
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={devoluciones.recargar} />} title="Devolución de materiales" subtitle="Materiales sobrantes que regresan de un proyecto o actividad" />
+      <PageHeader accion={<BotonActualizar onClick={devoluciones.recargar} />} title="Devolución de materiales" subtitle="Materiales sobrantes que regresan de un proyecto o actividad">
+        {puedeCrear && (
+          <button type="button" className="btn-primary" onClick={() => { setAviso(''); setError(''); setAbierto(true) }}>
+            <PlusIcon className="h-5 w-5" /> Registrar devolución
+          </button>
+        )}
+      </PageHeader>
       {pestanas}
       {devoluciones.error && <AlertaFormulario mensaje={devoluciones.error} />}
       {opciones.error && <AlertaFormulario mensaje={opciones.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
+      <FiltrosMovimiento id="dv-f" titulo="Buscar devoluciones" placeholder="Comprobante, material, proyecto o motivo"
+        controles={controles} almacenes={almacenesFila.map((a) => [a, a])}>
+        <div>
+          <label htmlFor="dv-f-apto" className="label">Condición</label>
+          <select id="dv-f-apto" className="input" value={filtros.apto} onChange={(e) => controles.cambiar('apto', e.target.value)}>
+            <option value="">Todas</option>
+            <option value="1">Reingresa al inventario</option>
+            <option value="0">Material no apto</option>
+          </select>
+        </div>
+      </FiltrosMovimiento>
+
       {puedeCrear && (
-        <form className="card grid gap-4 p-5 sm:grid-cols-2" onSubmit={enviar}>
+        <ModalFormulario abierto={abierto} titulo="Registrar devolución" subtitulo="Materiales sobrantes que regresan de un proyecto" ancho="max-w-3xl"
+          onGuardar={enviar} onCerrar={() => setAbierto(false)} guardando={guardando} error={error}
+          textoGuardar="Registrar devolución" textoGuardando="Registrando…" espaciado="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="dv-proyecto" className="label">Proyecto de origen</label>
             {selectDe('dv-proyecto', form.proyecto_id, elegirProyecto, (opciones.datos?.proyectos ?? []).map((p) => [p.id, `${p.codigo} · ${p.nombre}`]))}
@@ -137,13 +177,8 @@ export default function DevolucionesMateriales({ pestanas }) {
             <label htmlFor="dv-motivo" className="label">Motivo de la devolución</label>
             <textarea id="dv-motivo" className="input" rows={2} maxLength={500} value={form.motivo} onChange={cambiar('motivo')} required />
           </div>
-          {error && <p role="alert" className="text-xs font-medium text-red-600 sm:col-span-2">{error}</p>}
-          <div className="sm:col-span-2">
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={guardando}>
-              {guardando ? 'Registrando…' : 'Registrar devolución'}
-            </button>
-          </div>
-        </form>
+        </div>
+        </ModalFormulario>
       )}
 
       <section className="card overflow-hidden">
@@ -151,11 +186,12 @@ export default function DevolucionesMateriales({ pestanas }) {
           <p className="flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
             <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
           </p>
-        ) : devoluciones.datos.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">Aún no hay devoluciones registradas.</p>
+        ) : filtradas.length === 0 ? (
+          <p className="px-5 py-6 text-sm text-slate-500">{devoluciones.datos.length === 0 ? 'Aún no hay devoluciones registradas.' : 'Ninguna devolución coincide con los filtros.'}</p>
         ) : (
+          <>
           <TablaFicha
-            filas={devoluciones.datos}
+            filas={paginacion.visibles}
             compacta
             minWidth="md:min-w-0"
             ficha={{ titulo: (d) => d.comprobante, subtitulo: (d) => d.material }}
@@ -175,6 +211,8 @@ export default function DevolucionesMateriales({ pestanas }) {
               { titulo: 'Fecha', celda: (d) => fmtFecha(d.fecha_devolucion), orden: (d) => d.fecha_devolucion },
             ]}
           />
+          <Paginacion paginacion={paginacion} />
+          </>
         )}
       </section>
     </div>
