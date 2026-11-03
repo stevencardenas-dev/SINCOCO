@@ -19,6 +19,7 @@ export class Material {
     estado,
     activo,
     fecha_baja,
+    existencia_almacen,
   }) {
     this.id = id
     this.codigo = codigo
@@ -32,6 +33,8 @@ export class Material {
     this.estado = estado
     this.activo = activo
     this.fecha_baja = fecha_baja ?? null
+    // Solo viene al listar por almacén: lo que hay de este material en ese almacén.
+    this.existencia_almacen = existencia_almacen === undefined ? null : num(existencia_almacen)
     this.bajo_minimo =
       Number(activo) === 1 && this.nivel_minimo > 0 && this.existencia_total <= this.nivel_minimo
   }

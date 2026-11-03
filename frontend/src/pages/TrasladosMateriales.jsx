@@ -18,7 +18,7 @@ import { fmtCOP, fmtFecha } from '../lib/format.js'
  */
 const VACIO = { almacen_origen_id: '', almacen_destino_id: '', material_id: '', cantidad: '', observaciones: '' }
 
-export default function TrasladosMateriales() {
+export default function TrasladosMateriales({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('traslados_materiales.crear')
   const [form, setForm] = useState(VACIO)
@@ -56,6 +56,7 @@ export default function TrasladosMateriales() {
   return (
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={traslados.recargar} />} title="Traslado de materiales" subtitle="Reubicación de existencias entre almacenes" />
+      {pestanas}
       {traslados.error && <AlertaFormulario mensaje={traslados.error} />}
       {opciones.error && <AlertaFormulario mensaje={opciones.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}

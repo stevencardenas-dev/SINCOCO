@@ -18,10 +18,7 @@ import {
   WrenchScrewdriverIcon,
   ClipboardDocumentListIcon,
   XMarkIcon,
-  ArrowDownTrayIcon,
-  ArrowUturnLeftIcon,
   ArrowsRightLeftIcon,
-  ArrowUpTrayIcon,
   ClipboardDocumentCheckIcon,
 } from '@heroicons/react/24/outline'
 
@@ -53,10 +50,7 @@ const NAV = [
       { to: '/materiales', label: 'Materiales', icon: CubeIcon, permiso: ['materiales.listar'] },
       { to: '/herramientas', label: 'Herramientas', icon: WrenchScrewdriverIcon, permiso: ['herramientas.listar'] },
       { to: '/solicitudes', label: 'Solicitudes', icon: ClipboardDocumentListIcon, permiso: ['solicitudes_herramientas.listar'] },
-      { to: '/ingresos', label: 'Ingreso', icon: ArrowDownTrayIcon, permiso: ['entradas_inventario.listar'] },
-      { to: '/salidas', label: 'Salidas', icon: ArrowUpTrayIcon, permiso: ['salidas_materiales.listar'] },
-      { to: '/devoluciones', label: 'Devoluciones', icon: ArrowUturnLeftIcon, permiso: ['devoluciones_materiales.listar'] },
-      { to: '/traslados', label: 'Traslados', icon: ArrowsRightLeftIcon, permiso: ['traslados_materiales.listar'] },
+      { to: '/movimientos', label: 'Movimientos', icon: ArrowsRightLeftIcon, permiso: ['entradas_inventario.listar', 'salidas_materiales.listar', 'devoluciones_materiales.listar', 'traslados_materiales.listar'] },
       { to: '/consumos', label: 'Consumos', icon: ClipboardDocumentCheckIcon, permiso: ['consumos_materiales.listar'] },
       { to: '/alertas', label: 'Alertas', icon: BellAlertIcon, permiso: ['alertas.listar'] },
     ],

@@ -2,12 +2,14 @@ import {
   listarMateriales,
   listarCategorias,
   listarUnidadesMedida,
+  listarExistenciasPorAlmacen,
   obtenerMaterial,
   registrarMaterial,
   actualizarMaterial,
   darDeBajaMaterial,
   reactivarMaterial,
 } from '../services/materialService.js'
+import { listarAlmacenes } from '../services/herramientaService.js'
 import { RegistrarMaterialDto } from '../dtos/material/RegistrarMaterialDto.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
@@ -16,7 +18,8 @@ const verdadero = (v) => ['1', 'true', 'on'].includes(String(v))
 /**
  * GET /api/materiales -> catálogo de materiales (HU-07).
  * `?buscar=` `?categoria_id=` filtran; `?bajo_minimo=1` deja los que están en
- * o bajo su nivel mínimo; `?incluirInactivos=1` incluye los dados de baja (HU-18).
+ * o bajo su nivel mínimo; `?incluirInactivos=1` incluye los dados de baja (HU-18);
+ * `?almacen_id=` deja los que tienen saldo en ese almacén (`existencia_almacen`).
  */
 export const listar = asyncHandler(async (req, res) => {
   return res.json(
@@ -25,8 +28,19 @@ export const listar = asyncHandler(async (req, res) => {
       buscar: req.query.buscar ?? req.query.q ?? '',
       categoriaId: req.query.categoria_id || null,
       bajoMinimo: verdadero(req.query.bajo_minimo),
+      almacenId: req.query.almacen_id || null,
     }),
   )
+})
+
+/** GET /api/materiales/almacenes -> almacenes activos para filtrar por almacén. */
+export const almacenes = asyncHandler(async (req, res) => {
+  return res.json(await listarAlmacenes())
+})
+
+/** GET /api/materiales/:id/existencias -> saldo del material en cada almacén. */
+export const existencias = asyncHandler(async (req, res) => {
+  return res.json(await listarExistenciasPorAlmacen(req.params.id))
 })
 
 export const obtener = asyncHandler(async (req, res) => {

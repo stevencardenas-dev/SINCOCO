@@ -16,6 +16,12 @@ export async function listarMateriales(filtros = {}) {
   return materialRepository.listar(filtros)
 }
 
+/** Saldo del material en cada almacén (la suma es `existencia_total`). */
+export async function listarExistenciasPorAlmacen(id) {
+  await obtenerMaterial(id)
+  return materialRepository.existenciasPorAlmacen(id)
+}
+
 export async function listarCategorias() {
   return materialRepository.listarCategorias()
 }

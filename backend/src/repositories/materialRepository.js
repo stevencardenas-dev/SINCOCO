@@ -1,5 +1,6 @@
 import { pool } from '../db/pool.js'
 import { Material } from '../entities/Material.js'
+import { EXISTENCIA_ALMACEN_SQL } from './existenciaAlmacenRepository.js'
 
 /** Repositorio de la tabla `materiales` (HU-07). */
 
@@ -26,9 +27,14 @@ export async function listar({
   buscar = '',
   categoriaId = null,
   bajoMinimo = false,
+  almacenId = null,
 } = {}) {
   const condiciones = []
-  const params = []
+  // Con almacén: solo lo que tiene saldo allí, con esa cantidad en `existencia_almacen`.
+  // El `?` del JOIN va antes que los del WHERE.
+  const porAlmacen = Boolean(almacenId)
+  const params = porAlmacen ? [almacenId] : []
+  if (porAlmacen) condiciones.push(`${EXISTENCIA_ALMACEN_SQL} > 0`)
 
   if (!incluirInactivos) condiciones.push('m.activo = 1')
 
@@ -47,7 +53,8 @@ export async function listar({
   }
 
   const [rows] = await pool.query(
-    `SELECT ${CAMPOS} ${DESDE}
+    `SELECT ${CAMPOS}${porAlmacen ? `, ${EXISTENCIA_ALMACEN_SQL} AS existencia_almacen` : ''} ${DESDE}
+     ${porAlmacen ? 'JOIN almacenes a ON a.id = ?' : ''}
      ${condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : ''}
      ORDER BY c.nombre, m.descripcion, m.codigo`,
     params,
@@ -55,65 +62,16 @@ export async function listar({
   return rows.map(Material.fromRow)
 }
 
-/** `existencia_total` queda en su DEFAULT 0: solo la mueven los procesos de inventario. */
-export async function create(dto) {
-  const [result] = await pool.query(
-    `INSERT INTO materiales
-       (codigo, categoria_id, descripcion, unidad_medida, costo_referencia, nivel_minimo)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [dto.codigo, dto.categoria_id, dto.descripcion, dto.unidad_medida,
-     dto.costo_referencia, dto.nivel_minimo],
-  )
-  return result.insertId
-}
-
-// Lista blanca: los nombres de columna no se pueden parametrizar y
-// `existencia_total` queda fuera a propósito (HU-07 · criterio 4).
-const EDITABLES = new Set([
-  'codigo', 'categoria_id', 'descripcion', 'unidad_medida', 'costo_referencia', 'nivel_minimo',
-])
-
-export async function update(id, campos) {
-  const claves = Object.keys(campos).filter((k) => EDITABLES.has(k))
-  if (claves.length === 0) return 0
-  const [result] = await pool.query(
-    `UPDATE materiales SET ${claves.map((k) => `${k} = ?`).join(', ')} WHERE id = ?`,
-    [...claves.map((k) => campos[k]), id],
-  )
-  return result.affectedRows
-}
-
-/** HU-18: baja lógica; el material deja de ofrecerse pero conserva su historial. */
-export async function darDeBaja(id, usuarioId) {
-  const [result] = await pool.query(
-    `UPDATE materiales
-        SET activo = 0, estado = 'INACTIVO', fecha_baja = NOW(), baja_por_usuario_id = ?
-      WHERE id = ? AND activo = 1`,
-    [usuarioId ?? null, id],
-  )
-  return result.affectedRows
-}
-
-export async function reactivar(id) {
-  const [result] = await pool.query(
-    `UPDATE materiales
-        SET activo = 1, estado = 'ACTIVO', fecha_baja = NULL, baja_por_usuario_id = NULL
-      WHERE id = ? AND activo = 0`,
-    [id],
-  )
-  return result.affectedRows
-}
-
-/** Categorías del catálogo, para el selector del formulario. */
-export async function listarCategorias() {
-  const [rows] = await pool.query('SELECT id, nombre, descripcion FROM categorias_materiales ORDER BY nombre')
-  return rows
-}
-
-export async function findCategoria(id) {
+/** Saldo de un material en cada almacén activo que lo tiene (mayor primero). */
+export async function existenciasPorAlmacen(materialId) {
   const [rows] = await pool.query(
-    'SELECT id, nombre FROM categorias_materiales WHERE id = ? LIMIT 1',
-    [id],
+    `SELECT a.id AS almacen_id, a.codigo, a.nombre AS almacen, a.es_central,
+            ${EXISTENCIA_ALMACEN_SQL} AS cantidad
+       FROM almacenes a JOIN materiales m ON m.id = ?
+      WHERE a.activo = 1
+     HAVING cantidad > 0
+      ORDER BY cantidad DESC, a.nombre`,
+    [materialId],
   )
-  return rows[0] || null
+  return rows.map((r) => ({ ...r, cantidad: Number(r.cantidad) }))
 }

@@ -21,7 +21,7 @@ const VACIO = {
   material_id: '', cantidad: '', apto: true, motivo: '',
 }
 
-export default function DevolucionesMateriales() {
+export default function DevolucionesMateriales({ pestanas }) {
   const { puede } = useAuth()
   const puedeCrear = puede('devoluciones_materiales.crear')
   const [form, setForm] = useState(VACIO)
@@ -84,6 +84,7 @@ export default function DevolucionesMateriales() {
   return (
     <div className="space-y-6">
       <PageHeader accion={<BotonActualizar onClick={devoluciones.recargar} />} title="Devolución de materiales" subtitle="Materiales sobrantes que regresan de un proyecto o actividad" />
+      {pestanas}
       {devoluciones.error && <AlertaFormulario mensaje={devoluciones.error} />}
       {opciones.error && <AlertaFormulario mensaje={opciones.error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}

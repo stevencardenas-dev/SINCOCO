@@ -42,7 +42,7 @@ const VACIO = {
   nivel_minimo: '',
 }
 
-const SIN_FILTROS = { buscar: '', categoria_id: '', bajo_minimo: '' }
+const SIN_FILTROS = { buscar: '', categoria_id: '', almacen_id: '', bajo_minimo: '' }
 
 const cantidad = (n) => new Intl.NumberFormat('es-CO', { maximumFractionDigits: 2 }).format(Number(n ?? 0))
 
@@ -56,6 +56,9 @@ export default function Materiales() {
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   const [categorias, setCategorias] = useState([])
   const [unidades, setUnidades] = useState([])
+  const [almacenes, setAlmacenes] = useState([])
+  // Saldo por almacén del material que se está editando.
+  const [porAlmacen, setPorAlmacen] = useState([])
   const {
     filtros,
     cambiar: cambiarFiltro,
@@ -78,6 +81,7 @@ export default function Materiales() {
         incluirInactivos,
         buscar: filtros.buscar,
         categoria_id: filtros.categoria_id,
+        almacen_id: filtros.almacen_id,
         bajo_minimo: filtros.bajo_minimo === '1',
       }),
     [incluirInactivos, filtros],
@@ -87,6 +91,7 @@ export default function Materiales() {
   useEffect(() => {
     materialesApi.categorias().then(setCategorias).catch(() => {})
     materialesApi.unidades().then(setUnidades).catch(() => {})
+    materialesApi.almacenes().then(setAlmacenes).catch(() => {})
   }, [])
 
   /** CU-07: registrar o actualizar. `registro` es el material en edición (null = nuevo). */
@@ -129,6 +134,8 @@ export default function Materiales() {
 
   const abrirEditar = (m) => {
     setAviso('')
+    setPorAlmacen([])
+    materialesApi.existencias(m.id).then(setPorAlmacen).catch(() => {})
     formulario.abrir(
       {
         codigo: m.codigo ?? '',
@@ -197,6 +204,24 @@ export default function Materiales() {
               {categorias.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="mat-almacen" className="label">
+              Almacén
+            </label>
+            <select
+              id="mat-almacen"
+              className="input"
+              value={filtros.almacen_id}
+              onChange={(e) => cambiarFiltro('almacen_id', e.target.value)}
+            >
+              <option value="">Todos</option>
+              {almacenes.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre}
                 </option>
               ))}
             </select>
@@ -358,6 +383,18 @@ export default function Materiales() {
                 <p className="mt-1 text-xs text-slate-500">
                   Solo cambia con entradas, salidas, traslados y devoluciones.
                 </p>
+                {porAlmacen.length > 0 && (
+                  <ul className="mt-2 space-y-1 text-xs text-slate-600">
+                    {porAlmacen.map((e) => (
+                      <li key={e.almacen_id} className="flex justify-between gap-3">
+                        <span>{e.almacen}</span>
+                        <span className="tabular-nums">
+                          {cantidad(e.cantidad)} {editando.unidad_medida}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </div>
@@ -467,6 +504,17 @@ export default function Materiales() {
                   </>
                 ),
               },
+              // Con un almacén elegido, «Existencia» sigue siendo el total y esta es la de ese almacén.
+              ...(filtros.almacen_id
+                ? [
+                    {
+                      titulo: 'En el almacén',
+                      movil: true,
+                      tdClase: 'tabular-nums font-medium text-slate-800',
+                      celda: (m) => cantidad(m.existencia_almacen),
+                    },
+                  ]
+                : []),
               {
                 titulo: 'Nivel mínimo',
                 tdClase: 'tabular-nums text-slate-600',
