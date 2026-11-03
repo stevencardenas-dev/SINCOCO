@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
-  listar, obtener, categorias, unidades, registrar, actualizar, baja, reactivarCtrl,
+  listar, obtener, categorias, unidades, almacenes, existencias, registrar, actualizar, baja, reactivarCtrl,
 } from '../controllers/materialController.js'
 
 const router = Router()
@@ -13,7 +13,10 @@ router.get('/', requirePermiso('materiales.listar'), listar)
 // Antes de '/:id' para que «categorias» y «unidades» no se lean como un id.
 router.get('/categorias', requirePermiso('materiales.listar'), categorias)
 router.get('/unidades', requirePermiso('materiales.listar'), unidades)
+// Selector de almacén de la lista; propio de materiales para no exigir `herramientas.listar`.
+router.get('/almacenes', requirePermiso('materiales.listar'), almacenes)
 router.get('/:id', requirePermiso('materiales.listar'), obtener)
+router.get('/:id/existencias', requirePermiso('materiales.listar'), existencias)
 router.post('/', requirePermiso('materiales.crear'), registrar)
 router.patch('/:id', requirePermiso('materiales.editar'), actualizar)
 
