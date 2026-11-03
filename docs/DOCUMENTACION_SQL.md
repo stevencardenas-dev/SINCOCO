@@ -147,6 +147,19 @@ significado sin el padre y forman un solo registro lógico.
 | `trg_salida_descuenta_existencia` | `AFTER INSERT` en `detalles_salida_materiales` | descuenta la cantidad despachada |
 | `trg_devolucion_suma_existencia` | `AFTER INSERT` en `devoluciones_materiales` | reingresa la cantidad devuelta |
 
+### Existencia por almacén
+
+La tabla nexo `existencias_almacen` (`almacen_id`, `material_id`, `cantidad`; PK compuesta, `CHECK cantidad >= 0`)
+guarda el saldo de cada material en cada almacén; su suma por material es `existencia_total`. La mantienen triggers
+(migración `migracion_existencias_almacen.sql`):
+
+| Trigger | Evento | Efecto |
+|---|---|---|
+| `trg_entrada_suma_almacen` | `AFTER INSERT` en `detalles_entrada_inventario` | suma en el almacén de la entrada |
+| `trg_salida_descuenta_almacen` | `AFTER INSERT` en `detalles_salida_materiales` | resta en el almacén de origen |
+| `trg_devolucion_suma_almacen` | `AFTER INSERT` en `devoluciones_materiales` | suma en el almacén de destino si es apta |
+| `trg_traslado_mueve_almacen` | `AFTER INSERT` en `traslados_materiales` | resta en el origen y suma en el destino |
+
 El `CHECK chk_mat_existencia` (`existencia_total >= 0`) cierra RN01: un
 despacho superior a lo disponible falla con error 3819. La aplicación no
 necesita replicar estas dos reglas, pero sí traducir ambos errores a mensajes
