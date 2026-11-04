@@ -17,7 +17,6 @@ import { salidasMaterialesApi } from '../services/salidasMateriales'
 import { mensajeError } from '../lib/errores'
 import { proyectosApi } from '../services/proyectos'
 import { actividadesApi } from '../services/actividades'
-import { trabajadoresApi } from '../services/trabajadores'
 import { herramientasApi } from '../services/herramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtFecha } from '../lib/format.js'
@@ -70,7 +69,7 @@ export default function SolicitudesMateriales({ pestanas }) {
   const notificaciones = useRecurso(() => notificacionesApi.listar({ soloNoLeidas: true }), [], { mensaje: 'No se pudieron cargar las notificaciones.' })
   const proyectos = useRecurso(() => proyectosApi.listar(), [], { mensaje: 'No se pudieron cargar los proyectos.' })
   const almacenes = useRecurso(() => (puedeResolver ? herramientasApi.almacenes() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los almacenes.' })
-  const trabajadores = useRecurso(() => (puedeResolver ? trabajadoresApi.listar() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los trabajadores.' })
+  const trabajadores = useRecurso(() => (puedeResolver ? solicitudesMaterialesApi.trabajadores() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudieron cargar los trabajadores.' })
   // HU-26: existencia por almacén, para ver cuánto hay en el almacén de origen antes de despachar.
   const existencias = useRecurso(() => (puedeResolver && puede('salidas_materiales.listar') ? salidasMaterialesApi.existencias() : Promise.resolve([])), [puedeResolver], { mensaje: 'No se pudo cargar la existencia por almacén.' })
 
@@ -158,6 +157,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       {solicitudes.aviso && <AlertaFormulario tipo="aviso" mensaje={solicitudes.aviso} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
       {materiales.error && <AlertaFormulario mensaje={materiales.error} />}
+      {trabajadores.error && <AlertaFormulario mensaje={trabajadores.error} />}
 
       {(notificaciones.datos ?? []).length > 0 && (
         <section aria-label="Notificaciones" className="card space-y-2 border-sky-200 border-l-4 border-l-sky-500 bg-sky-100 p-4">

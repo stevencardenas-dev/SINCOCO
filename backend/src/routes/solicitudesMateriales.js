@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
-import { listar, crear, aprobar, rechazar, cancelar, despachar, catalogo, cancelarSaldo } from '../controllers/solicitudMaterialController.js'
+import { listar, crear, aprobar, rechazar, cancelar, despachar, catalogo, trabajadores, cancelarSaldo } from '../controllers/solicitudMaterialController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -10,6 +10,8 @@ router.use(requireAuth)
 router.get('/', requirePermiso('solicitudes_materiales.listar'), listar)
 // Materiales que se pueden pedir: quien solicita no necesita el permiso del catálogo de inventario.
 router.get('/materiales', requirePermiso('solicitudes_materiales.crear'), catalogo)
+// A quién se entrega un despacho: bodega no necesita el permiso del módulo de personal.
+router.get('/trabajadores', requirePermiso('solicitudes_materiales.resolver'), trabajadores)
 router.post('/', requirePermiso('solicitudes_materiales.crear'), crear)
 router.patch('/:id/aprobar', requirePermiso('solicitudes_materiales.resolver'), aprobar)
 router.patch('/:id/rechazar', requirePermiso('solicitudes_materiales.resolver'), rechazar)

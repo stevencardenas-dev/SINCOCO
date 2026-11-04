@@ -1,5 +1,5 @@
 import {
-  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud, catalogoMateriales, cancelarSaldoSolicitud,
+  listarSolicitudes, crearSolicitud, aprobarSolicitud, rechazarSolicitud, cancelarSolicitud, despacharSolicitud, catalogoMateriales, trabajadoresEntrega, cancelarSaldoSolicitud,
 } from '../services/solicitudMaterialService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
@@ -7,6 +7,8 @@ export const listar = asyncHandler(async (req, res) =>
   res.json(await listarSolicitudes({ estado: req.query.estado }, req.user)))
 
 export const catalogo = asyncHandler(async (req, res) => res.json(await catalogoMateriales()))
+
+export const trabajadores = asyncHandler(async (req, res) => res.json(await trabajadoresEntrega()))
 
 export const crear =asyncHandler(async (req, res) =>
   res.status(201).json({ message: 'Solicitud registrada: bodega fue notificada', solicitud: await crearSolicitud(req.body, contexto(req)) }))
