@@ -14,6 +14,9 @@ import { textoOpcional, revisarLargo } from '../utils/campos.js'
  */
 export const ESTADOS = ['PENDIENTE', 'APROBADA', 'APROBADA_PARCIAL', 'RECHAZADA', 'DESPACHADA_PARCIAL', 'DESPACHADA_TOTAL', 'CANCELADA']
 const PERMISO_RESOLVER = 'solicitudes_materiales.resolver'
+// HU-08: solo se solicita para un proyecto y una actividad activos.
+const ESTADOS_PROYECTO_INACTIVO = ['PAUSADO', 'FINALIZADO', 'CANCELADO']
+const ESTADOS_ACTIVIDAD_INACTIVA = ['COMPLETADA', 'SUSPENDIDA']
 
 const entero = (v, campo) => {
   const n = Number(v)
@@ -60,9 +63,15 @@ export async function crearSolicitud(body = {}, ctx) {
   const proyecto = await proyectoRepository.findById(proyectoId)
   if (!proyecto) throw new AppError('Proyecto no encontrado', 404, 'proyecto_id')
   await verificarAccesoProyecto(ctx.usuario, proyectoId)
+  if (ESTADOS_PROYECTO_INACTIVO.includes(proyecto.estado)) {
+    throw new AppError(`No se pueden solicitar materiales para un proyecto en estado ${proyecto.estado}`, 409, 'proyecto_id')
+  }
   const actividad = await repo.findActividadProyecto(actividadId)
   if (!actividad || Number(actividad.proyecto_id) !== proyectoId) {
     throw new AppError('La actividad no existe o no pertenece al proyecto', 400, 'actividad_id')
+  }
+  if (ESTADOS_ACTIVIDAD_INACTIVA.includes(actividad.estado)) {
+    throw new AppError(`No se pueden solicitar materiales para una actividad en estado ${actividad.estado}`, 409, 'actividad_id')
   }
   const materiales = await repo.findMateriales(detalles.map((d) => d.material_id))
   for (const d of detalles) {
