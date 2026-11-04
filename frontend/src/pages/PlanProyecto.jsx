@@ -6,6 +6,7 @@ import {
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
+  CubeIcon,
   EyeIcon,
   FunnelIcon,
   PencilSquareIcon,
@@ -34,6 +35,7 @@ import { asignacionesApi } from '../services/asignaciones'
 import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import RegistrarAvance from '../components/RegistrarAvance.jsx'
+import PresupuestoMateriales from '../components/PresupuestoMateriales.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -204,6 +206,8 @@ export default function PlanProyecto() {
   const proyecto = datos?.proyecto ?? null
   const etapas = datos?.etapas ?? []
   const actividades = datos?.actividades ?? []
+  // Lo repartido entre las actividades, frente al presupuesto inicial del proyecto.
+  const presupuestoAsignado = etapas.reduce((total, et) => total + Number(et.presupuesto ?? 0), 0)
   const responsables = datos?.responsables ?? []
   const conIncidencia = new Set(datos?.afectadas ?? []) // HU-14: actividades a resaltar
   // Responsables de actividad: solo quienes tienen acceso vigente al proyecto (o su responsable).
@@ -232,6 +236,7 @@ export default function PlanProyecto() {
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
   const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
+  const [presupuestando, setPresupuestando] = useState(null) // HU-08: actividad cuyo presupuesto de materiales se consulta
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
   const puedeExtender = puede('asignaciones.extender') // HU-31: solo el administrador
@@ -499,7 +504,7 @@ export default function PlanProyecto() {
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
         subtitle={
           proyecto
-            ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)}`
+            ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)} · Presupuesto ${fmtCOP(proyecto.presupuesto_inicial)} · Asignado a actividades ${fmtCOP(presupuestoAsignado)}`
             : 'Plan de trabajo'
         }
       >
@@ -668,6 +673,7 @@ export default function PlanProyecto() {
             <p className="mt-1 text-xs text-slate-400">
               {et.fecha_inicio_programada ? fmtFecha(et.fecha_inicio_programada) : 'sin inicio'} —{' '}
               {et.fecha_fin_programada ? fmtFecha(et.fecha_fin_programada) : 'sin fin'}
+              <span title="Suma del presupuesto de sus actividades"> · Presupuesto {et.presupuesto != null ? fmtCOP(et.presupuesto) : 'sin definir'}</span>
             </p>
             </div>
 
@@ -836,6 +842,10 @@ export default function PlanProyecto() {
                               <ClipboardDocumentCheckIcon className="h-4 w-4" />
                             </button>
                           )}
+                          <button type="button" title="Presupuesto de materiales" aria-label="Presupuesto de materiales"
+                            className="btn-accion btn-accion-editar" onClick={() => setPresupuestando(a)}>
+                            <CubeIcon className="h-4 w-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1149,6 +1159,19 @@ export default function PlanProyecto() {
         onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
       />
 
+      {/* HU-08: cantidades por material contra las que se valida cada solicitud. */}
+      {presupuestando && (
+        <PresupuestoMateriales
+          actividad={presupuestando}
+          editable={puedeEditarActividades}
+          onCerrar={() => setPresupuestando(null)}
+          onGuardado={() => {
+            setAviso('Presupuesto de materiales actualizado.')
+            setPresupuestando(null)
+          }}
+        />
+      )}
+
       {/* HU-21: registro del porcentaje de avance e historial de la actividad. */}
       {porAvanzar && (
         <RegistrarAvance
@@ -1178,7 +1201,7 @@ export default function PlanProyecto() {
             ['Estado', ESTADO_ETIQUETA[fichaVer.tipo === 'actividad' ? estadoVisible(fichaVer.dato) : fichaVer.dato.estado]],
             ['Avance', fichaVer.dato.porcentaje_avance != null ? `${Number(fichaVer.dato.porcentaje_avance)}%` : null],
             ['Esfuerzo', fichaVer.tipo === 'actividad' ? `${etiquetaEsfuerzo(fichaVer.dato.esfuerzo)} (peso ${Number(fichaVer.dato.peso)})` : null],
-            ['Presupuesto', fichaVer.tipo === 'actividad' && fichaVer.dato.presupuesto != null ? fmtCOP(fichaVer.dato.presupuesto) : null],
+            ['Presupuesto', fichaVer.dato.presupuesto != null ? fmtCOP(fichaVer.dato.presupuesto) : null],
             ['Criterios cumplidos', fichaVer.tipo === 'actividad' && fichaVer.dato.total_criterios ? `${fichaVer.dato.criterios_cumplidos} de ${fichaVer.dato.total_criterios}` : null],
           ]}
         />
@@ -1264,7 +1287,7 @@ export default function PlanProyecto() {
                     value={fmtMiles(edicion.valores.presupuesto ?? '')}
                     onChange={(e) => edicion.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
                   <p className="mt-1 text-xs text-slate-500">
-                    Referencia para advertir cuando un servicio externo la excede; vacío = sin presupuesto.
+                    Referencia para advertir cuando un servicio externo la excede; vacío = sin presupuesto. Las cantidades de materiales se definen en «Presupuesto de materiales».
                   </p>
                 </div>
               )}
