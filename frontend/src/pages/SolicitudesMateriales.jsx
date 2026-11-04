@@ -311,10 +311,10 @@ export default function SolicitudesMateriales({ pestanas }) {
               )}
               {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && (
                 <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(pendienteDespacho(d))])) }) }}>
-                  {s.estado === 'DESPACHADA_PARCIAL' || s.detalles.some((d) => d.saldo_pendiente > pendienteDespacho(d)) ? 'Despachar (incluye el saldo)' : 'Despachar'}
+                  {s.detalles.some((d) => d.saldo_pendiente > 0) ? 'Despachar (incluye el saldo)' : 'Despachar'}
                 </button>
               )}
-              {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && s.detalles.some((d) => d.saldo_pendiente > 0) && (
+              {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && s.detalles.some((d) => d.por_despachar > 0) && (
                 <button type="button" className="btn-ghost text-xs" onClick={() => { setErrorAccion(''); setCancelandoSaldo({ solicitud: s, motivo: '' }) }}>Cancelar saldo</button>
               )}
               {(s.estado === 'PENDIENTE' || s.estado === 'APROBADA' || s.estado === 'APROBADA_PARCIAL') && (
@@ -381,10 +381,10 @@ export default function SolicitudesMateriales({ pestanas }) {
       <Modal abierto={cancelandoSaldo !== null} titulo="Cancelar el saldo pendiente" onCerrar={() => setCancelandoSaldo(null)} ancho="max-w-md">
         {cancelandoSaldo && (
           <>
-            <p className="mb-3 text-xs text-slate-500">La solicitud se cierra con lo despachado y se avisa al solicitante. Saldo que se cancela:</p>
+            <p className="mb-3 text-xs text-slate-500">La solicitud se cierra con lo despachado y se avisa al solicitante. Pendiente por despachar que se cancela:</p>
             <ul className="mb-3 list-disc pl-5 text-sm text-slate-700">
-              {cancelandoSaldo.solicitud.detalles.filter((d) => d.saldo_pendiente > 0).map((d) => (
-                <li key={d.id}>{d.material}: {d.saldo_pendiente} {d.unidad_medida}</li>
+              {cancelandoSaldo.solicitud.detalles.filter((d) => d.por_despachar > 0).map((d) => (
+                <li key={d.id}>{d.material}: {d.por_despachar} {d.unidad_medida}</li>
               ))}
             </ul>
             <label htmlFor="cs-motivo" className="label">Observación (obligatoria)</label>
@@ -403,8 +403,8 @@ export default function SolicitudesMateriales({ pestanas }) {
       <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} ancho="max-w-md">
         {despachando && (
           <>
-            <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material: por defecto lo aprobado que falta, y puede llegar hasta el saldo pendiente si ya hay existencia. La solicitud se cierra al llegar el saldo a cero.</p>
-            {despachando.solicitud.detalles.filter((d) => d.saldo_pendiente > 0).map((d) => (
+            <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material: por defecto lo aprobado que falta, y puede sumar el saldo pendiente si ya hay existencia. La solicitud se cierra cuando sale todo lo solicitado.</p>
+            {despachando.solicitud.detalles.filter((d) => d.por_despachar > 0).map((d) => (
               <div key={d.id} className="mb-3">
                 <label htmlFor={`dp-${d.id}`} className="label">
                   {d.material} (aprobado pendiente {pendienteDespacho(d)}, saldo pendiente {d.saldo_pendiente}, existencia total {d.existencia_total} {d.unidad_medida}
@@ -412,7 +412,7 @@ export default function SolicitudesMateriales({ pestanas }) {
                     ? `, en el almacén elegido ${(existencias.datos ?? []).find((x) => String(x.almacen_id) === String(despachando.almacen) && x.material_id === d.material_id)?.existencia ?? 0}`
                     : ', elija el almacén para ver la suya'})
                 </label>
-                <input id={`dp-${d.id}`} type="number" min="0" max={d.saldo_pendiente} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
+                <input id={`dp-${d.id}`} type="number" min="0" max={d.por_despachar} step="0.01" className="input" value={despachando.cantidades[d.id] ?? ''}
                   onChange={(e) => setDespachando({ ...despachando, cantidades: { ...despachando.cantidades, [d.id]: e.target.value } })} />
               </div>
             ))}
@@ -431,7 +431,7 @@ export default function SolicitudesMateriales({ pestanas }) {
               <button type="button" className="btn-primary" onClick={() => confirmar(
                 () => solicitudesMaterialesApi.despachar(despachando.solicitud.id, {
                   almacen_origen_id: despachando.almacen, entregado_a_trabajador_id: despachando.trabajador,
-                  detalles: despachando.solicitud.detalles.filter((d) => d.saldo_pendiente > 0)
+                  detalles: despachando.solicitud.detalles.filter((d) => d.por_despachar > 0)
                     .map((d) => ({ detalle_id: d.id, cantidad: Number(despachando.cantidades[d.id] || 0) })),
                 }), () => setDespachando(null))}>Despachar</button>
               <button type="button" className="btn-ghost" onClick={() => setDespachando(null)}>Cancelar</button>

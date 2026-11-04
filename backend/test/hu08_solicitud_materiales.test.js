@@ -25,11 +25,13 @@ mock.module('../src/repositories/solicitudMaterialRepository.js', {
     findById: async (id) => {
       const s = estado.solicitudes.find((x) => x.id === Number(id))
       if (!s) return null
-      // Como el repositorio real: saldo pendiente = solicitado - despachado (cero si el saldo se canceló).
+      // Como el repositorio real: saldo = solicitado - aprobado; por despachar = solicitado - despachado (cero si el saldo se canceló).
       return {
         ...s,
         detalles: (s.detalles ?? []).map((d) => ({
-          ...d, saldo_pendiente: s.saldo_cancelado ? 0 : Math.max(0, Number(d.cantidad_solicitada) - Number(d.cantidad_despachada ?? 0)),
+          ...d,
+          saldo_pendiente: s.saldo_cancelado ? 0 : Math.max(0, Number(d.cantidad_solicitada) - Number(d.cantidad_aprobada ?? 0)),
+          por_despachar: s.saldo_cancelado ? 0 : Math.max(0, Number(d.cantidad_solicitada) - Number(d.cantidad_despachada ?? 0)),
         })),
       }
     },
@@ -312,7 +314,8 @@ describe('HU-36 · aprobación parcial con saldo', () => {
     const s = await pendiente(4)
     const r = await aprobarSolicitud(s.id, { detalles: [{ detalle_id: 1, cantidad_aprobada: 4 }, { detalle_id: 2, cantidad_aprobada: 0, observacion: 'Sin stock de arena' }] }, bodega)
     assert.equal(r.estado, 'APROBADA_PARCIAL')
-    assert.deepEqual(r.detalles.map((d) => d.saldo_pendiente), [10, 5])
+    assert.deepEqual(r.detalles.map((d) => d.saldo_pendiente), [6, 5])
+    assert.deepEqual(r.detalles.map((d) => d.por_despachar), [10, 5])
     const n = estado.notificaciones[0]
     assert.equal(n.usuarioId, 7)
     assert.match(n.titulo, /saldo pendiente/)
@@ -327,13 +330,28 @@ describe('HU-36 · aprobación parcial con saldo', () => {
     // Por defecto sale lo aprobado que falta despachar.
     await despacharSolicitud(s.id, datos, bodega)
     assert.equal(estado.salidas[0].cantidad, 4)
-    // Con existencia nueva se puede despachar más de lo aprobado, hasta el saldo (10).
+    // Con existencia nueva se puede despachar más de lo aprobado, hasta lo solicitado (10).
     await despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 9 }] }, bodega)
     assert.equal(estado.salidas[0].cantidad, 9)
     await assert.rejects(
       () => despacharSolicitud(s.id, { ...datos, detalles: [{ detalle_id: 1, cantidad: 11 }] }, bodega),
-      (err) => { assert.equal(err.statusCode, 409); assert.match(err.message, /saldo pendiente \(10\)/); return true },
+      (err) => { assert.equal(err.statusCode, 409); assert.match(err.message, /pendiente por despachar \(10\)/); return true },
     )
+  })
+
+  test('lo aprobado que falta por despachar no es saldo, pero se puede despachar y cancelar', async () => {
+    const s = await pendiente(20)
+    estado.solicitudes[0].detalles[1].existencia_total = 20
+    const r = await aprobarSolicitud(s.id, { detalles: [{ detalle_id: 1, cantidad_aprobada: 10 }, { detalle_id: 2, cantidad_aprobada: 5 }] }, bodega)
+    assert.equal(r.estado, 'APROBADA')
+    assert.deepEqual(r.detalles.map((d) => d.saldo_pendiente), [0, 0])
+    estado.solicitudes[0].detalles[0].cantidad_despachada = 4
+    estado.solicitudes[0].estado = 'DESPACHADA_PARCIAL'
+    estado.notificaciones = []
+    await despacharSolicitud(s.id, { almacen_origen_id: 1, entregado_a_trabajador_id: 3 }, bodega)
+    assert.deepEqual(estado.salidas.map((x) => x.cantidad), [6, 5])
+    await cancelarSaldoSolicitud(s.id, { observaciones: 'Se agotó el stock' }, bodega)
+    assert.match(estado.notificaciones[0].mensaje, /Cemento: 6 BOLSA; Arena: 5 M3/)
   })
 
   test('criterio 5: una solicitud ya cerrada no se despacha', async () => {

@@ -225,12 +225,12 @@ export async function despacharSolicitud(id, body = {}, ctx) {
       }
       const salidas = []
       for (const l of lineas) {
-        // HU-36: se puede despachar hasta el saldo (solicitado - despachado); por defecto, lo aprobado que falta despachar.
-        const saldo = Math.round((Number(l.cantidad_solicitada) - Number(l.cantidad_despachada)) * 100) / 100
+        // HU-36: se puede despachar hasta lo solicitado (incluye el saldo); por defecto, lo aprobado que falta despachar.
+        const porDespachar = Math.round((Number(l.cantidad_solicitada) - Number(l.cantidad_despachada)) * 100) / 100
         const aprobadoPendiente = Math.max(0, Math.round((Number(l.cantidad_aprobada) - Number(l.cantidad_despachada)) * 100) / 100)
         const c = indicadas.has(Number(l.id)) ? cantidad(indicadas.get(Number(l.id)), 'cantidad', { permiteCero: true }) : aprobadoPendiente
         if (c === 0) continue
-        if (c > saldo) throw new AppError(`La cantidad supera el saldo pendiente (${saldo}) de ${l.material}`, 409, 'cantidad')
+        if (c > porDespachar) throw new AppError(`La cantidad supera lo pendiente por despachar (${porDespachar}) de ${l.material}`, 409, 'cantidad')
         // HU-26: debe haber existencia suficiente en el almacén de origen (y, por consistencia, en el total).
         const enAlmacen = Number(l.existencia_almacen ?? l.existencia_total)
         if (c > enAlmacen) {
@@ -262,14 +262,15 @@ export async function cancelarSaldoSolicitud(id, body = {}, ctx) {
   if (!['APROBADA', 'APROBADA_PARCIAL', 'DESPACHADA_PARCIAL'].includes(s.estado)) {
     throw new AppError(`No se puede cancelar el saldo de una solicitud en estado ${s.estado}`, 409)
   }
-  const saldo = s.detalles.filter((l) => Number(l.saldo_pendiente) > 0)
-  if (saldo.length === 0) throw new AppError('La solicitud no tiene saldo pendiente', 409)
-  const resumen = saldo.map((l) => `${l.material}: ${l.saldo_pendiente} ${l.unidad_medida}`).join('; ')
+  // Se cierra todo lo que falta por salir: el saldo y lo aprobado que no alcanzó a despacharse.
+  const pendientes = s.detalles.filter((l) => Number(l.por_despachar) > 0)
+  if (pendientes.length === 0) throw new AppError('La solicitud no tiene cantidades pendientes por despachar', 409)
+  const resumen = pendientes.map((l) => `${l.material}: ${l.por_despachar} ${l.unidad_medida}`).join('; ')
   const notificacion = {
     usuarioId: s.solicitado_por_usuario_id,
     referenciaId: Number(id),
     titulo: `Saldo de la solicitud ${s.codigo} cancelado`,
-    mensaje: `Bodega canceló el saldo pendiente (${resumen}) y cerró la solicitud con lo despachado. Observación: ${observacion}`,
+    mensaje: `Bodega canceló lo pendiente por despachar (${resumen}) y cerró la solicitud con lo despachado. Observación: ${observacion}`,
   }
   const final = await repo.cancelarSaldo(id, ctx.usuarioId, observacion, notificacion)
   if (!final) throw new AppError('La solicitud ya no admite cancelar el saldo (la resolvió otra persona)', 409)
