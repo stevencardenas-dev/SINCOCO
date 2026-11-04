@@ -594,7 +594,7 @@ HU-12 y HU-08: sus criterios cubren solo lo nuevo.
 * **Sprint:** 4
 * **Criterios de Aceptación:**
   * Extiende HU-08. La cantidad_aprobada de cada línea no puede superar la cantidad_solicitada ni la existencia disponible al momento de la revisión.
-  * La diferencia entre lo solicitado y lo despachado queda como saldo pendiente, visible en la solicitud, que queda en estado aprobada parcial.
+  * La diferencia entre lo solicitado y lo aprobado queda como saldo pendiente, visible en la solicitud, que queda en estado aprobada parcial.
   * El saldo pendiente puede despacharse después mediante nuevas salidas (HU-26) sin crear otra solicitud, o cancelarse con una observación obligatoria.
   * Una línea con cantidad aprobada igual a cero exige observación.
   * La solicitud no pasa a despachada hasta que el saldo sea cero o esté cancelado.

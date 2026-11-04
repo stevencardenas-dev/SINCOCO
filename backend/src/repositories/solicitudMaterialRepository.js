@@ -24,10 +24,11 @@ async function conDetalles(solicitudes) {
   )
   return solicitudes.map((s) => ({
     ...s,
-    // HU-36: saldo pendiente = lo solicitado que aún no se despachó (cero si el saldo se canceló).
+    // HU-36: saldo pendiente = lo solicitado que no se aprobó; por despachar = lo solicitado que aún no sale (cero si el saldo se canceló).
     detalles: detalles.filter((d) => d.solicitud_id === s.id).map((d) => ({
       ...d,
-      saldo_pendiente: s.saldo_cancelado ? 0 : Math.max(0, Math.round((Number(d.cantidad_solicitada) - Number(d.cantidad_despachada)) * 100) / 100),
+      saldo_pendiente: s.saldo_cancelado ? 0 : Math.max(0, Math.round((Number(d.cantidad_solicitada) - Number(d.cantidad_aprobada)) * 100) / 100),
+      por_despachar: s.saldo_cancelado ? 0 : Math.max(0, Math.round((Number(d.cantidad_solicitada) - Number(d.cantidad_despachada)) * 100) / 100),
     })),
   }))
 }
@@ -215,7 +216,7 @@ export async function despachar({ id, almacenId, trabajadorId, usuarioId, observ
         [s.cantidad, s.detalle_id],
       )
     }
-    // La solicitud solo queda despachada cuando el saldo (solicitado - despachado) llega a cero.
+    // La solicitud solo queda despachada cuando todo lo solicitado salió.
     const [[pend]] = await conn.query(
       'SELECT COUNT(*) AS n FROM detalles_solicitud_materiales WHERE solicitud_id = ? AND cantidad_despachada < cantidad_solicitada',
       [id],
