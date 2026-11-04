@@ -16,6 +16,7 @@ export class Etapa {
     estado,
     activo,
     porcentaje_avance,
+    presupuesto,
   }) {
     this.id = id
     this.proyecto_id = proyecto_id
@@ -32,6 +33,8 @@ export class Etapa {
     this.activo = activo
     // HU-21 · criterio 4: promedio ponderado por peso de sus actividades activas.
     this.porcentaje_avance = Number(porcentaje_avance ?? 0)
+    // Suma del presupuesto de sus actividades activas (null = ninguna tiene presupuesto).
+    this.presupuesto = presupuesto === undefined || presupuesto === null ? null : Number(presupuesto)
   }
 
   static fromRow(row) {

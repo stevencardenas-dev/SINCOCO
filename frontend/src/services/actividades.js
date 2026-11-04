@@ -17,4 +17,8 @@ export const actividadesApi = {
   reprogramar: (id, cuerpo) => datos(api.patch(`/actividades/${id}/reprogramar`, cuerpo)),
   /** HU-34: historial de reprogramaciones de la actividad. */
   historial: (id) => datos(api.get(`/actividades/${id}/reprogramaciones`)),
+  /** HU-08: cantidades presupuestadas por material y materiales disponibles. */
+  presupuestoMateriales: (id) => datos(api.get(`/actividades/${id}/presupuesto-materiales`)),
+  /** HU-08: reemplaza las cantidades presupuestadas por material. */
+  guardarPresupuestoMateriales: (id, lineas) => datos(api.put(`/actividades/${id}/presupuesto-materiales`, { lineas })),
 }

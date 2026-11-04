@@ -4,6 +4,7 @@ import { requirePermiso } from '../middleware/permisos.js'
 import { listar, registrar, actualizar, baja, reactivarCtrl, iniciar, finalizar } from '../controllers/actividadController.js'
 import { reprogramarActividadCtrl, historialActividad } from '../controllers/reprogramacionController.js'
 import { registrar as registrarAvance, historial as historialAvance, criterios as criteriosActividad } from '../controllers/avanceController.js'
+import { obtener as presupuestoMateriales, guardar as guardarPresupuestoMateriales } from '../controllers/presupuestoMaterialController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -26,6 +27,10 @@ router.get('/:id/criterios', requirePermiso('avance.listar'), criteriosActividad
 // HU-34: reprogramación de fechas (solo administrador) e historial de cambios.
 router.patch('/:id/reprogramar', requirePermiso('actividades.reprogramar'), reprogramarActividadCtrl)
 router.get('/:id/reprogramaciones', requirePermiso('actividades.listar'), historialActividad)
+
+// HU-08: cantidades presupuestadas por material, contra las que se valida cada solicitud.
+router.get('/:id/presupuesto-materiales', requirePermiso('actividades.listar'), presupuestoMateriales)
+router.put('/:id/presupuesto-materiales', requirePermiso('actividades.editar'), guardarPresupuestoMateriales)
 
 // HU-18: baja lógica y reactivación (nunca borrado físico)
 router.patch('/:id/baja', requirePermiso('actividades.dar_baja'), baja)

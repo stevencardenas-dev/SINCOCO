@@ -10,7 +10,10 @@ const CAMPOS = `id, proyecto_id, nombre, descripcion, orden,
                 fecha_inicio_original, fecha_fin_original, fecha_inicio_real, estado, activo,
                 (SELECT COALESCE(ROUND(SUM(a.peso * a.porcentaje_avance) / NULLIF(SUM(a.peso), 0), 2), 0)
                    FROM actividades a
-                  WHERE a.etapa_id = etapas_proyecto.id AND a.activo = 1) AS porcentaje_avance`
+                  WHERE a.etapa_id = etapas_proyecto.id AND a.activo = 1) AS porcentaje_avance,
+                (SELECT SUM(a.presupuesto)
+                   FROM actividades a
+                  WHERE a.etapa_id = etapas_proyecto.id AND a.activo = 1) AS presupuesto`
 
 export async function findById(id) {
   const [rows] = await pool.query(
