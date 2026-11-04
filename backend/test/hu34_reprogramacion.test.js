@@ -53,6 +53,9 @@ mock.module('../src/repositories/reprogramacionRepository.js', {
     },
   },
 })
+mock.module('../src/repositories/asignacionRepository.js', {
+  namedExports: { activasFueraDeRango: async () => [] },
+})
 mock.module('../src/services/accesoService.js', {
   namedExports: { verificarGestionPlan: async () => {}, verificarAccesoProyecto: async () => {} },
 })
