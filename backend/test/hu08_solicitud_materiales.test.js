@@ -36,7 +36,7 @@ mock.module('../src/repositories/solicitudMaterialRepository.js', {
       }
     },
     listar: async () => estado.solicitudes,
-    findActividadProyecto: async (id) => (id === 5 ? { id: 5, estado: 'EN_PROCESO', proyecto_id: 1 } : null),
+    findActividadProyecto: async (id) => (id === 5 ? { id: 5, estado: estado.actividadEstado, proyecto_id: 1 } : null),
     findMateriales: async (ids) => ids.map((id) => ({ id, activo: 1, descripcion: 'Cemento' })),
     catalogoMateriales: async () => [{ id: 10, codigo: 'MAT-001', descripcion: 'Cemento', unidad_medida: 'BOLSA' }],
     trabajadoresEntrega: async () => [{ id: 3, nombres: 'Ana', apellidos: 'Ruiz' }],
@@ -86,7 +86,7 @@ mock.module('../src/repositories/solicitudMaterialRepository.js', {
     },
   },
 })
-mock.module('../src/repositories/proyectoRepository.js', { namedExports: { findById: async (id) => (id === 1 ? { id: 1 } : null) } })
+mock.module('../src/repositories/proyectoRepository.js', { namedExports: { findById: async (id) => (id === 1 ? { id: 1, estado: estado.proyectoEstado } : null) } })
 mock.module('../src/services/accesoService.js', { namedExports: { verificarAccesoProyecto: async () => {} } })
 mock.module('../src/middleware/permisos.js', { namedExports: { rolTienePermiso: async (rol) => rol === 'ENCARGADO_BODEGA' } })
 mock.module('../src/db/bitacora.js', { namedExports: { registrar: async () => {} } })
@@ -105,6 +105,8 @@ beforeEach(() => {
   estado.creaciones = []
   estado.notificaciones = []
   estado.salidas = []
+  estado.proyectoEstado = 'EN_EJECUCION'
+  estado.actividadEstado = 'EN_PROCESO'
 })
 
 describe('HU-08 · solicitar materiales', () => {
@@ -118,6 +120,28 @@ describe('HU-08 · solicitar materiales', () => {
     assert.equal(s.proyecto_id, 1)
     assert.equal(s.actividad_id, 5)
     assert.equal(s.solicitado_por_usuario_id, 7)
+  })
+
+  test('principal: un proyecto en planificación y una actividad atrasada siguen admitiendo solicitudes', async () => {
+    estado.proyectoEstado = 'PLANIFICACION'
+    estado.actividadEstado = 'ATRASADA'
+    assert.equal((await crearSolicitud(cuerpo(), ctx)).estado, 'PENDIENTE')
+  })
+
+  test('principal: no se solicita para un proyecto inactivo', async () => {
+    for (const e of ['PAUSADO', 'FINALIZADO', 'CANCELADO']) {
+      estado.proyectoEstado = e
+      await assert.rejects(() => crearSolicitud(cuerpo(), ctx), { statusCode: 409 })
+    }
+    assert.equal(estado.creaciones.length, 0)
+  })
+
+  test('principal: no se solicita para una actividad inactiva', async () => {
+    for (const e of ['COMPLETADA', 'SUSPENDIDA']) {
+      estado.actividadEstado = e
+      await assert.rejects(() => crearSolicitud(cuerpo(), ctx), { statusCode: 409 })
+    }
+    assert.equal(estado.creaciones.length, 0)
   })
 
   test('exige proyecto, actividad y al menos un material', async () => {
