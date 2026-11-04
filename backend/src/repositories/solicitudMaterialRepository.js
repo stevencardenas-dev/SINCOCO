@@ -68,6 +68,14 @@ export async function catalogoMateriales() {
   return rows
 }
 
+/** Selector «Entregado a» del despacho: solo el nombre del personal en servicio. */
+export async function trabajadoresEntrega() {
+  const [rows] = await pool.query(
+    `SELECT id, nombres, apellidos FROM trabajadores WHERE activo = 1 AND estado = 'ACTIVO' ORDER BY nombres, apellidos`,
+  )
+  return rows
+}
+
 /** Cantidad presupuestada por material para la actividad (solo los materiales presupuestados). */
 export async function presupuestoActividad(actividadId) {
   const [rows] = await pool.query(

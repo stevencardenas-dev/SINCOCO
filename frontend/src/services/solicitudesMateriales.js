@@ -7,6 +7,8 @@ export const solicitudesMaterialesApi = {
   listar: (filtros) => datos(api.get(ruta, { params: sinVacios(filtros) })),
   // Materiales que se pueden pedir; no requiere el permiso del catálogo de inventario.
   catalogo: () => datos(api.get(`${ruta}/materiales`)),
+  // A quién se entrega un despacho; no requiere el permiso del módulo de personal.
+  trabajadores: () => datos(api.get(`${ruta}/trabajadores`)),
   crear: (cuerpo) => datos(api.post(ruta, cuerpo)),
   aprobar: (id, cuerpo) => datos(api.patch(`${ruta}/${id}/aprobar`, cuerpo)),
   rechazar: (id, observaciones) => datos(api.patch(`${ruta}/${id}/rechazar`, { observaciones })),

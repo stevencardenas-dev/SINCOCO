@@ -120,6 +120,9 @@ async function calcularExcesos(actividadId, detalles, materiales) {
 /** Catálogo de materiales para quien solicita (sin existencias ni costos). */
 export const catalogoMateriales = () => repo.catalogoMateriales()
 
+/** Trabajadores a quienes bodega puede entregar un despacho (sin datos de personal). */
+export const trabajadoresEntrega = () => repo.trabajadoresEntrega()
+
 /**
  * Bodega revisa el stock real y fija la cantidad aprobada de cada línea (HU-08 CU-08 Alt 2 y HU-36).
  * La aprobada no puede superar lo solicitado ni la existencia disponible; una línea en cero exige observación.

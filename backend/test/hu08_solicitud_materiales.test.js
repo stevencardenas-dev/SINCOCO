@@ -39,6 +39,7 @@ mock.module('../src/repositories/solicitudMaterialRepository.js', {
     findActividadProyecto: async (id) => (id === 5 ? { id: 5, estado: 'EN_PROCESO', proyecto_id: 1 } : null),
     findMateriales: async (ids) => ids.map((id) => ({ id, activo: 1, descripcion: 'Cemento' })),
     catalogoMateriales: async () => [{ id: 10, codigo: 'MAT-001', descripcion: 'Cemento', unidad_medida: 'BOLSA' }],
+    trabajadoresEntrega: async () => [{ id: 3, nombres: 'Ana', apellidos: 'Ruiz' }],
     presupuestoActividad: async () => estado.presupuesto,
     yaSolicitadoActividad: async () => estado.yaSolicitado,
     crear: async (datos) => {
@@ -91,7 +92,7 @@ mock.module('../src/middleware/permisos.js', { namedExports: { rolTienePermiso: 
 mock.module('../src/db/bitacora.js', { namedExports: { registrar: async () => {} } })
 
 const {
-  crearSolicitud, aprobarSolicitud, rechazarSolicitud, catalogoMateriales, despacharSolicitud, cancelarSaldoSolicitud,
+  crearSolicitud, aprobarSolicitud, rechazarSolicitud, catalogoMateriales, trabajadoresEntrega, despacharSolicitud, cancelarSaldoSolicitud,
 } = await import('../src/services/solicitudMaterialService.js')
 
 const ctx = { usuario: { id: 7, rol: 'MAESTRO_OBRA' }, usuarioId: 7, ip: '127.0.0.1' }
@@ -103,6 +104,7 @@ beforeEach(() => {
   estado.yaSolicitado = []
   estado.creaciones = []
   estado.notificaciones = []
+  estado.salidas = []
 })
 
 describe('HU-08 · solicitar materiales', () => {
@@ -275,6 +277,10 @@ describe('HU-26 · existencia del almacén de origen', () => {
 })
 
 describe('HU-36 · aprobación parcial con saldo', () => {
+  test('el selector de entrega de bodega solo trae el nombre del trabajador', async () => {
+    assert.deepEqual(Object.keys((await trabajadoresEntrega())[0]), ['id', 'nombres', 'apellidos'])
+  })
+
   const bodega = { usuario: { id: 2, rol: 'ENCARGADO_BODEGA' }, usuarioId: 2, ip: '127.0.0.1' }
   const LINEA_B = { id: 2, material_id: 11, material: 'Arena', unidad_medida: 'M3', cantidad_solicitada: 5, cantidad_aprobada: 0, cantidad_despachada: 0, existencia_total: 0 }
   // Solicitud pendiente de dos líneas: cemento (pide 10, hay `existencia`) y arena (pide 5, no hay).
