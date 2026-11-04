@@ -160,7 +160,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       {materiales.error && <AlertaFormulario mensaje={materiales.error} />}
 
       {(notificaciones.datos ?? []).length > 0 && (
-        <section aria-label="Notificaciones" className="card space-y-2 border-l-4 border-l-brand-500 p-4">
+        <section aria-label="Notificaciones" className="card space-y-2 border-sky-200 border-l-4 border-l-sky-500 bg-sky-100 p-4">
           {notificaciones.datos.map((n) => (
             <div key={n.id} className="flex flex-wrap items-start justify-between gap-3 text-sm">
               <div>
