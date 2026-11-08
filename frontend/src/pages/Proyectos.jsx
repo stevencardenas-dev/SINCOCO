@@ -87,7 +87,7 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
         }
       }}
       aria-label={`${p.nombre}: abrir plan`}
-      className={`card flex cursor-pointer flex-col gap-3 border-t-4 bg-gradient-to-b ${tono.fondo} via-white via-45% to-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${tono.borde} ${p.activo ? '' : 'opacity-60'}`}
+      className={`card flex cursor-pointer flex-col gap-2.5 border-t-4 bg-gradient-to-b ${tono.fondo} via-white via-45% to-white p-3.5 shadow-md transition hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${tono.borde} ${p.activo ? '' : 'opacity-60'}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold tracking-wide text-slate-400">{p.codigo}</span>
@@ -98,8 +98,8 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
         )}
       </div>
 
-      <div className="min-w-0">
-        <p className="font-bold leading-snug text-slate-900">{p.nombre}</p>
+      <div className="min-w-0 sm:min-h-[3.4rem]">
+        <p className="line-clamp-2 font-bold leading-snug text-slate-900" title={p.nombre}>{p.nombre}</p>
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
           <BuildingOffice2Icon className="h-3.5 w-3.5 shrink-0" />
           <span className="truncate">
@@ -109,23 +109,23 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
       </div>
 
       <div>
-        <div className="mb-1 flex items-center justify-between text-xs">
+        <div className="mb-0.5 flex items-center justify-between text-xs">
           <span className="text-slate-500">Avance</span>
           <span className="font-bold tabular-nums text-slate-700">{avance}%</span>
         </div>
-        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/80 shadow-inner">
+        <div className="h-2 overflow-hidden rounded-full bg-slate-200/80 shadow-inner">
           <div className={`h-full rounded-full ${tono.barra} transition-all`} style={{ width: `${avance}%` }} />
         </div>
       </div>
 
-      <ul className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-xl bg-white/80 p-3 text-slate-700 shadow-sm ring-1 ring-slate-200/70">
+      <ul className="mt-auto grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-white/80 p-2.5 text-slate-700 shadow-sm ring-1 ring-slate-200/70">
         {datos.map(([Icono, rotulo, valor, op = {}]) =>
           valor ? (
             <li key={rotulo} className={`flex min-w-0 items-start gap-1.5 ${op.ancho ? 'col-span-2' : ''}`} title={rotulo}>
-              <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${op.alerta ? 'bg-red-100 text-red-600' : tono.icono}`}>
-                <Icono className="h-3.5 w-3.5" aria-label={rotulo} />
+              <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${op.alerta ? 'bg-red-100 text-red-600' : tono.icono}`}>
+                <Icono className="h-3 w-3" aria-label={rotulo} />
               </span>
-              <span className={`min-w-0 self-center text-[13px] ${op.alerta ? 'font-semibold text-red-600' : ''} ${op.ancho ? 'line-clamp-2' : 'truncate'}`}>
+              <span className={`min-w-0 self-center text-xs ${op.alerta ? 'font-semibold text-red-600' : ''} ${op.ancho ? 'truncate' : 'truncate'}`}>
                 {op.enlace ? nuevaPestana(op.enlace, valor) : valor}
                 {op.alerta && ' · atrasado'}
               </span>
@@ -805,7 +805,7 @@ export default function Proyectos() {
       )}
 
       {proyectos !== null && proyectos.length > 0 && vista === 'tarjetas' && (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {proyectos.map((p) => (
             <TarjetaProyecto
               key={p.id}
