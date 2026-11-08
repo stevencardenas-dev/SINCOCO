@@ -5,9 +5,12 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
   UserPlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
+import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
@@ -95,6 +98,44 @@ function OpcionesAgrupadas({ filas, tipo }) {
   ))
 }
 
+// No disponible: no ACTIVO. Asignado: ACTIVO con actividades vigentes (aún asignable).
+function disponibilidad(t) {
+  return !Number(t.disponible)
+    ? ['No disponible', 'bg-red-50 text-red-700']
+    : Number(t.actividades_vigentes) > 0
+      ? ['Asignado', 'bg-amber-50 text-amber-700']
+      : ['Disponible', 'bg-emerald-50 text-emerald-700']
+}
+
+function TarjetaTrabajador({ t, onAbrir }) {
+  const nombre = `${t.nombres} ${t.apellidos}`
+  const [dispTexto, dispClase] = disponibilidad(t)
+  return (
+    <button
+      type="button"
+      onClick={() => onAbrir(t)}
+      aria-label={`Ver ficha de ${nombre}`}
+      className={`card group flex aspect-square flex-col items-center justify-center gap-2 p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${
+        t.activo ? '' : 'opacity-60'
+      }`}
+    >
+      <Avatar nombre={nombre} semilla={String(t.id)} className="h-20 w-20 text-2xl" />
+      <div className="min-w-0 max-w-full">
+        <p className="truncate text-sm font-semibold text-slate-800">{nombre}</p>
+        <p className="truncate text-xs text-slate-500">{t.cargo}</p>
+        {t.especialidad && <p className="truncate text-xs text-slate-400">{t.especialidad}</p>}
+      </div>
+      <span
+        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+          t.activo ? dispClase : 'bg-slate-100 text-slate-500'
+        }`}
+      >
+        {t.activo ? dispTexto : 'Dado de baja'}
+      </span>
+    </button>
+  )
+}
+
 export default function Personal() {
   const { puede } = useAuth()
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
@@ -107,6 +148,14 @@ export default function Personal() {
   const [porAsignar, setPorAsignar] = useState(null)
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
+  const [verFicha, setVerFicha] = useState(null)
+  const [vista, setVista] = useState(() => {
+    try { return localStorage.getItem('personal-vista') === 'tabla' ? 'tabla' : 'tarjetas' } catch { return 'tarjetas' }
+  })
+  const cambiarVista = (v) => {
+    setVista(v)
+    try { localStorage.setItem('personal-vista', v) } catch { /* sin storage */ }
+  }
   // HU-18: por defecto no se muestran los registros dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   const {
@@ -862,6 +911,99 @@ export default function Personal() {
       />
 
       {personal !== null && personal.length > 0 && (
+        <div className="flex justify-end">
+          <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
+            {[
+              ['tarjetas', 'Tarjetas', Squares2X2Icon],
+              ['tabla', 'Tabla', TableCellsIcon],
+            ].map(([v, texto, Icono]) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={vista === v}
+                onClick={() => cambiarVista(v)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  vista === v ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <Icono className="h-4 w-4" /> {texto}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {personal !== null && personal.length > 0 && vista === 'tarjetas' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {personal.map((t) => (
+            <TarjetaTrabajador key={t.id} t={t} onAbrir={setVerFicha} />
+          ))}
+        </div>
+      )}
+
+      {/* Ficha del trabajador: se abre al hacer clic en una tarjeta. */}
+      <Modal
+        abierto={!!verFicha}
+        titulo={verFicha ? `${verFicha.nombres} ${verFicha.apellidos}` : ''}
+        subtitulo={verFicha ? (verFicha.especialidad ? `${verFicha.cargo} · ${verFicha.especialidad}` : verFicha.cargo) : ''}
+        onCerrar={() => setVerFicha(null)}
+        ancho="max-w-lg"
+      >
+        {verFicha && (() => {
+          const t = verFicha
+          const [dispTexto, dispClase] = disponibilidad(t)
+          const filas = [
+            ['Documento', `${t.tipo_documento} ${t.numero_documento}`],
+            ['Correo', t.email ?? '—'],
+            ['Teléfono', t.telefono ? telefonoLegible(t.telefono) : '—'],
+            ['Dirección', t.direccion ?? '—'],
+            ['Estado', t.activo ? (ESTADOS.find((e) => e.value === t.estado)?.label ?? t.estado) : `De baja${t.fecha_baja ? ` desde ${fmtFecha(t.fecha_baja)}` : ''}`],
+            ['Actividades vigentes', String(t.actividades_vigentes ?? 0)],
+          ]
+          return (
+            <>
+              <div className="flex items-center gap-4">
+                <Avatar nombre={`${t.nombres} ${t.apellidos}`} semilla={String(t.id)} className="h-20 w-20 text-2xl" />
+                {t.activo && (
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${dispClase}`}>{dispTexto}</span>
+                )}
+              </div>
+              <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+                {filas.map(([k, v]) => (
+                  <div key={k} className={k === 'Dirección' ? 'sm:col-span-2' : ''}>
+                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{k}</dt>
+                    <dd className="mt-0.5 break-words text-sm text-slate-700">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+              {(t.activo ? puedeEditar || puedeAsignar : puedeBaja) && (
+                <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
+                  {t.activo ? (
+                    <>
+                      {puedeEditar && (
+                        <button className="btn-primary" onClick={() => { setVerFicha(null); abrirEditar(t) }}>
+                          <PencilSquareIcon className="h-4 w-4" /> Editar
+                        </button>
+                      )}
+                      {puedeAsignar && t.estado === 'ACTIVO' && (
+                        <button className="btn-ghost" onClick={() => { setVerFicha(null); setPorAsignar(t) }}>
+                          <UserPlusIcon className="h-4 w-4" /> Asignar
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button className="btn-primary" onClick={() => { setVerFicha(null); reactivar(t) }}>
+                      <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
+                    </button>
+                  )}
+                </div>
+              )}
+            </>
+          )
+        })()}
+      </Modal>
+
+      {personal !== null && personal.length > 0 && vista === 'tabla' && (
         <div className="card overflow-hidden">
           <TablaFicha
             filas={personal}
