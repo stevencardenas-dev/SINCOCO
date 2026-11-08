@@ -53,7 +53,15 @@ function etiquetaDe(el, form) {
 
 function leerFiltros(form) {
   const res = []
-  form.querySelectorAll('select, input, textarea').forEach((el, i) => {
+  form.querySelectorAll('select, input, textarea, fieldset[data-filtro]').forEach((el, i) => {
+    // Grupo de opciones (radios): el valor es el texto de la opción elegida.
+    if (el.tagName === 'FIELDSET') {
+      const marcada = el.querySelector('input:checked')
+      if (marcada && marcada.value !== '') {
+        res.push({ id: `c${i}`, etiqueta: el.dataset.filtro, valor: marcada.closest('label')?.textContent.trim(), el })
+      }
+      return
+    }
     if (IGNORADOS.includes(el.type) || el.disabled) return
     const etiqueta = etiquetaDe(el, form)
     if (el.type === 'checkbox') {
@@ -69,6 +77,7 @@ function leerFiltros(form) {
 
 // Cambia el valor como lo haría una persona, para que React reciba el evento.
 function vaciar(el) {
+  if (el.tagName === 'FIELDSET') return el.querySelector('input[value=""]')?.click()
   if (el.type === 'checkbox') return el.click()
   const proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, '')
@@ -80,6 +89,7 @@ export default function FiltrosDesplegable({
   activos = 0,
   abiertoInicial = false,
   ariaLabel,
+  resumen,
   children,
 }) {
   const [abierto, setAbierto] = useState(abiertoInicial)
@@ -94,6 +104,11 @@ export default function FiltrosDesplegable({
     const form = formRef.current
     if (!form) return
     const nuevos = leerFiltros(form)
+    // Los campos con valor se resaltan (borde y fondo amarillo suave) vía CSS.
+    form.querySelectorAll('select, input[type="date"]').forEach((el) => {
+      if (el.value !== '') el.setAttribute('data-activo', '')
+      else el.removeAttribute('data-activo')
+    })
     const t = form.querySelector('input[type="search"]')?.value ?? ''
     const f = nuevos.map((c) => `${c.etiqueta}=${c.valor}`).join('|') + `#${t}`
     if (f !== firma.current) {
@@ -220,10 +235,11 @@ export default function FiltrosDesplegable({
       {/* Panel flotante. Siempre montado (hidden) para poder leer los valores. */}
       <div
         hidden={!abierto}
-        className="absolute right-2 top-full z-30 mt-1.5 max-h-[70vh] w-[min(440px,calc(100vw-2rem))] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl [&_.grid]:!grid-cols-2 [&_.grid]:gap-3 [&_.input]:py-1.5 [&_.label]:mb-1 [&_.label]:text-xs [&_.label]:uppercase [&_.label]:tracking-wide [&_.label]:text-slate-500"
+        className="absolute right-2 top-full z-30 mt-1.5 max-h-[70vh] w-[min(440px,calc(100vw-2rem))] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl [&_.grid]:!grid-cols-2 [&_.grid]:gap-3 [&_.input]:py-1.5 [&_input[data-activo]]:border-accent-500 [&_input[data-activo]]:bg-accent-50 [&_select[data-activo]]:border-accent-500 [&_select[data-activo]]:bg-accent-50 [&_.label]:mb-1 [&_.label]:text-xs [&_.label]:uppercase [&_.label]:tracking-wide [&_.label]:text-slate-500"
       >
         {campos}
-        <div className="flex justify-end border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+          <p className="text-xs text-slate-500">{resumen}</p>
           <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setAbierto(false)}>
             Listo
           </button>

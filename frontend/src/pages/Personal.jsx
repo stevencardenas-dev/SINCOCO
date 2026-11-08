@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  CalendarDaysIcon,
+  WrenchScrewdriverIcon,
   EnvelopeIcon,
   IdentificationIcon,
   PhoneIcon,
@@ -19,6 +21,7 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import { Interruptor, SeccionFiltros, Segmentado } from '../components/FiltrosControles.jsx'
 import ConfirmarAusencia from '../components/ConfirmarAusencia.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import AsignarPersonal from '../components/AsignarPersonal.jsx'
@@ -419,139 +422,116 @@ export default function Personal() {
         titulo="Buscar personal"
         ariaLabel="Filtros de personal"
         activos={filtrosActivos}
+        resumen={
+          personal !== null
+            ? `${personal.length} ${personal.length === 1 ? 'trabajador' : 'trabajadores'} ${hayFiltros ? 'con los filtros' : 'en la lista'}`
+            : ''
+        }
       >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="xl:col-span-2">
-            <label htmlFor="per-buscar" className="label">
-              Búsqueda
-            </label>
-            <input
-              id="per-buscar"
-              type="search"
-              className="input"
-              placeholder="Nombre, documento, correo, cargo o especialidad"
-              value={filtros.buscar}
-              onChange={(e) => cambiarFiltro('buscar', e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="per-estado" className="label">
-              Estado
-            </label>
-            <select
-              id="per-estado"
-              className="input"
-              value={filtros.estado}
-              onChange={(e) => cambiarFiltro('estado', e.target.value)}
-            >
-              <option value="">Todos</option>
-              {ESTADOS.map((e2) => (
-                <option key={e2.value} value={e2.value}>
-                  {e2.label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="per-disponible" className="label">
-              Disponibilidad
-            </label>
-            <select
-              id="per-disponible"
-              className="input"
-              value={filtros.disponible}
-              onChange={(e) => cambiarFiltro('disponible', e.target.value)}
-            >
-              <option value="">Todas</option>
-              <option value="libre">Disponibles</option>
-              <option value="asignado">Asignados</option>
-              <option value="0">No disponibles</option>
-            </select>
-          </div>
-          {/* HU-33 · criterio 3: solo quienes no tienen asignaciones solapadas en el periodo. */}
-          <div>
-            <label htmlFor="per-desde" className="label">
-              Libre desde
-            </label>
-            <input
-              id="per-desde"
-              type="date"
-              className="input"
-              value={filtros.desde}
-              max={filtros.hasta || undefined}
-              onChange={(e) => cambiarFiltro('desde', e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="per-hasta" className="label">
-              Libre hasta
-            </label>
-            <input
-              id="per-hasta"
-              type="date"
-              className="input"
-              value={filtros.hasta}
-              min={filtros.desde || undefined}
-              onChange={(e) => cambiarFiltro('hasta', e.target.value)}
-            />
-          </div>
-          <div>
-            <label htmlFor="per-cargo" className="label">
-              Cargo
-            </label>
-            <select
-              id="per-cargo"
-              className="input"
-              value={filtros.cargo_id}
-              onChange={(e) => cambiarFiltro('cargo_id', e.target.value)}
-            >
-              <option value="">Todos</option>
-              <OpcionesAgrupadas filas={cargos} tipo="cargos" />
-            </select>
-          </div>
-          {/* CU-04 · Alt 2: el personal se filtra por especialidad para tareas específicas. */}
-          <div>
-            <label htmlFor="per-especialidad" className="label">
-              Especialidad
-            </label>
-            <select
-              id="per-especialidad"
-              className="input"
-              value={filtros.especialidad_id}
-              onChange={(e) => cambiarFiltro('especialidad_id', e.target.value)}
-            >
-              <option value="">Todas</option>
-              <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
-            </select>
-          </div>
-          <div className="flex items-end">
-            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded border-slate-300 text-brand-600"
-                checked={incluirInactivos}
-                onChange={(e) => setIncluirInactivos(e.target.checked)}
-              />
-              Incluir dados de baja
-            </label>
-          </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={!hayFiltros}
-              onClick={limpiarFiltros}
-            >
-              Limpiar filtros
-            </button>
-          </div>
+        <div>
+          <label htmlFor="per-buscar" className="label">
+            Búsqueda
+          </label>
+          <input
+            id="per-buscar"
+            type="search"
+            className="input"
+            placeholder="Nombre, documento, correo, cargo o especialidad"
+            value={filtros.buscar}
+            onChange={(e) => cambiarFiltro('buscar', e.target.value)}
+          />
         </div>
-        {personal !== null && (
-          <p className="text-xs text-slate-500">
-            {personal.length} {personal.length === 1 ? 'trabajador' : 'trabajadores'}{' '}
-            {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
-          </p>
-        )}
+
+        <SeccionFiltros titulo="Situación" icono={UsersIcon}>
+          <Segmentado
+            etiqueta="Estado"
+            nombre="per-estado"
+            value={filtros.estado}
+            onChange={(v) => cambiarFiltro('estado', v)}
+            opciones={[{ value: '', label: 'Todos' }, ...ESTADOS.map((e2) => ({ value: e2.value, label: e2.label }))]}
+          />
+          <Segmentado
+            etiqueta="Disponibilidad"
+            nombre="per-disponible"
+            value={filtros.disponible}
+            onChange={(v) => cambiarFiltro('disponible', v)}
+            opciones={[
+              { value: '', label: 'Todas' },
+              { value: 'libre', label: 'Disponibles' },
+              { value: 'asignado', label: 'Asignados' },
+              { value: '0', label: 'No disponibles' },
+            ]}
+          />
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        </SeccionFiltros>
+
+        <SeccionFiltros titulo="Perfil" icono={WrenchScrewdriverIcon}>
+          <div className="grid">
+            <div>
+              <label htmlFor="per-cargo" className="label">
+                Cargo
+              </label>
+              <select
+                id="per-cargo"
+                className="input"
+                value={filtros.cargo_id}
+                onChange={(e) => cambiarFiltro('cargo_id', e.target.value)}
+              >
+                <option value="">Todos</option>
+                <OpcionesAgrupadas filas={cargos} tipo="cargos" />
+              </select>
+            </div>
+            {/* CU-04 · Alt 2: el personal se filtra por especialidad para tareas específicas. */}
+            <div>
+              <label htmlFor="per-especialidad" className="label">
+                Especialidad
+              </label>
+              <select
+                id="per-especialidad"
+                className="input"
+                value={filtros.especialidad_id}
+                onChange={(e) => cambiarFiltro('especialidad_id', e.target.value)}
+              >
+                <option value="">Todas</option>
+                <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
+              </select>
+            </div>
+          </div>
+        </SeccionFiltros>
+
+        {/* HU-33 · criterio 3: solo quienes no tienen asignaciones solapadas en el periodo. */}
+        <SeccionFiltros titulo="Libre en un período" icono={CalendarDaysIcon}>
+          <div className="grid">
+            <div>
+              <label htmlFor="per-desde" className="label">
+                Libre desde
+              </label>
+              <input
+                id="per-desde"
+                type="date"
+                className="input"
+                value={filtros.desde}
+                max={filtros.hasta || undefined}
+                onChange={(e) => cambiarFiltro('desde', e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="per-hasta" className="label">
+                Libre hasta
+              </label>
+              <input
+                id="per-hasta"
+                type="date"
+                className="input"
+                value={filtros.hasta}
+                min={filtros.desde || undefined}
+                onChange={(e) => cambiarFiltro('hasta', e.target.value)}
+              />
+            </div>
+          </div>
+        </SeccionFiltros>
       </FiltrosDesplegable>
 
       <ConfirmarAusencia
