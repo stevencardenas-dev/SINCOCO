@@ -165,14 +165,6 @@ export default function Auditoria() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className="btn-ghost"
-            disabled={!hayFiltros}
-            onClick={limpiar}
-          >
-            Limpiar filtros
-          </button>
           <p className="text-xs text-slate-500">
             {datos
               ? `${datos.total} ${datos.total === 1 ? 'registro' : 'registros'} ` +

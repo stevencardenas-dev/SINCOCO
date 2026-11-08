@@ -244,11 +244,6 @@ export default function Materiales() {
               <option value="1">En o bajo el nivel mínimo</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <button type="button" className="btn-ghost" disabled={!hayFiltros} onClick={limpiarFiltros}>
-              Limpiar filtros
-            </button>
-          </div>
         </div>
         {materiales !== null && (
           <p className="text-xs text-slate-500">

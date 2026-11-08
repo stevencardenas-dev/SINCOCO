@@ -402,14 +402,6 @@ export default function Usuarios() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            className="btn-ghost"
-            disabled={!hayFiltros}
-            onClick={limpiarFiltros}
-          >
-            Limpiar filtros
-          </button>
           <p className="text-xs text-slate-500">
             {visibles.length} {visibles.length === 1 ? 'usuario' : 'usuarios'}{' '}
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}

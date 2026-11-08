@@ -97,6 +97,7 @@ export default function FiltrosDesplegable({
   const [chips, setChips] = useState([])
   const [texto, setTexto] = useState('')
   const formRef = useRef(null)
+  const borrarRef = useRef(() => {})
   const firma = useRef('')
   const [campos, buscador, etiquetaBuscador] = sacarBuscador(children)
 
@@ -125,6 +126,12 @@ export default function FiltrosDesplegable({
     const fuera = (e) => !formRef.current?.contains(e.target) && setAbierto(false)
     // Escape cierra; Ctrl/Cmd + Enter aplica y cierra desde cualquier campo del panel.
     const esc = (e) => {
+      // Ctrl/Cmd + Mayús + L: borrar todos los filtros.
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault()
+        borrarRef.current()
+        return
+      }
       if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
         e.preventDefault()
         setAbierto(false)
@@ -150,6 +157,8 @@ export default function FiltrosDesplegable({
       await new Promise((r) => setTimeout(r, 0)) // un cambio por vez: los hooks de filtros no se pisan
     }
   }
+
+  borrarRef.current = borrarTodo
 
   return (
     <form
@@ -272,6 +281,18 @@ export default function FiltrosDesplegable({
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-3">
           <div className="min-w-0">{pie}</div>
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="btn-ghost gap-2 px-3 py-1.5 text-sm disabled:opacity-40"
+            disabled={!hayAlgo}
+            aria-keyshortcuts="Control+Shift+L"
+            title="Borrar todos los filtros (Ctrl + Mayús + L)"
+            onClick={borrarTodo}
+          >
+            Borrar filtros
+            <kbd className="hidden rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-500 sm:inline">Ctrl ⇧ L</kbd>
+          </button>
           <button
             type="button"
             className="btn-primary gap-2 px-4 py-1.5 text-sm"
@@ -282,6 +303,7 @@ export default function FiltrosDesplegable({
             Listo
             <kbd className="hidden rounded bg-brand-950/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold sm:inline">Ctrl ↵</kbd>
           </button>
+          </div>
         </div>
       </aside>
     </form>

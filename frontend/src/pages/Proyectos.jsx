@@ -308,16 +308,6 @@ export default function Proyectos() {
               ))}
             </select>
           </div>
-          <div className="flex items-end">
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={!hayFiltros}
-              onClick={limpiarFiltros}
-            >
-              Limpiar filtros
-            </button>
-          </div>
         </div>
         {proyectos !== null && (
           <p className="text-xs text-slate-500">

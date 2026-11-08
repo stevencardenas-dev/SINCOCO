@@ -129,9 +129,6 @@ export default function SolicitudesHerramientas({ pestanas }) {
             <input id="sh-f-desde" type="date" className="input" value={filtros.desde} onChange={(e) => cambiarFiltro('desde', e.target.value)} />
           </div>
         </div>
-        {(activos > 0 || estado) && (
-          <button type="button" className="btn-ghost text-xs" onClick={() => { limpiar(); setEstado('') }}>Limpiar filtros</button>
-        )}
       </FiltrosDesplegable>
 
       {error && <AlertaFormulario mensaje={error} />}

@@ -373,11 +373,6 @@ export default function Proveedores({ pestanas }) {
               onChange={(e) => cambiarFiltro('buscar', e.target.value)}
             />
           </div>
-          <div className="flex items-end">
-            <button type="button" className="btn-ghost" disabled={!hayFiltros} onClick={limpiarFiltros}>
-              Limpiar filtros
-            </button>
-          </div>
         </div>
         {proveedores !== null && (
           <p className="text-xs text-slate-500">

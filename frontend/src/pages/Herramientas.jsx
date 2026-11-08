@@ -334,11 +334,6 @@ function CatalogoHerramientas({ pestanas }) {
               <option value="1">Solo prestables</option>
             </select>
           </div>
-          <div className="flex items-end">
-            <button type="button" className="btn-ghost" disabled={!hayFiltros} onClick={limpiarFiltros}>
-              Limpiar filtros
-            </button>
-          </div>
         </div>
         {herramientas !== null && (
           <p className="text-xs text-slate-500">

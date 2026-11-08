@@ -34,7 +34,6 @@ export default function FiltrosMovimiento({ id, titulo, placeholder, controles, 
         </div>
         {children}
       </div>
-      {activos > 0 && <button type="button" className="btn-ghost text-xs" onClick={limpiar}>Limpiar filtros</button>}
     </FiltrosDesplegable>
   )
 }

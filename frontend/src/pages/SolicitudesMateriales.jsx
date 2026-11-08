@@ -265,7 +265,6 @@ export default function SolicitudesMateriales({ pestanas }) {
             <input id="sm-f-desde" type="date" className="input" value={filtros.desde} onChange={(e) => controles.cambiar('desde', e.target.value)} />
           </div>
         </div>
-        {controles.activos > 0 && <button type="button" className="btn-ghost text-xs" onClick={controles.limpiar}>Limpiar filtros</button>}
       </FiltrosDesplegable>
 
       <section className="space-y-3">

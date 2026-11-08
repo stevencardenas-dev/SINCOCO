@@ -167,11 +167,6 @@ export default function Incidencias() {
               {Object.entries(severidadIncidente).map(([v, e]) => <option key={v} value={v}>{e.label}</option>)}
             </select>
           </div>
-          <div className="flex items-end">
-            <button type="button" className="btn-ghost" disabled={!hayFiltros} onClick={limpiarFiltros}>
-              Limpiar filtros
-            </button>
-          </div>
         </div>
       </FiltrosDesplegable>
 
