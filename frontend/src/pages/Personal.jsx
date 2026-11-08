@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
+  EnvelopeIcon,
+  IdentificationIcon,
+  PhoneIcon,
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
@@ -948,38 +951,55 @@ export default function Personal() {
       {/* Ficha del trabajador: se abre al hacer clic en una tarjeta. */}
       <Modal
         abierto={!!verFicha}
-        titulo={verFicha ? `${verFicha.nombres} ${verFicha.apellidos}` : ''}
-        subtitulo={verFicha ? (verFicha.especialidad ? `${verFicha.cargo} · ${verFicha.especialidad}` : verFicha.cargo) : ''}
+        titulo="Ficha del trabajador"
         onCerrar={() => setVerFicha(null)}
         ancho="max-w-lg"
       >
         {verFicha && (() => {
           const t = verFicha
           const [dispTexto, dispClase] = disponibilidad(t)
-          const filas = [
-            ['Documento', `${t.tipo_documento} ${t.numero_documento}`],
-            ['Correo', t.email ?? '—'],
-            ['Teléfono', t.telefono ? telefonoLegible(t.telefono) : '—'],
-            ['Dirección', t.direccion ?? '—'],
-            ['Estado', t.activo ? (ESTADOS.find((e) => e.value === t.estado)?.label ?? t.estado) : `De baja${t.fecha_baja ? ` desde ${fmtFecha(t.fecha_baja)}` : ''}`],
-            ['Actividades vigentes', String(t.actividades_vigentes ?? 0)],
+          const estadoTxt = t.activo ? (ESTADOS.find((e) => e.value === t.estado)?.label ?? t.estado) : 'Dado de baja'
+          // Lo que se necesita para ubicar a la persona va con icono y más grande.
+          const contacto = [
+            [PhoneIcon, 'Teléfono', t.telefono ? telefonoLegible(t.telefono) : null, t.telefono ? `tel:${t.telefono}` : null],
+            [EnvelopeIcon, 'Correo', t.email, t.email ? `mailto:${t.email}` : null],
+            [MapPinIcon, 'Dirección', t.direccion, null],
+            [IdentificationIcon, 'Documento', `${t.tipo_documento} ${t.numero_documento}`, null],
           ]
           return (
             <>
               <div className="flex items-center gap-4">
-                <Avatar nombre={`${t.nombres} ${t.apellidos}`} semilla={String(t.id)} className="h-20 w-20 text-2xl" />
-                {t.activo && (
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${dispClase}`}>{dispTexto}</span>
-                )}
-              </div>
-              <dl className="mt-5 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
-                {filas.map(([k, v]) => (
-                  <div key={k} className={k === 'Dirección' ? 'sm:col-span-2' : ''}>
-                    <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{k}</dt>
-                    <dd className="mt-0.5 break-words text-sm text-slate-700">{v}</dd>
+                <Avatar nombre={`${t.nombres} ${t.apellidos}`} semilla={String(t.id)} className="h-16 w-16 text-xl" />
+                <div className="min-w-0">
+                  <h3 className="text-xl font-bold leading-tight text-slate-900">{t.nombres} {t.apellidos}</h3>
+                  <p className="mt-0.5 text-sm font-medium text-slate-600">
+                    {t.especialidad ? `${t.cargo} · ${t.especialidad}` : t.cargo}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {t.activo && (
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${dispClase}`}>{dispTexto}</span>
+                    )}
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${t.activo ? (ESTADO_BADGE[t.estado] ?? 'bg-slate-100 text-slate-600') : ESTADO_BADGE.INACTIVO}`}>
+                      {estadoTxt}
+                    </span>
+                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+                      {t.actividades_vigentes ?? 0} {Number(t.actividades_vigentes) === 1 ? 'actividad' : 'actividades'}
+                    </span>
                   </div>
+                </div>
+              </div>
+              <ul className="mt-5 divide-y divide-slate-100 rounded-xl ring-1 ring-slate-200">
+                {contacto.map(([Icono, k, v, href]) => (
+                  <li key={k} className="flex items-start gap-3 px-4 py-3">
+                    <Icono className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" aria-label={k} />
+                    {v && href ? (
+                      <a href={href} className="break-words text-base font-medium text-slate-800 hover:text-brand-700 hover:underline">{v}</a>
+                    ) : (
+                      <span className={`break-words ${v ? 'text-base font-medium text-slate-800' : 'text-sm text-slate-400'}`}>{v ?? `Sin ${k.toLowerCase()}`}</span>
+                    )}
+                  </li>
                 ))}
-              </dl>
+              </ul>
               {(t.activo ? puedeEditar || puedeAsignar : puedeBaja) && (
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
                   {t.activo ? (
