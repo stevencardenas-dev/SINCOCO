@@ -267,7 +267,7 @@ export default function Proyectos() {
       <FiltrosDesplegable
         pie={
           <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
+            Dados de baja
           </Interruptor>
         }
        

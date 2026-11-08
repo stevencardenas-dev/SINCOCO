@@ -424,7 +424,7 @@ export default function Personal() {
         activos={filtrosActivos}
         pie={
           <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
+            Dados de baja
           </Interruptor>
         }
         resumen={

@@ -176,7 +176,7 @@ export default function Materiales() {
       <FiltrosDesplegable
         pie={
           <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
+            Dados de baja
           </Interruptor>
         }
         titulo="Buscar materiales" ariaLabel="Filtros de materiales" activos={filtrosActivos}>

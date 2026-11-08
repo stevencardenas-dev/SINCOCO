@@ -265,6 +265,19 @@ export default function FiltrosDesplegable({
           <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
             <FunnelIcon className="h-5 w-5 text-accent-500" /> Filtros
           </h2>
+          <div className="flex items-center gap-1">
+          {hayAlgo && (
+            <button
+              type="button"
+              className="mr-1 inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
+              aria-keyshortcuts="Control+Shift+L"
+              title="Borrar todos los filtros (Ctrl + Mayús + L)"
+              onClick={borrarTodo}
+            >
+              Borrar filtros
+              <kbd className="hidden rounded border border-red-100 bg-red-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold whitespace-nowrap text-red-500 sm:inline">Ctrl ⇧ L</kbd>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setAbierto(false)}
@@ -275,35 +288,23 @@ export default function FiltrosDesplegable({
             <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-400 sm:inline">Esc</kbd>
             <XMarkIcon className="h-5 w-5" />
           </button>
+          </div>
         </div>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">{campos}</div>
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-3">
           <div className="min-w-0">{pie}</div>
-          <div className="flex items-center gap-2">
           <button
             type="button"
-            className="btn-ghost gap-2 px-3 py-1.5 text-sm disabled:opacity-40"
-            disabled={!hayAlgo}
-            aria-keyshortcuts="Control+Shift+L"
-            title="Borrar todos los filtros (Ctrl + Mayús + L)"
-            onClick={borrarTodo}
-          >
-            Borrar filtros
-            <kbd className="hidden rounded bg-slate-100 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-500 sm:inline">Ctrl ⇧ L</kbd>
-          </button>
-          <button
-            type="button"
-            className="btn-primary gap-2 px-4 py-1.5 text-sm"
+            className="btn-primary shrink-0 gap-2 whitespace-nowrap px-4 py-1.5 text-sm"
             aria-keyshortcuts="Control+Enter"
             title="Aplicar y cerrar (Ctrl + Enter)"
             onClick={() => setAbierto(false)}
           >
             Listo
-            <kbd className="hidden rounded bg-brand-950/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold sm:inline">Ctrl ↵</kbd>
+            <kbd className="hidden rounded bg-brand-950/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold whitespace-nowrap sm:inline">Ctrl ↵</kbd>
           </button>
-          </div>
         </div>
       </aside>
     </form>

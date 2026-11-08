@@ -244,7 +244,7 @@ function CatalogoHerramientas({ pestanas }) {
       <FiltrosDesplegable
         pie={
           <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dadas de baja
+            Dadas de baja
           </Interruptor>
         }
        

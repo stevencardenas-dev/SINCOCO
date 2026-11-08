@@ -355,7 +355,7 @@ export default function Proveedores({ pestanas }) {
       <FiltrosDesplegable
         pie={
           <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
+            Dados de baja
           </Interruptor>
         }
         titulo="Buscar proveedores" ariaLabel="Filtros de proveedores" activos={filtrosActivos}>
