@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
   BanknotesIcon,
@@ -76,7 +76,7 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
           onAbrir(p)
         }
       }}
-      aria-label={`${p.nombre}: abrir opciones`}
+      aria-label={`${p.nombre}: abrir plan`}
       className={`card flex cursor-pointer flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${p.activo ? '' : 'opacity-60'}`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -223,6 +223,10 @@ export default function Proyectos() {
   const [parametros] = useSearchParams()
   // Menú de acciones de la tarjeta elegida y confirmación de «Dar de baja» (desde Editar).
   const [menu, setMenu] = useState(null)
+  const navegar = useNavigate()
+  // /proyectos?editar=ID[&volver=plan]: abre la edición desde el plan y, al cerrar, regresa a él.
+  const editarPedido = useRef(parametros.get('editar'))
+  const volverAlPlan = useRef(parametros.get('volver') ? parametros.get('editar') : null)
   const [porDarDeBaja, setPorDarDeBaja] = useState(null)
   // Enlaces a la ficha del responsable y del cliente, según lo que el usuario puede ver.
   const enlaceResponsable = ['ADMINISTRADOR', 'GERENTE'].includes(user?.rol) ? '/personal?ficha=' : null
@@ -277,6 +281,7 @@ export default function Proyectos() {
     alGuardar: (data, { valores, registro }) => {
       const nombre = data.proyecto?.nombre ?? valores.nombre
       setAviso(registro ? `Proyecto "${nombre}" actualizado.` : `Proyecto "${nombre}" registrado en planificación.`)
+      if (volverAlPlan.current) navegar(`/proyectos/${volverAlPlan.current}`)
       return recargar()
     },
     error: 'No se pudo guardar el proyecto.',
@@ -340,6 +345,14 @@ export default function Proyectos() {
   // El backend limita el listado al alcance del rol (RBAC): estos roles ven
   // todos los proyectos; los demás, solo los asignados.
   const veTodos = puede('proyectos.acceso_total')
+
+  useEffect(() => {
+    if (!editarPedido.current || !proyectos) return
+    const p = proyectos.find((x) => String(x.id) === editarPedido.current)
+    editarPedido.current = null
+    if (p && p.activo && puedeEditar) abrirEditar(p)
+    else if (volverAlPlan.current) navegar(`/proyectos/${volverAlPlan.current}`)
+  }, [proyectos])
 
   const opcionesClientes = clientes.map((c) => ({
     value: c.id,
@@ -452,6 +465,10 @@ export default function Proyectos() {
       {gestionaProyectos && (
         <ModalFormulario
           {...formulario.propsModal}
+          onCerrar={() => {
+            formulario.cerrar()
+            if (volverAlPlan.current) navegar(`/proyectos/${volverAlPlan.current}`)
+          }}
           titulo={editando ? 'Actualizar proyecto' : 'Registrar proyecto'}
           subtitulo={
             editando
@@ -781,7 +798,7 @@ export default function Proyectos() {
             <TarjetaProyecto
               key={p.id}
               p={p}
-              onAbrir={setMenu}
+              onAbrir={(p) => (p.activo ? navegar(`/proyectos/${p.id}`) : setMenu(p))}
               enlaceResponsable={enlaceResponsable}
               enlaceCliente={enlaceCliente}
             />
@@ -916,19 +933,6 @@ export default function Proyectos() {
             <Link to={`/proyectos/${menu.id}`} className="btn-primary justify-center" onClick={() => setMenu(null)}>
               <ClipboardDocumentListIcon className="h-5 w-5" /> Abrir plan
             </Link>
-            {!!menu.activo && puedeEditar && (
-              <button
-                type="button"
-                className="btn-ghost justify-center"
-                onClick={() => {
-                  const p = menu
-                  setMenu(null)
-                  abrirEditar(p)
-                }}
-              >
-                <PencilSquareIcon className="h-5 w-5" /> Editar
-              </button>
-            )}
             {!menu.activo && puedeBaja && (
               <button
                 type="button"

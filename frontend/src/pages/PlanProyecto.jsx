@@ -508,6 +508,11 @@ export default function PlanProyecto() {
             : 'Plan de trabajo'
         }
       >
+        {proyecto?.activo !== 0 && proyecto?.activo !== false && puede('proyectos.editar') && (
+          <Link to={`/proyectos?editar=${id}&volver=plan`} className="btn-ghost">
+            <PencilSquareIcon className="h-5 w-5" /> Editar proyecto
+          </Link>
+        )}
         {puedeAplicarPlantilla && (
           <button className="btn-ghost" onClick={() => setPlantillaAbierta(true)}>
             Aplicar plantilla
