@@ -5,6 +5,7 @@ import {
   BanknotesIcon,
   BuildingOffice2Icon,
   CalendarDaysIcon,
+  FlagIcon,
   CheckIcon,
   ClipboardDocumentIcon,
   ClipboardDocumentListIcon,
@@ -16,6 +17,7 @@ import {
   TableCellsIcon,
   UserIcon,
 } from '@heroicons/react/24/outline'
+import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
@@ -33,20 +35,50 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 
-/** Tarjeta de proyecto: estado, avance y datos clave con icono; «Plan» es la acción principal. */
-function TarjetaProyecto({ p, puedeEditar, puedeBaja, onEditar, onBaja }) {
+/**
+ * Tarjeta de proyecto. Toda la tarjeta es clicable (abre el menú de acciones: plan, editar…);
+ * el responsable y el cliente son enlaces a su ficha, que se abre en otra pestaña.
+ */
+function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
   const est = estadoProyecto[p.estado?.toLowerCase()] ?? estadoProyecto.planificacion
   const avance = Math.max(0, Math.min(100, Number(p.porcentaje_avance_total) || 0))
   const cerrado = ['FINALIZADO', 'CANCELADO'].includes(p.estado)
   const atrasado = !cerrado && p.fecha_fin_programada && new Date(String(p.fecha_fin_programada).slice(0, 10)) < new Date(new Date().toDateString())
+  const enlace = 'underline decoration-slate-300 underline-offset-2 transition hover:text-brand-700 hover:decoration-brand-600'
+  const nuevaPestana = (href, texto) => (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
+      className={enlace}
+      title="Abrir la ficha en una pestaña nueva"
+    >
+      {texto}
+    </a>
+  )
   const datos = [
-    [UserIcon, 'Responsable', p.responsable_nombre],
-    [CalendarDaysIcon, 'Plazo', `${fmtFecha(p.fecha_inicio_programada)} – ${fmtFecha(p.fecha_fin_programada)}`, atrasado],
+    [UserIcon, 'Responsable', p.responsable_nombre, { enlace: enlaceResponsable && p.responsable_id ? `${enlaceResponsable}${p.responsable_id}` : null }],
     [BanknotesIcon, 'Presupuesto', fmtCOP(Number(p.presupuesto_inicial))],
-    [MapPinIcon, 'Ubicación', p.ubicacion],
+    [CalendarDaysIcon, 'Fecha de inicio', fmtFecha(p.fecha_inicio_programada)],
+    [FlagIcon, 'Fecha de fin', fmtFecha(p.fecha_fin_programada), { alerta: atrasado }],
+    [MapPinIcon, 'Ubicación', p.ubicacion, { ancho: true }],
   ]
   return (
-    <article className={`card flex flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${p.activo ? '' : 'opacity-60'}`}>
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={() => onAbrir(p)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onAbrir(p)
+        }
+      }}
+      aria-label={`${p.nombre}: abrir opciones`}
+      className={`card flex cursor-pointer flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${p.activo ? '' : 'opacity-60'}`}
+    >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold tracking-wide text-slate-400">{p.codigo}</span>
         {p.activo ? (
@@ -57,12 +89,12 @@ function TarjetaProyecto({ p, puedeEditar, puedeBaja, onEditar, onBaja }) {
       </div>
 
       <div className="min-w-0">
-        <Link to={`/proyectos/${p.id}`} className="block font-bold leading-snug text-slate-900 hover:text-brand-700">
-          {p.nombre}
-        </Link>
+        <p className="font-bold leading-snug text-slate-900">{p.nombre}</p>
         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
           <BuildingOffice2Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">{p.cliente_nombre}</span>
+          <span className="truncate">
+            {enlaceCliente && p.cliente_id ? nuevaPestana(`${enlaceCliente}${p.cliente_id}`, p.cliente_nombre) : p.cliente_nombre}
+          </span>
         </p>
       </div>
 
@@ -76,39 +108,19 @@ function TarjetaProyecto({ p, puedeEditar, puedeBaja, onEditar, onBaja }) {
         </div>
       </div>
 
-      <ul className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-sm text-slate-700 sm:grid-cols-2">
-        {datos.map(([Icono, rotulo, valor, alerta]) =>
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-2 text-slate-700">
+        {datos.map(([Icono, rotulo, valor, op = {}]) =>
           valor ? (
-            <li key={rotulo} className="flex min-w-0 items-start gap-1.5" title={`${rotulo}: ${valor}`}>
-              <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${alerta ? 'text-red-500' : 'text-brand-600'}`} aria-label={rotulo} />
-              <span className={`min-w-0 text-[13px] ${alerta ? 'font-semibold text-red-600' : ''} ${rotulo === 'Ubicación' ? 'line-clamp-2' : 'truncate'}`}>
-                {valor}
-                {alerta && ' · atrasado'}
+            <li key={rotulo} className={`flex min-w-0 items-start gap-1.5 ${op.ancho ? 'col-span-2' : ''}`} title={rotulo}>
+              <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${op.alerta ? 'text-red-500' : 'text-brand-600'}`} aria-label={rotulo} />
+              <span className={`min-w-0 text-[13px] ${op.alerta ? 'font-semibold text-red-600' : ''} ${op.ancho ? 'line-clamp-2' : 'truncate'}`}>
+                {op.enlace ? nuevaPestana(op.enlace, valor) : valor}
+                {op.alerta && ' · atrasado'}
               </span>
             </li>
           ) : null,
         )}
       </ul>
-
-      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-        <Link to={`/proyectos/${p.id}`} className="btn-accion btn-accion-plan">
-          <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
-        </Link>
-        {!!p.activo && puedeEditar && (
-          <button className="btn-accion btn-accion-editar" onClick={() => onEditar(p)} aria-label={`Actualizar ${p.nombre}`}>
-            <PencilSquareIcon className="h-4 w-4" /> Editar
-          </button>
-        )}
-        {puedeBaja && (
-          <button
-            className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
-            onClick={() => onBaja(p)}
-            aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
-          >
-            {p.activo ? 'Dar de baja' : 'Reactivar'}
-          </button>
-        )}
-      </div>
     </article>
   )
 }
@@ -199,7 +211,7 @@ const ESTADOS = [
 ]
 
 export default function Proyectos() {
-  const { puede } = useAuth()
+  const { puede, user } = useAuth()
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
   const puedeCrear = puede('proyectos.registrar')
   const puedeEditar = puede('proyectos.editar')
@@ -209,6 +221,12 @@ export default function Proyectos() {
 
   // El buscador de la barra superior navega a /proyectos?buscar=…
   const [parametros] = useSearchParams()
+  // Menú de acciones de la tarjeta elegida y confirmación de «Dar de baja» (desde Editar).
+  const [menu, setMenu] = useState(null)
+  const [porDarDeBaja, setPorDarDeBaja] = useState(null)
+  // Enlaces a la ficha del responsable y del cliente, según lo que el usuario puede ver.
+  const enlaceResponsable = ['ADMINISTRADOR', 'GERENTE'].includes(user?.rol) ? '/personal?ficha=' : null
+  const enlaceCliente = puede('catalogos.listar') ? '/catalogo?tab=clientes&ficha=' : null
 
   const [clientes, setClientes] = useState([])
   const [responsables, setResponsables] = useState([])
@@ -442,6 +460,17 @@ export default function Proyectos() {
           }
           ancho="max-w-3xl"
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar proyecto'}
+          acciones={
+            editando && formulario.registro.activo && puedeBaja ? (
+              <button
+                type="button"
+                className="btn-ghost ml-auto text-red-600 hover:bg-red-50"
+                onClick={() => setPorDarDeBaja(formulario.registro)}
+              >
+                <span aria-hidden="true">⚠️</span> Dar de baja
+              </button>
+            ) : null
+          }
         >
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
@@ -752,10 +781,9 @@ export default function Proyectos() {
             <TarjetaProyecto
               key={p.id}
               p={p}
-              puedeEditar={puedeEditar}
-              puedeBaja={puedeBaja}
-              onEditar={abrirEditar}
-              onBaja={cambiarBaja}
+              onAbrir={setMenu}
+              enlaceResponsable={enlaceResponsable}
+              enlaceCliente={enlaceCliente}
             />
           ))}
         </div>
@@ -874,6 +902,78 @@ export default function Proyectos() {
           />
         </div>
       )}
+
+      {/* Menú de la tarjeta: abrir el plan es lo principal; editar y reactivar según permisos. */}
+      <Modal
+        abierto={!!menu}
+        titulo={menu?.nombre ?? ''}
+        subtitulo={menu ? `${menu.codigo} · ${menu.cliente_nombre}` : ''}
+        onCerrar={() => setMenu(null)}
+        ancho="max-w-sm"
+      >
+        {menu && (
+          <div className="flex flex-col gap-2">
+            <Link to={`/proyectos/${menu.id}`} className="btn-primary justify-center" onClick={() => setMenu(null)}>
+              <ClipboardDocumentListIcon className="h-5 w-5" /> Abrir plan
+            </Link>
+            {!!menu.activo && puedeEditar && (
+              <button
+                type="button"
+                className="btn-ghost justify-center"
+                onClick={() => {
+                  const p = menu
+                  setMenu(null)
+                  abrirEditar(p)
+                }}
+              >
+                <PencilSquareIcon className="h-5 w-5" /> Editar
+              </button>
+            )}
+            {!menu.activo && puedeBaja && (
+              <button
+                type="button"
+                className="btn-ghost justify-center"
+                onClick={() => {
+                  const p = menu
+                  setMenu(null)
+                  cambiarBaja(p)
+                }}
+              >
+                Reactivar
+              </button>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        abierto={!!porDarDeBaja}
+        titulo={porDarDeBaja ? `¿Dar de baja «${porDarDeBaja.nombre}»?` : ''}
+        onCerrar={() => setPorDarDeBaja(null)}
+        ancho="max-w-md"
+      >
+        <p className="text-sm text-slate-600">
+          El proyecto deja de aparecer en la lista y no se borra nada: su historial se conserva y se puede
+          reactivar desde «Dados de baja».
+        </p>
+        <div className="mt-5 flex items-center gap-3 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={async () => {
+              const p = porDarDeBaja
+              setPorDarDeBaja(null)
+              formulario.cerrar()
+              await cambiarBaja(p)
+            }}
+          >
+            Dar de baja
+          </button>
+          <button type="button" className="btn-ghost" onClick={() => setPorDarDeBaja(null)}>
+            Cancelar
+          </button>
+        </div>
+      </Modal>
 
       <p className="text-xs text-slate-400">
         El avance del proyecto se deriva de sus actividades según la regla de cálculo definida por la

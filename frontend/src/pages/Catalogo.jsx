@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
   MapPinIcon,
@@ -92,7 +93,11 @@ export default function Catalogo() {
   const { puede } = useAuth()
   // Ver el módulo lo decide `catalogos.listar` (la ruta); operarlo, `catalogos.gestionar`.
   const puedeGestionar = puede('catalogos.gestionar')
-  const [tipo, setTipo] = useState('cargos')
+  const [parametros] = useSearchParams()
+  const [tipo, setTipo] = useState(parametros.get('tab') === 'clientes' ? 'clientes' : 'cargos')
+  // /catalogo?tab=clientes&ficha=ID abre la ficha de ese cliente (enlace desde Proyectos).
+  const fichaPedida = useRef(parametros.get('ficha'))
+  const [verCliente, setVerCliente] = useState(null)
   const [incluirInactivos, setIncluirInactivos] = useState(false)
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
@@ -107,6 +112,13 @@ export default function Catalogo() {
     [tipo, incluirInactivos],
     { mensaje: `No se pudo cargar el catálogo de ${tab.label.toLowerCase()}.`, reiniciar: true },
   )
+
+  useEffect(() => {
+    if (!fichaPedida.current || !datos || tipo !== 'clientes') return
+    const c = datos.find((x) => String(x.id) === fichaPedida.current)
+    fichaPedida.current = null
+    if (c) setVerCliente(c)
+  }, [datos, tipo])
 
   /** Lo que se envía de cada catálogo (el documento de un cliente no se edita). */
   const cuerpo = (form, editando) => {
@@ -495,6 +507,26 @@ export default function Catalogo() {
           <button type="button" className="btn-primary" onClick={eliminar}>Eliminar</button>
           <button type="button" className="btn-ghost" onClick={() => setPorEliminar(null)}>Cancelar</button>
         </div>
+      </Modal>
+
+      {/* Ficha del cliente (se abre desde el enlace del proyecto). */}
+      <Modal abierto={!!verCliente} titulo={verCliente?.razon_social_nombre ?? ''} subtitulo="Ficha del cliente" onCerrar={() => setVerCliente(null)} ancho="max-w-md">
+        {verCliente && (
+          <dl className="space-y-3 text-sm">
+            {[
+              ['Documento', `${verCliente.tipo_documento} ${verCliente.numero_documento}`],
+              ['Contacto', verCliente.nombre_contacto],
+              ['Teléfono', verCliente.telefono ? telefonoLegible(verCliente.telefono) : null],
+              ['Correo', verCliente.email],
+              ['Dirección', verCliente.direccion],
+            ].map(([k, v]) => (
+              <div key={k}>
+                <dt className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{k}</dt>
+                <dd className="mt-0.5 break-words text-base font-medium text-slate-800">{v ?? '—'}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
       </Modal>
     </div>
   )

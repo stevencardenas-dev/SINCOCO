@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
   ArrowUturnLeftIcon,
@@ -154,6 +155,9 @@ export default function Personal() {
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
   const [verFicha, setVerFicha] = useState(null)
+  // /personal?ficha=ID abre directamente la ficha de esa persona (enlace desde Proyectos).
+  const [parametros] = useSearchParams()
+  const fichaPedida = useRef(parametros.get('ficha'))
   const [vista, setVista] = useState(() => {
     try { return localStorage.getItem('personal-vista') === 'tabla' ? 'tabla' : 'tarjetas' } catch { return 'tarjetas' }
   })
@@ -200,6 +204,12 @@ export default function Personal() {
     { mensaje: 'No se pudo cargar el personal.' },
   )
 
+  useEffect(() => {
+    if (!fichaPedida.current || !personal) return
+    const t = personal.find((x) => String(x.id) === fichaPedida.current)
+    fichaPedida.current = null
+    if (t) setVerFicha(t)
+  }, [personal])
   useEffect(() => {
     catalogosApi.cargos.listar().then(setCargos).catch(() => {})
     catalogosApi.especialidades.listar().then(setEspecialidades).catch(() => {})
