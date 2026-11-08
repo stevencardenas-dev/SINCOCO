@@ -340,6 +340,12 @@ export default function Usuarios() {
       </ModalFormulario>
 
       <FiltrosDesplegable
+        pie={
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        }
+       
         titulo="Buscar usuarios"
         ariaLabel="Filtros de usuarios"
         activos={filtrosActivos}
@@ -408,11 +414,6 @@ export default function Usuarios() {
             {visibles.length} {visibles.length === 1 ? 'usuario' : 'usuarios'}{' '}
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
           </p>
-        </div>
-      <div className="border-t border-slate-100 pt-3">
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
-          </Interruptor>
         </div>
       </FiltrosDesplegable>
 

@@ -173,7 +173,13 @@ export default function Materiales() {
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
-      <FiltrosDesplegable titulo="Buscar materiales" ariaLabel="Filtros de materiales" activos={filtrosActivos}>
+      <FiltrosDesplegable
+        pie={
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        }
+        titulo="Buscar materiales" ariaLabel="Filtros de materiales" activos={filtrosActivos}>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="xl:col-span-2">
             <label htmlFor="mat-buscar" className="label">
@@ -250,11 +256,6 @@ export default function Materiales() {
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
           </p>
         )}
-      <div className="border-t border-slate-100 pt-3">
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
-          </Interruptor>
-        </div>
       </FiltrosDesplegable>
 
       {(puedeCrear || puedeEditar) && (

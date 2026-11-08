@@ -242,6 +242,12 @@ function CatalogoHerramientas({ pestanas }) {
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       <FiltrosDesplegable
+        pie={
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dadas de baja
+          </Interruptor>
+        }
+       
         titulo="Buscar herramientas"
         ariaLabel="Filtros de herramientas"
         activos={filtrosActivos}
@@ -340,11 +346,6 @@ function CatalogoHerramientas({ pestanas }) {
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
           </p>
         )}
-      <div className="border-t border-slate-100 pt-3">
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dadas de baja
-          </Interruptor>
-        </div>
       </FiltrosDesplegable>
 
       {(puedeCrear || puedeEditar) && (

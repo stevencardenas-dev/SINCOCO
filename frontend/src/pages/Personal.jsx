@@ -422,6 +422,11 @@ export default function Personal() {
         titulo="Buscar personal"
         ariaLabel="Filtros de personal"
         activos={filtrosActivos}
+        pie={
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        }
         resumen={
           personal !== null
             ? `${personal.length} ${personal.length === 1 ? 'trabajador' : 'trabajadores'} ${hayFiltros ? 'con los filtros' : 'en la lista'}`
@@ -462,9 +467,6 @@ export default function Personal() {
               { value: '0', label: 'No disponibles' },
             ]}
           />
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
-          </Interruptor>
         </SeccionFiltros>
 
         <SeccionFiltros titulo="Perfil" icono={WrenchScrewdriverIcon}>

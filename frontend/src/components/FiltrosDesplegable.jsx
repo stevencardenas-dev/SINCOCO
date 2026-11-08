@@ -90,6 +90,7 @@ export default function FiltrosDesplegable({
   abiertoInicial = false,
   ariaLabel,
   resumen,
+  pie,
   children,
 }) {
   const [abierto, setAbierto] = useState(abiertoInicial)
@@ -210,6 +211,8 @@ export default function FiltrosDesplegable({
         )}
       </div>
 
+      {resumen && <p className="px-4 pb-2 text-xs text-slate-500">{resumen}</p>}
+
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-1.5 border-t border-slate-100 px-3 py-2">
           {chips.map((c) => (
@@ -239,7 +242,7 @@ export default function FiltrosDesplegable({
       >
         {campos}
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
-          <p className="text-xs text-slate-500">{resumen}</p>
+          <div className="min-w-0">{pie}</div>
           <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setAbierto(false)}>
             Listo
           </button>

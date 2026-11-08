@@ -265,6 +265,12 @@ export default function Proyectos() {
 
       {/* Búsqueda y filtros del listado (corren en la base) */}
       <FiltrosDesplegable
+        pie={
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        }
+       
         titulo="Buscar proyectos"
         ariaLabel="Filtros de proyectos"
         activos={filtrosActivos}
@@ -321,11 +327,6 @@ export default function Proyectos() {
               ' · solo se listan los proyectos donde está asignado o de los que es responsable'}
           </p>
         )}
-      <div className="border-t border-slate-100 pt-3">
-          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
-            Incluir dados de baja
-          </Interruptor>
-        </div>
       </FiltrosDesplegable>
 
       {gestionaProyectos && (
