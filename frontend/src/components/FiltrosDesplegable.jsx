@@ -123,7 +123,13 @@ export default function FiltrosDesplegable({
   useEffect(() => {
     if (!abierto) return
     const fuera = (e) => !formRef.current?.contains(e.target) && setAbierto(false)
-    const esc = (e) => e.key === 'Escape' && setAbierto(false)
+    // Escape cierra; Ctrl/Cmd + Enter aplica y cierra desde cualquier campo del panel.
+    const esc = (e) => {
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault()
+        setAbierto(false)
+      }
+    }
     document.addEventListener('mousedown', fuera)
     document.addEventListener('keydown', esc)
     return () => {
@@ -254,8 +260,10 @@ export default function FiltrosDesplegable({
             type="button"
             onClick={() => setAbierto(false)}
             aria-label="Cerrar filtros"
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
+            aria-keyshortcuts="Escape"
+            className="flex items-center gap-1.5 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
           >
+            <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-400 sm:inline">Esc</kbd>
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
@@ -264,8 +272,15 @@ export default function FiltrosDesplegable({
 
         <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-3">
           <div className="min-w-0">{pie}</div>
-          <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setAbierto(false)}>
+          <button
+            type="button"
+            className="btn-primary gap-2 px-4 py-1.5 text-sm"
+            aria-keyshortcuts="Control+Enter"
+            title="Aplicar y cerrar (Ctrl + Enter)"
+            onClick={() => setAbierto(false)}
+          >
             Listo
+            <kbd className="hidden rounded bg-brand-950/10 px-1.5 py-0.5 font-sans text-[10px] font-semibold sm:inline">Ctrl ↵</kbd>
           </button>
         </div>
       </aside>

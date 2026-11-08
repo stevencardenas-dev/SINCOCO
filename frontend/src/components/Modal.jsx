@@ -92,9 +92,11 @@ export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, 
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand-900"
+            className="flex items-center gap-1.5 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-brand-900"
             aria-label="Cerrar"
+            aria-keyshortcuts="Escape"
           >
+            <kbd className="hidden rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-400 sm:inline">Esc</kbd>
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
