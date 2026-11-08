@@ -15,6 +15,7 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import { Interruptor } from '../components/FiltrosControles.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
@@ -257,9 +258,6 @@ export default function Proyectos() {
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
         )}
-        <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
-          {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
-        </button>
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
@@ -323,6 +321,11 @@ export default function Proyectos() {
               ' · solo se listan los proyectos donde está asignado o de los que es responsable'}
           </p>
         )}
+      <div className="border-t border-slate-100 pt-3">
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dados de baja
+          </Interruptor>
+        </div>
       </FiltrosDesplegable>
 
       {gestionaProyectos && (

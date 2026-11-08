@@ -11,6 +11,7 @@ import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import { Interruptor } from '../components/FiltrosControles.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -233,9 +234,6 @@ function CatalogoHerramientas({ pestanas }) {
             <PlusIcon className="h-5 w-5" /> Nueva herramienta
           </button>
         )}
-        <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
-          {incluirInactivos ? 'Ocultar dadas de baja' : 'Incluir dadas de baja'}
-        </button>
       </PageHeader>
 
       {pestanas}
@@ -342,6 +340,11 @@ function CatalogoHerramientas({ pestanas }) {
             {hayFiltros ? 'con los filtros aplicados' : 'en la lista'}
           </p>
         )}
+      <div className="border-t border-slate-100 pt-3">
+          <Interruptor checked={incluirInactivos} onChange={setIncluirInactivos}>
+            Incluir dadas de baja
+          </Interruptor>
+        </div>
       </FiltrosDesplegable>
 
       {(puedeCrear || puedeEditar) && (
