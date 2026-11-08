@@ -115,18 +115,17 @@ function TarjetaTrabajador({ t, onAbrir }) {
       type="button"
       onClick={() => onAbrir(t)}
       aria-label={`Ver ficha de ${nombre}`}
-      className={`card group flex aspect-square flex-col items-center justify-center gap-2 p-4 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${
+      className={`card group flex aspect-square flex-col items-center justify-center gap-1.5 p-2.5 text-center transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${
         t.activo ? '' : 'opacity-60'
       }`}
     >
-      <Avatar nombre={nombre} semilla={String(t.id)} className="h-20 w-20 text-2xl" />
+      <Avatar nombre={nombre} semilla={String(t.id)} className="h-14 w-14 text-lg" />
       <div className="min-w-0 max-w-full">
-        <p className="truncate text-sm font-semibold text-slate-800">{nombre}</p>
-        <p className="truncate text-xs text-slate-500">{t.cargo}</p>
-        {t.especialidad && <p className="truncate text-xs text-slate-400">{t.especialidad}</p>}
+        <p className="truncate text-xs font-semibold text-slate-800">{nombre}</p>
+        <p className="truncate text-[11px] text-slate-500">{t.cargo}</p>
       </div>
       <span
-        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+        className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
           t.activo ? dispClase : 'bg-slate-100 text-slate-500'
         }`}
       >
@@ -387,9 +386,26 @@ export default function Personal() {
             <PlusIcon className="h-5 w-5" /> Nuevo trabajador
           </button>
         )}
-        <button type="button" className="btn-ghost" onClick={() => setIncluirInactivos((v) => !v)}>
-          {incluirInactivos ? 'Ocultar dados de baja' : 'Incluir dados de baja'}
-        </button>
+        <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
+          {[
+            ['tarjetas', 'Tarjetas', Squares2X2Icon],
+            ['tabla', 'Tabla', TableCellsIcon],
+          ].map(([v, texto, Icono]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={vista === v}
+              aria-label={`Vista de ${texto.toLowerCase()}`}
+              title={texto}
+              onClick={() => cambiarVista(v)}
+              className={`rounded-lg p-2 transition ${
+                vista === v ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Icono className="h-5 w-5" />
+            </button>
+          ))}
+        </div>
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
@@ -504,6 +520,17 @@ export default function Personal() {
               <option value="">Todas</option>
               <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
             </select>
+          </div>
+          <div className="flex items-end">
+            <label className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-brand-600"
+                checked={incluirInactivos}
+                onChange={(e) => setIncluirInactivos(e.target.checked)}
+              />
+              Incluir dados de baja
+            </label>
           </div>
           <div className="flex items-end">
             <button
@@ -910,31 +937,8 @@ export default function Personal() {
         }}
       />
 
-      {personal !== null && personal.length > 0 && (
-        <div className="flex justify-end">
-          <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
-            {[
-              ['tarjetas', 'Tarjetas', Squares2X2Icon],
-              ['tabla', 'Tabla', TableCellsIcon],
-            ].map(([v, texto, Icono]) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={vista === v}
-                onClick={() => cambiarVista(v)}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                  vista === v ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                <Icono className="h-4 w-4" /> {texto}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {personal !== null && personal.length > 0 && vista === 'tarjetas' && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {personal.map((t) => (
             <TarjetaTrabajador key={t.id} t={t} onAbrir={setVerFicha} />
           ))}
