@@ -235,19 +235,40 @@ export default function FiltrosDesplegable({
         </div>
       )}
 
-      {/* Panel flotante. Siempre montado (hidden) para poder leer los valores. */}
-      <div
-        hidden={!abierto}
-        className="absolute right-2 top-full z-30 mt-1.5 max-h-[70vh] w-[min(440px,calc(100vw-2rem))] space-y-3 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl [&_.grid]:!grid-cols-2 [&_.grid]:gap-3 [&_.input]:py-1.5 [&_input[data-activo]]:border-accent-500 [&_input[data-activo]]:bg-accent-50 [&_select[data-activo]]:border-accent-500 [&_select[data-activo]]:bg-accent-50 [&_.label]:mb-1 [&_.label]:text-xs [&_.label]:uppercase [&_.label]:tracking-wide [&_.label]:text-slate-500"
+      {/* Telón: oscurece el fondo y cierra el panel al hacer clic. */}
+      {abierto && (
+        <div className="fixed inset-0 z-40 bg-brand-950/30" onClick={() => setAbierto(false)} aria-hidden="true" />
+      )}
+
+      {/* Panel lateral fijo: ocupa toda la altura de la ventana, así nunca se recorta
+          sin importar dónde esté la barra. Siempre montado para poder leer los valores. */}
+      <aside
+        aria-label="Filtros"
+        className={`${abierto ? 'flex' : 'hidden'} fixed inset-y-0 right-0 z-50 w-[min(400px,100vw)] flex-col bg-white shadow-2xl [&_.grid]:!grid-cols-2 [&_.grid]:gap-3 [&_.input]:py-1.5 [&_input[data-activo]]:border-accent-500 [&_input[data-activo]]:bg-accent-50 [&_select[data-activo]]:border-accent-500 [&_select[data-activo]]:bg-accent-50 [&_.label]:mb-1 [&_.label]:text-xs [&_.label]:uppercase [&_.label]:tracking-wide [&_.label]:text-slate-500`}
       >
-        {campos}
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-3">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <FunnelIcon className="h-5 w-5 text-accent-500" /> Filtros
+          </h2>
+          <button
+            type="button"
+            onClick={() => setAbierto(false)}
+            aria-label="Cerrar filtros"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">{campos}</div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-3">
           <div className="min-w-0">{pie}</div>
           <button type="button" className="btn-primary px-4 py-1.5 text-sm" onClick={() => setAbierto(false)}>
             Listo
           </button>
         </div>
-      </div>
+      </aside>
     </form>
   )
 }
