@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
+  BanknotesIcon,
   BuildingOffice2Icon,
+  CalendarDaysIcon,
   CheckIcon,
   ClipboardDocumentIcon,
   ClipboardDocumentListIcon,
@@ -10,6 +12,9 @@ import {
   MapPinIcon,
   PencilSquareIcon,
   PlusIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
@@ -27,6 +32,86 @@ import { trabajadoresApi } from '../services/trabajadores'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
+
+/** Tarjeta de proyecto: estado, avance y datos clave con icono; «Plan» es la acción principal. */
+function TarjetaProyecto({ p, puedeEditar, puedeBaja, onEditar, onBaja }) {
+  const est = estadoProyecto[p.estado?.toLowerCase()] ?? estadoProyecto.planificacion
+  const avance = Math.max(0, Math.min(100, Number(p.porcentaje_avance_total) || 0))
+  const cerrado = ['FINALIZADO', 'CANCELADO'].includes(p.estado)
+  const atrasado = !cerrado && p.fecha_fin_programada && new Date(String(p.fecha_fin_programada).slice(0, 10)) < new Date(new Date().toDateString())
+  const datos = [
+    [UserIcon, 'Responsable', p.responsable_nombre],
+    [CalendarDaysIcon, 'Plazo', `${fmtFecha(p.fecha_inicio_programada)} – ${fmtFecha(p.fecha_fin_programada)}`, atrasado],
+    [BanknotesIcon, 'Presupuesto', fmtCOP(Number(p.presupuesto_inicial))],
+    [MapPinIcon, 'Ubicación', p.ubicacion],
+  ]
+  return (
+    <article className={`card flex flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md ${p.activo ? '' : 'opacity-60'}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] font-bold tracking-wide text-slate-400">{p.codigo}</span>
+        {p.activo ? (
+          <span className={`badge ring-1 ${est.cls}`}>{est.label}</span>
+        ) : (
+          <span className="badge bg-slate-100 text-slate-500 ring-1 ring-slate-200">Dado de baja</span>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        <Link to={`/proyectos/${p.id}`} className="block font-bold leading-snug text-slate-900 hover:text-brand-700">
+          {p.nombre}
+        </Link>
+        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500">
+          <BuildingOffice2Icon className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{p.cliente_nombre}</span>
+        </p>
+      </div>
+
+      <div>
+        <div className="mb-1 flex items-center justify-between text-xs">
+          <span className="text-slate-500">Avance</span>
+          <span className="font-bold tabular-nums text-slate-700">{avance}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-brand-100">
+          <div className="h-full rounded-full bg-accent-500 transition-all" style={{ width: `${avance}%` }} />
+        </div>
+      </div>
+
+      <ul className="grid grid-cols-1 gap-x-3 gap-y-1.5 text-sm text-slate-700 sm:grid-cols-2">
+        {datos.map(([Icono, rotulo, valor, alerta]) =>
+          valor ? (
+            <li key={rotulo} className="flex min-w-0 items-start gap-1.5" title={`${rotulo}: ${valor}`}>
+              <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${alerta ? 'text-red-500' : 'text-brand-600'}`} aria-label={rotulo} />
+              <span className={`min-w-0 text-[13px] ${alerta ? 'font-semibold text-red-600' : ''} ${rotulo === 'Ubicación' ? 'line-clamp-2' : 'truncate'}`}>
+                {valor}
+                {alerta && ' · atrasado'}
+              </span>
+            </li>
+          ) : null,
+        )}
+      </ul>
+
+      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
+        <Link to={`/proyectos/${p.id}`} className="btn-accion btn-accion-plan">
+          <ClipboardDocumentListIcon className="h-4 w-4" /> Plan
+        </Link>
+        {!!p.activo && puedeEditar && (
+          <button className="btn-accion btn-accion-editar" onClick={() => onEditar(p)} aria-label={`Actualizar ${p.nombre}`}>
+            <PencilSquareIcon className="h-4 w-4" /> Editar
+          </button>
+        )}
+        {puedeBaja && (
+          <button
+            className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
+            onClick={() => onBaja(p)}
+            aria-label={p.activo ? `Dar de baja ${p.nombre}` : `Reactivar ${p.nombre}`}
+          >
+            {p.activo ? 'Dar de baja' : 'Reactivar'}
+          </button>
+        )}
+      </div>
+    </article>
+  )
+}
 
 /** Ubicación recortada en la tabla, con botón para copiarla completa. */
 function UbicacionCopiable({ texto }) {
@@ -138,6 +223,13 @@ export default function Proyectos() {
   const [mapaAbierto, setMapaAbierto] = useState(false)
   // HU-18: por defecto no se muestran los proyectos dados de baja.
   const [incluirInactivos, setIncluirInactivos] = useState(false)
+  const [vista, setVista] = useState(() => {
+    try { return localStorage.getItem('proyectos-vista') === 'tabla' ? 'tabla' : 'tarjetas' } catch { return 'tarjetas' }
+  })
+  const cambiarVista = (v) => {
+    setVista(v)
+    try { localStorage.setItem('proyectos-vista', v) } catch { /* sin storage */ }
+  }
 
   const { datos: proyectos, error, aviso, setAviso, recargar, ejecutar } = useRecurso(
     () => proyectosApi.listar({ incluirInactivos, buscar: filtros.buscar, estado: filtros.estado }),
@@ -258,6 +350,26 @@ export default function Proyectos() {
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
         )}
+        <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
+          {[
+            ['tarjetas', 'Tarjetas', Squares2X2Icon],
+            ['tabla', 'Tabla', TableCellsIcon],
+          ].map(([v, texto, Icono]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={vista === v}
+              aria-label={`Vista de ${texto.toLowerCase()}`}
+              title={texto}
+              onClick={() => cambiarVista(v)}
+              className={`rounded-lg p-2 transition ${
+                vista === v ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Icono className="h-5 w-5" />
+            </button>
+          ))}
+        </div>
       </PageHeader>
 
       {error && <AlertaFormulario mensaje={error} />}
@@ -634,7 +746,22 @@ export default function Proyectos() {
         </div>
       )}
 
-      {proyectos !== null && proyectos.length > 0 && (
+      {proyectos !== null && proyectos.length > 0 && vista === 'tarjetas' && (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {proyectos.map((p) => (
+            <TarjetaProyecto
+              key={p.id}
+              p={p}
+              puedeEditar={puedeEditar}
+              puedeBaja={puedeBaja}
+              onEditar={abrirEditar}
+              onBaja={cambiarBaja}
+            />
+          ))}
+        </div>
+      )}
+
+      {proyectos !== null && proyectos.length > 0 && vista === 'tabla' && (
         <div className="card overflow-hidden">
           <TablaFicha
             filas={proyectos}
