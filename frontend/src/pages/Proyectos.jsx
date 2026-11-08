@@ -35,12 +35,22 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 
+// Color de la tarjeta según el estado: degradado suave arriba, filo superior, iconos y barra.
+const TONO = {
+  PLANIFICACION: { fondo: 'from-sky-50', borde: 'border-t-sky-400', icono: 'bg-sky-100 text-sky-700', barra: 'bg-sky-500' },
+  EN_EJECUCION: { fondo: 'from-emerald-50', borde: 'border-t-emerald-500', icono: 'bg-emerald-100 text-emerald-700', barra: 'bg-emerald-500' },
+  PAUSADO: { fondo: 'from-amber-50', borde: 'border-t-amber-400', icono: 'bg-amber-100 text-amber-700', barra: 'bg-amber-500' },
+  FINALIZADO: { fondo: 'from-slate-100', borde: 'border-t-slate-400', icono: 'bg-slate-200 text-slate-600', barra: 'bg-slate-500' },
+  CANCELADO: { fondo: 'from-red-50', borde: 'border-t-red-400', icono: 'bg-red-100 text-red-700', barra: 'bg-red-500' },
+}
+
 /**
  * Tarjeta de proyecto. Toda la tarjeta es clicable (abre el menú de acciones: plan, editar…);
  * el responsable y el cliente son enlaces a su ficha, que se abre en otra pestaña.
  */
 function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
   const est = estadoProyecto[p.estado?.toLowerCase()] ?? estadoProyecto.planificacion
+  const tono = TONO[p.estado] ?? TONO.PLANIFICACION
   const avance = Math.max(0, Math.min(100, Number(p.porcentaje_avance_total) || 0))
   const cerrado = ['FINALIZADO', 'CANCELADO'].includes(p.estado)
   const atrasado = !cerrado && p.fecha_fin_programada && new Date(String(p.fecha_fin_programada).slice(0, 10)) < new Date(new Date().toDateString())
@@ -77,7 +87,7 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
         }
       }}
       aria-label={`${p.nombre}: abrir plan`}
-      className={`card flex cursor-pointer flex-col gap-3 p-4 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${p.activo ? '' : 'opacity-60'}`}
+      className={`card flex cursor-pointer flex-col gap-3 border-t-4 bg-gradient-to-b ${tono.fondo} via-white via-45% to-white p-4 shadow-md transition hover:-translate-y-1 hover:shadow-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${tono.borde} ${p.activo ? '' : 'opacity-60'}`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] font-bold tracking-wide text-slate-400">{p.codigo}</span>
@@ -103,17 +113,19 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
           <span className="text-slate-500">Avance</span>
           <span className="font-bold tabular-nums text-slate-700">{avance}%</span>
         </div>
-        <div className="h-2 overflow-hidden rounded-full bg-brand-100">
-          <div className="h-full rounded-full bg-accent-500 transition-all" style={{ width: `${avance}%` }} />
+        <div className="h-2.5 overflow-hidden rounded-full bg-slate-200/80 shadow-inner">
+          <div className={`h-full rounded-full ${tono.barra} transition-all`} style={{ width: `${avance}%` }} />
         </div>
       </div>
 
-      <ul className="grid grid-cols-2 gap-x-3 gap-y-2 text-slate-700">
+      <ul className="grid grid-cols-2 gap-x-3 gap-y-2.5 rounded-xl bg-white/80 p-3 text-slate-700 shadow-sm ring-1 ring-slate-200/70">
         {datos.map(([Icono, rotulo, valor, op = {}]) =>
           valor ? (
             <li key={rotulo} className={`flex min-w-0 items-start gap-1.5 ${op.ancho ? 'col-span-2' : ''}`} title={rotulo}>
-              <Icono className={`mt-0.5 h-4 w-4 shrink-0 ${op.alerta ? 'text-red-500' : 'text-brand-600'}`} aria-label={rotulo} />
-              <span className={`min-w-0 text-[13px] ${op.alerta ? 'font-semibold text-red-600' : ''} ${op.ancho ? 'line-clamp-2' : 'truncate'}`}>
+              <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${op.alerta ? 'bg-red-100 text-red-600' : tono.icono}`}>
+                <Icono className="h-3.5 w-3.5" aria-label={rotulo} />
+              </span>
+              <span className={`min-w-0 self-center text-[13px] ${op.alerta ? 'font-semibold text-red-600' : ''} ${op.ancho ? 'line-clamp-2' : 'truncate'}`}>
                 {op.enlace ? nuevaPestana(op.enlace, valor) : valor}
                 {op.alerta && ' · atrasado'}
               </span>
