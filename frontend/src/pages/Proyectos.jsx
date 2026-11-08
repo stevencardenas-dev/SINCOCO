@@ -108,14 +108,21 @@ function TarjetaProyecto({ p, onAbrir, enlaceResponsable, enlaceCliente }) {
         </p>
       </div>
 
-      <div>
-        <div className="mb-0.5 flex items-center justify-between text-xs">
-          <span className="text-slate-500">Avance</span>
-          <span className="font-bold tabular-nums text-slate-700">{avance}%</span>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-slate-200/80 shadow-inner">
+      <div className="flex items-center gap-2" title="Avance">
+        <div
+          className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200/80 shadow-inner"
+          role="progressbar"
+          aria-label="Avance"
+          aria-valuenow={avance}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div className={`h-full rounded-full ${tono.barra} transition-all`} style={{ width: `${avance}%` }} />
         </div>
+        {/* Ancho fijo para «XX,XX%»: todas las barras terminan en el mismo punto. */}
+        <span className="w-[6.5ch] shrink-0 text-right text-xs font-bold tabular-nums text-slate-700">
+          {Number(avance.toFixed(2))}%
+        </span>
       </div>
 
       <ul className="mt-auto grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-xl bg-white/80 p-2.5 text-slate-700 shadow-sm ring-1 ring-slate-200/70">
