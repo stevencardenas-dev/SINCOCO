@@ -68,7 +68,9 @@ function leerFiltros(form) {
       if (el.checked && etiqueta) res.push({ id: `c${i}`, etiqueta, valor: null, el })
       return
     }
-    if (el.value === '' || !etiqueta) return
+    // Los selectores con buscador muestran «Todos» como texto: el valor real está en su campo oculto.
+    const real = el.getAttribute('role') === 'combobox' ? el.parentElement?.parentElement?.querySelector('input[type="hidden"]')?.value ?? el.value : el.value
+    if (real === '' || !etiqueta) return
     const valor = el.tagName === 'SELECT' ? el.options[el.selectedIndex]?.text : el.value
     res.push({ id: `c${i}`, etiqueta, valor, el })
   })
@@ -79,6 +81,7 @@ function leerFiltros(form) {
 function vaciar(el) {
   if (el.tagName === 'FIELDSET') return el.querySelector('input[value=""]')?.click()
   if (el.type === 'checkbox') return el.click()
+  if (el.getAttribute('role') === 'combobox') return el.parentElement?.parentElement?.dispatchEvent(new Event('vaciar-filtro'))
   const proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, '')
   el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true }))

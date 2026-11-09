@@ -47,6 +47,17 @@ export default function BuscadorSelect({
     )
   }, [opciones, texto])
 
+  // El panel de filtros pide vaciar el campo (botón × de su etiqueta).
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  useEffect(() => {
+    const el = contenedor.current
+    if (!el) return undefined
+    const vaciar = () => onChangeRef.current('')
+    el.addEventListener('vaciar-filtro', vaciar)
+    return () => el.removeEventListener('vaciar-filtro', vaciar)
+  }, [])
+
   // Cierra al hacer clic fuera.
   useEffect(() => {
     if (!abierto) return undefined
