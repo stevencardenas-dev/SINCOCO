@@ -9,6 +9,7 @@ import {
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
+import CampoMoneda from '../components/CampoMoneda.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -145,7 +146,7 @@ export default function Materiales() {
         categoria_id: String(m.categoria_id ?? ''),
         descripcion: m.descripcion ?? '',
         unidad_medida: m.unidad_medida ?? '',
-        costo_referencia: String(m.costo_referencia ?? ''),
+        costo_referencia: m.costo_referencia == null ? '' : String(Math.round(Number(m.costo_referencia))),
         nivel_minimo: String(m.nivel_minimo ?? ''),
       },
       m,
@@ -344,15 +345,11 @@ export default function Materiales() {
               <label htmlFor="m-costo" className="label">
                 Costo de referencia (COP)
               </label>
-              <input
+              <CampoMoneda
                 id="m-costo"
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                className={campo('costo_referencia')}
+                placeholder="0"
                 value={form.costo_referencia}
-                onChange={(e) => formulario.cambiar('costo_referencia', e.target.value)}
+                onChange={(v) => formulario.cambiar('costo_referencia', v)}
               />
             </div>
             <div>
