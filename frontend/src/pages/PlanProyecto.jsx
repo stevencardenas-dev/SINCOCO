@@ -4,11 +4,13 @@ import { urlListado } from '../hooks/useListadoUrl'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
+  CalendarDaysIcon,
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
   CubeIcon,
   EyeIcon,
+  ExclamationTriangleIcon,
   FunnelIcon,
   PencilSquareIcon,
   PlayIcon,
@@ -24,6 +26,8 @@ import BotonActualizar from '../components/BotonActualizar.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
+import CronogramaPlan from '../components/CronogramaPlan.jsx'
+import { colorEtapa } from '../lib/coloresEtapa.js'
 import EncabezadoOrdenable from '../components/EncabezadoOrdenable.jsx'
 import { alternarOrden, ordenarFilas } from '../lib/ordenarTabla.js'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -41,7 +45,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { mensajeError } from '../lib/errores.js'
-import { fmtFecha, fmtCOP, fmtMiles, soloDigitos, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
+import { fmtFecha, fmtCOP, fmtCOPCompacto, fmtMiles, soloDigitos, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
 
 /**
  * HU-03 (RF03 · RF04): plan de trabajo de un proyecto. Define etapas y, dentro
@@ -209,6 +213,12 @@ export default function PlanProyecto() {
   const actividades = datos?.actividades ?? []
   // Lo repartido entre las actividades, frente al presupuesto inicial del proyecto.
   const presupuestoAsignado = etapas.reduce((total, et) => total + Number(et.presupuesto ?? 0), 0)
+  // Indicadores del resumen del proyecto.
+  const avanceProyecto = Math.round(Number(proyecto?.porcentaje_avance_total ?? 0))
+  const atrasadas = actividades.filter((a) => a.atrasada).length
+  const diasRestantes = proyecto?.fecha_fin_programada
+    ? Math.ceil((new Date(`${soloDia(proyecto.fecha_fin_programada)}T00:00:00`) - new Date(new Date().toDateString())) / 86400000)
+    : 0
   const responsables = datos?.responsables ?? []
   const conIncidencia = new Set(datos?.afectadas ?? []) // HU-14: actividades a resaltar
   // Responsables de actividad: solo quienes tienen acceso vigente al proyecto (o su responsable).
@@ -264,6 +274,7 @@ export default function PlanProyecto() {
     error: 'No se pudo registrar la actividad.',
   })
   const actividadEn = nuevaActividad.registro
+  const etapaNueva = etapas.find((x) => x.id === actividadEn) ?? null // etapa donde se agrega la actividad
 
   // Edición en ventana: `registro` es { tipo: 'etapa' | 'actividad', dato }.
   // HU-34 · criterio 5: las fechas ya definidas no se editan aquí, se reprograman.
@@ -621,79 +632,185 @@ export default function PlanProyecto() {
         </div>
       )}
 
-      {etapas.map((et) => {
-        const acts = actividades.filter((a) => a.etapa_id === et.id)
-        return (
-          <div key={et.id} className="card overflow-hidden">
-            <div className="border-b border-slate-100 px-5 py-4">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-              <div className="flex min-w-0 flex-1 items-start gap-2">
-                <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-400 text-xs font-semibold text-brand-950 ring-1 ring-inset ring-accent-500/30">
-                  {et.orden}
-                </span>
-                <p className="min-w-0 break-words text-sm font-semibold leading-6 text-slate-900">{et.nombre}</p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 xl:h-6 xl:shrink-0 xl:flex-nowrap">
-                <span
-                  className="text-xs font-semibold tabular-nums text-slate-600"
-                  title="Promedio ponderado por el esfuerzo de cada actividad"
-                >
-                  Avance {Number(et.porcentaje_avance ?? 0)}%
-                </span>
-                <span className={`badge ${ESTADO_BADGE[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>
-                  {ESTADO_ETIQUETA[et.estado] ?? et.estado}
-                </span>
-                <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
-                  <EyeIcon className="h-3.5 w-3.5" /> Ver ficha
-                </button>
-                {puedeEditarEtapas && (
-                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => abrirEdicionEtapa(et)}>
-                    <PencilSquareIcon className="h-3.5 w-3.5" /> Editar
-                  </button>
-                )}
-                {puedeBajaEtapas && (
-                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs text-red-600" onClick={() => setEtapaPorBaja(et)}>
-                    <TrashIcon className="h-3.5 w-3.5" /> Dar de baja
-                  </button>
-                )}
-                {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
-                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" disabled={cambiandoEstado === `e${et.id}`} onClick={() => empezarEtapa(et)}>
-                    <PlayIcon className="h-3.5 w-3.5" /> Empezar
-                  </button>
-                )}
-                {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && et.fecha_inicio_programada && et.fecha_fin_programada && (
-                  <button className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs" onClick={() => abrirReprogramacion('etapa', et)}>
-                    <ArrowPathIcon className="h-3.5 w-3.5" /> Reprogramar
-                  </button>
-                )}
-                {puedeActividades && (
-                  <button
-                    className="btn-ghost !gap-1 !px-2.5 !py-1.5 text-xs"
-                    onClick={() => (actividadEn === et.id ? nuevaActividad.cerrar() : nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id))}
-                  >
-                    <PlusIcon className="h-3.5 w-3.5" /> Actividad
-                  </button>
-                )}
-              </div>
+      {/* Resumen del proyecto: avance, presupuesto por etapa y plazo. */}
+      {proyecto && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <div className="card flex items-center gap-5 p-5">
+            <div className="relative h-24 w-24 shrink-0">
+              <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#e5e7eb" strokeWidth="10" />
+                <circle cx="50" cy="50" r="42" fill="none" stroke="#eab308" strokeWidth="10" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - avanceProyecto / 100)} />
+              </svg>
+              <span className="absolute inset-0 grid place-items-center text-xl font-extrabold text-slate-900">{avanceProyecto}%</span>
             </div>
-            <p className="mt-1 text-xs text-slate-400">
-              {et.fecha_inicio_programada ? fmtFecha(et.fecha_inicio_programada) : 'sin inicio'} —{' '}
-              {et.fecha_fin_programada ? fmtFecha(et.fecha_fin_programada) : 'sin fin'}
-              <span title="Suma del presupuesto de sus actividades"> · Presupuesto {et.presupuesto != null ? fmtCOP(et.presupuesto) : 'sin definir'}</span>
-            </p>
+            <div className="min-w-0 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Avance del proyecto</p>
+              <p className="mt-1 font-semibold text-slate-900">Ponderado por esfuerzo</p>
+              <p className="mt-1 text-xs text-slate-500">
+                {actividades.filter((a) => a.estado === 'COMPLETADA').length} de {actividades.length} actividades finalizadas
+              </p>
             </div>
+          </div>
 
-            {puedeActividades && actividadEn === et.id && (
-              <form onSubmit={nuevaActividad.guardar} className="grid gap-4 border-b border-slate-100 bg-slate-50/60 p-5 sm:grid-cols-2">
+          <div className="card p-5">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Presupuesto</p>
+            <p className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900" title={fmtCOP(proyecto.presupuesto_inicial)}>
+              {fmtCOPCompacto(proyecto.presupuesto_inicial)}
+            </p>
+            <div className="mt-2 flex h-3 gap-0.5 overflow-hidden rounded-full bg-slate-100">
+              {etapas.map((et, i) => (
+                <span key={et.id} title={`${et.nombre}: ${fmtCOP(et.presupuesto ?? 0)}`}
+                  style={{ width: `${Math.min(100, (Number(et.presupuesto ?? 0) / (Number(proyecto.presupuesto_inicial) || 1)) * 100)}%`, background: colorEtapa(i) }} />
+              ))}
+            </div>
+            <ul className="mt-3 max-h-32 space-y-1 overflow-y-auto pr-1 text-xs text-slate-600">
+              {etapas.map((et, i) => (
+                <li key={et.id} className="flex items-center justify-between gap-2">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: colorEtapa(i) }} />
+                    <span className="truncate">{et.orden}. {et.nombre}</span>
+                  </span>
+                  <b className="shrink-0 text-slate-800" title={fmtCOP(et.presupuesto ?? 0)}>{fmtCOPCompacto(et.presupuesto ?? 0)}</b>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 flex justify-between border-t border-dashed border-slate-200 pt-2 text-xs text-slate-600">
+              <span>Sin asignar a actividades</span>
+              <b className="text-slate-800" title={fmtCOP(Math.max(0, Number(proyecto.presupuesto_inicial) - presupuestoAsignado))}>
+                {fmtCOPCompacto(Math.max(0, Number(proyecto.presupuesto_inicial) - presupuestoAsignado))}
+              </b>
+            </p>
+          </div>
+
+          <div className="card space-y-3 p-5 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Plazo y alertas</p>
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sky-600"><CalendarDaysIcon className="h-5 w-5" /></span>
+              <div>
+                <p className="font-bold text-slate-900">{diasRestantes >= 0 ? `${diasRestantes} días para la entrega` : `Plazo vencido hace ${-diasRestantes} días`}</p>
+                <p className="text-xs text-slate-500">{fmtFecha(proyecto.fecha_inicio_programada)} — {fmtFecha(proyecto.fecha_fin_programada)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${atrasadas + conIncidencia.size ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                <ExclamationTriangleIcon className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="font-bold text-slate-900">{atrasadas} {atrasadas === 1 ? 'atrasada' : 'atrasadas'} · {conIncidencia.size} {conIncidencia.size === 1 ? 'incidencia grave' : 'incidencias graves'}</p>
+                <p className="text-xs text-slate-500">{atrasadas + conIncidencia.size ? 'Abra la actividad marcada para actuar.' : 'Sin alertas por ahora.'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {etapas.length > 0 && (
+        <CronogramaPlan
+          proyecto={proyecto}
+          etapas={etapas}
+          actividades={actividades}
+          conIncidencia={conIncidencia}
+          estadoVisible={estadoVisible}
+          etiquetas={ESTADO_ETIQUETA}
+          insignias={ESTADO_BADGE}
+          orden={ordenActs}
+          onOrden={setOrdenActs}
+          ordenarActividades={(filas) => ordenarFilas(filas, ordenActs, CLAVES_ACTIVIDAD)}
+          accionesEtapa={(et) => (
+            <>
+              <button type="button" title="Ver ficha de la etapa" aria-label="Ver ficha de la etapa"
+                className="btn-accion" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
+                <EyeIcon className="h-4 w-4" />
+              </button>
+              {puedeEditarEtapas && (
+                <button type="button" title="Editar etapa" aria-label="Editar etapa"
+                  className="btn-accion btn-accion-editar" onClick={() => abrirEdicionEtapa(et)}>
+                  <PencilSquareIcon className="h-4 w-4" />
+                </button>
+              )}
+              {puedeActividades && (
+                <button type="button" title="Agregar actividad" aria-label="Agregar actividad"
+                  className="btn-accion btn-accion-ok" onClick={() => nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id)}>
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+              )}
+              {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
+                <button type="button" title="Empezar etapa" aria-label="Empezar etapa" disabled={cambiandoEstado === `e${et.id}`}
+                  className="btn-accion btn-accion-plan disabled:opacity-60" onClick={() => empezarEtapa(et)}>
+                  <PlayIcon className="h-4 w-4" />
+                </button>
+              )}
+              {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && et.fecha_inicio_programada && et.fecha_fin_programada && (
+                <button type="button" title="Reprogramar etapa" aria-label="Reprogramar etapa"
+                  className="btn-accion border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" onClick={() => abrirReprogramacion('etapa', et)}>
+                  <ArrowPathIcon className="h-4 w-4" />
+                </button>
+              )}
+              {puedeBajaEtapas && (
+                <button type="button" title="Dar de baja la etapa" aria-label="Dar de baja la etapa"
+                  className="btn-accion btn-accion-peligro" onClick={() => setEtapaPorBaja(et)}>
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
+            </>
+          )}
+          panelActividad={(a, cerrar) => {
+            const accion = (fn) => () => { cerrar(); fn() }
+            return (
+              <>
+                {puedeAvance(a) && a.estado === 'PENDIENTE' && (
+                  <button type="button" disabled={cambiandoEstado === a.id}
+                    className="btn-primary justify-center disabled:opacity-60" onClick={accion(() => cambiarEstado(a))}>
+                    <PlayIcon className="h-4 w-4" /> Empezar actividad
+                  </button>
+                )}
+                {puedeAvance(a) && (
+                  <button type="button" className="btn-ghost justify-start" onClick={accion(() => setPorAvanzar(a))}>
+                    <ClipboardDocumentCheckIcon className="h-5 w-5 text-emerald-600" /> Registrar avance
+                  </button>
+                )}
+                <button type="button" className="btn-ghost justify-start" onClick={accion(() => setFichaVer({ tipo: 'actividad', dato: a }))}>
+                  <EyeIcon className="h-5 w-5 text-slate-500" /> Ver ficha
+                </button>
+                {puedeEditarActividades && (
+                  <button type="button" className="btn-ghost justify-start" onClick={accion(() => abrirEdicionActividad(a))}>
+                    <PencilSquareIcon className="h-5 w-5 text-sky-600" /> Editar
+                  </button>
+                )}
+                {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
+                  <button type="button" className="btn-ghost justify-start" onClick={accion(() => abrirReprogramacion('actividad', a))}>
+                    <ArrowPathIcon className="h-5 w-5 text-amber-600" /> Reprogramar
+                  </button>
+                )}
+                <button type="button" className="btn-ghost justify-start" onClick={accion(() => setPresupuestando(a))}>
+                  <CubeIcon className="h-5 w-5 text-slate-500" /> Presupuesto de materiales
+                </button>
+              </>
+            )
+          }}
+        />
+      )}
+
+      {/* Nueva actividad: ventana con el formulario (antes se abría dentro de la etapa). */}
+      <ModalFormulario
+        {...nuevaActividad.propsModal}
+        abierto={nuevaActividad.abierto && puedeActividades}
+        titulo="Nueva actividad"
+        subtitulo={etapaNueva?.nombre}
+        textoGuardar="Registrar actividad"
+      >
+        {etapaNueva && (
+          <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor={`a-nombre-${et.id}`} className="label">Nombre de la actividad</label>
-                  <input id={`a-nombre-${et.id}`} className="input" value={nuevaActividad.valores.nombre}
+                  <label htmlFor={`a-nombre-${actividadEn}`} className="label">Nombre de la actividad</label>
+                  <input id={`a-nombre-${actividadEn}`} className="input" value={nuevaActividad.valores.nombre}
                     onChange={(e) => nuevaActividad.cambiar('nombre', e.target.value)} required />
                 </div>
                 <div>
-                  <label htmlFor={`a-resp-${et.id}`} className="label">Responsable</label>
+                  <label htmlFor={`a-resp-${actividadEn}`} className="label">Responsable</label>
                   <BuscadorSelect
-                    id={`a-resp-${et.id}`}
+                    id={`a-resp-${actividadEn}`}
                     value={nuevaActividad.valores.responsable_id}
                     onChange={(v) => nuevaActividad.cambiar('responsable_id', v)}
                     opciones={[
@@ -709,20 +826,20 @@ export default function PlanProyecto() {
                   />
                 </div>
                 <div>
-                  <label htmlFor={`a-inicio-${et.id}`} className="label">Inicio programado</label>
-                  <input id={`a-inicio-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_inicio_programada}
-                    min={limiteEtapa(et).min || undefined} max={nuevaActividad.valores.fecha_fin_programada || limiteEtapa(et).max || undefined}
+                  <label htmlFor={`a-inicio-${actividadEn}`} className="label">Inicio programado</label>
+                  <input id={`a-inicio-${actividadEn}`} type="date" className="input" value={nuevaActividad.valores.fecha_inicio_programada}
+                    min={limiteEtapa(etapaNueva).min || undefined} max={nuevaActividad.valores.fecha_fin_programada || limiteEtapa(etapaNueva).max || undefined}
                     onChange={(e) => nuevaActividad.cambiar('fecha_inicio_programada', e.target.value)} required />
                 </div>
                 <div>
-                  <label htmlFor={`a-fin-${et.id}`} className="label">Fin programado</label>
-                  <input id={`a-fin-${et.id}`} type="date" className="input" value={nuevaActividad.valores.fecha_fin_programada}
-                    min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(et).min || undefined} max={limiteEtapa(et).max || undefined}
+                  <label htmlFor={`a-fin-${actividadEn}`} className="label">Fin programado</label>
+                  <input id={`a-fin-${actividadEn}`} type="date" className="input" value={nuevaActividad.valores.fecha_fin_programada}
+                    min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(etapaNueva).min || undefined} max={limiteEtapa(etapaNueva).max || undefined}
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
                 </div>
                 <div>
-                  <label htmlFor={`a-esfuerzo-${et.id}`} className="label">Esfuerzo</label>
-                  <select id={`a-esfuerzo-${et.id}`} className="input" value={nuevaActividad.valores.esfuerzo}
+                  <label htmlFor={`a-esfuerzo-${actividadEn}`} className="label">Esfuerzo</label>
+                  <select id={`a-esfuerzo-${actividadEn}`} className="input" value={nuevaActividad.valores.esfuerzo}
                     onChange={(e) => nuevaActividad.cambiar('esfuerzo', e.target.value)}>
                     {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -731,8 +848,8 @@ export default function PlanProyecto() {
                   </p>
                 </div>
                 <div className="sm:col-span-2">
-                  <label htmlFor={`a-presupuesto-${et.id}`} className="label">Presupuesto (COP, opcional)</label>
-                  <input id={`a-presupuesto-${et.id}`} type="text" inputMode="numeric" autoComplete="off" className="input tabular-nums"
+                  <label htmlFor={`a-presupuesto-${actividadEn}`} className="label">Presupuesto (COP, opcional)</label>
+                  <input id={`a-presupuesto-${actividadEn}`} type="text" inputMode="numeric" autoComplete="off" className="input tabular-nums"
                     placeholder="10.000.000" value={fmtMiles(nuevaActividad.valores.presupuesto)}
                     onChange={(e) => nuevaActividad.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
                   <p className="mt-1 text-xs text-slate-500">
@@ -767,102 +884,9 @@ export default function PlanProyecto() {
                     El avance se calcula de forma equitativa según los criterios cumplidos.
                   </p>
                 </div>
-                <div className="sm:col-span-2">
-                  <AlertaFormulario mensaje={nuevaActividad.error} />
-                </div>
-                <div className="sm:col-span-2 flex items-center gap-3">
-                  <button type="submit" className="btn-primary">Registrar actividad</button>
-                  <button type="button" className="btn-ghost" onClick={nuevaActividad.cerrar}>Cancelar</button>
-                </div>
-              </form>
-            )}
-
-            {acts.length === 0 ? (
-              <p className="px-5 py-4 text-xs text-slate-400">Sin actividades en esta etapa.</p>
-            ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left text-sm">
-                <thead>
-                  <tr className="text-xs uppercase tracking-wide text-slate-500">
-                    {['Actividad', 'Responsable', 'Fechas', 'Estado', 'Avance'].map((t) => (
-                      <EncabezadoOrdenable key={t} titulo={t} orden={ordenActs} className={t === 'Actividad' ? 'py-2.5 pl-5 pr-3' : 'px-3 py-2.5'}
-                        onOrden={(x) => setOrdenActs((o) => alternarOrden(o, x))} />
-                    ))}
-                    <th className="px-3 py-2.5 font-semibold">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {ordenarFilas(acts, ordenActs, CLAVES_ACTIVIDAD).map((a) => (
-                    <tr key={a.id} className={conIncidencia.has(a.id) ? 'bg-red-50/60' : undefined}>
-                      <td className="max-w-[9rem] py-3 pl-5 pr-3 text-xs font-medium text-slate-700">
-                        <button type="button" title="Ver ficha de la actividad"
-                          className="text-left hover:text-brand-700 hover:underline"
-                          onClick={() => setFichaVer({ tipo: 'actividad', dato: a })}>
-                          {a.nombre}
-                        </button>
-                        {/* HU-14: incidencia de severidad alta o crítica sin resolver. */}
-                        {conIncidencia.has(a.id) && (
-                          <Link to="/incidencias" title="Tiene una incidencia grave sin resolver"
-                            className="badge mt-1 block w-fit bg-red-100 text-red-700 ring-1 ring-red-200">
-                            ⚠ Incidencia
-                          </Link>
-                        )}
-                      </td>
-                      <td className="max-w-[7rem] px-3 py-3 text-xs text-slate-600">{a.responsable_nombre ?? '—'}</td>
-                      <td className="px-3 py-3 text-xs text-slate-500">
-                        {fmtFecha(a.fecha_inicio_programada)} — {fmtFecha(a.fecha_fin_programada)}
-                      </td>
-                      <td className="px-3 py-3">
-                        {puedeAvance(a) && a.estado === 'PENDIENTE' ? (
-                          <button type="button" title="Empezar la actividad (registra la fecha real de inicio)"
-                            disabled={cambiandoEstado === a.id} onClick={() => cambiarEstado(a)}
-                            className="inline-flex items-center gap-1 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-800 transition hover:bg-amber-200 disabled:opacity-60">
-                            <PlayIcon className="h-3.5 w-3.5" /> Empezar
-                          </button>
-                        ) : (
-                          <span className={`badge ${ESTADO_BADGE[estadoVisible(a)] ?? 'bg-slate-100 text-slate-600'}`}>
-                            {ESTADO_ETIQUETA[estadoVisible(a)] ?? a.estado}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-3 text-xs font-semibold tabular-nums text-slate-600">
-                        {Number(a.porcentaje_avance)}%
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          {puedeEditarActividades && (
-                            <button type="button" title="Editar" aria-label="Editar actividad"
-                              className="btn-accion btn-accion-editar" onClick={() => abrirEdicionActividad(a)}>
-                              <PencilSquareIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                          {puedeReprogramarActividades && a.estado !== 'COMPLETADA' && (
-                            <button type="button" title="Reprogramar" aria-label="Reprogramar actividad"
-                              className="btn-accion btn-accion-peligro" onClick={() => abrirReprogramacion('actividad', a)}>
-                              <ArrowPathIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                          {puedeAvance(a) && (
-                            <button type="button" title="Registrar avance" aria-label="Registrar avance"
-                              className="btn-accion btn-accion-ok" onClick={() => setPorAvanzar(a)}>
-                              <ClipboardDocumentCheckIcon className="h-4 w-4" />
-                            </button>
-                          )}
-                          <button type="button" title="Presupuesto de materiales" aria-label="Presupuesto de materiales"
-                            className="btn-accion btn-accion-editar" onClick={() => setPresupuestando(a)}>
-                            <CubeIcon className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              </div>
-            )}
           </div>
-        )
-      })}
+        )}
+      </ModalFormulario>
 
       {/* RBAC: gestión de acceso al proyecto. Solo quien puede administrarlo ve
           el formulario; los demás roles no necesitan esta caja. */}
