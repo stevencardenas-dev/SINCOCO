@@ -1,3 +1,4 @@
+import math
 # Prueba del panel de inicio (RF04 · RF09 · RF22 · RF26).
 #
 # Requiere el backend corriendo (puerto 3005). No usa navegador.
@@ -129,9 +130,10 @@ try:
     categoria_id = int(scalar(f"SELECT id FROM categorias_materiales WHERE nombre='{CATEGORIA}'"))
     # El detalle muestra solo los 5 de mayor faltante: el mínimo se calcula para
     # superar el mayor faltante actual y no depender de los datos semilla.
-    mayor_faltante = int(scalar(
+    # Las columnas son DECIMAL: MySQL devuelve '1000.00', no un entero.
+    mayor_faltante = math.ceil(float(scalar(
         'SELECT COALESCE(MAX(nivel_minimo - existencia_total), 0) FROM materiales '
-        "WHERE activo=1 AND codigo <> 'TEST-DASH-BAJO'"))
+        "WHERE activo=1 AND codigo <> 'TEST-DASH-BAJO'")))
     minimo_bajo = 3 + max(mayor_faltante, 0) + 1
     for codigo, existencia, minimo in (('TEST-DASH-BAJO', 3, minimo_bajo), ('TEST-DASH-OK', 20, 5)):
         assert sql(
