@@ -144,7 +144,7 @@ try:
     assert 'TEST-DASH-BAJO' in detalle, f'el material bajo mínimo no se alerta: {detalle}'
     assert 'TEST-DASH-OK' not in detalle, f'el material con existencia suficiente no debe alertar: {detalle}'
     fila = next(m for m in d3['inventario']['detalle'] if m['codigo'] == 'TEST-DASH-BAJO')
-    assert (fila['existencia_total'], fila['nivel_minimo']) == (3, 10), f'valores distintos: {fila}'
+    assert (fila['existencia_total'], fila['nivel_minimo']) == (3, 1000000), f'valores distintos: {fila}'
     print(f'inventario -> {d3["inventario"]["bajo_stock"]} bajo mínimo; detalle incluye '
           f'{fila["codigo"]} ({fila["existencia_total"]} < {fila["nivel_minimo"]}) y excluye TEST-DASH-OK')
 finally:
