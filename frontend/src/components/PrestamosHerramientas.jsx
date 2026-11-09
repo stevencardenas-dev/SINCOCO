@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import Modal from './Modal.jsx'
 import TablaSolicitudes from './TablaSolicitudes.jsx'
@@ -56,6 +57,8 @@ export default function PrestamosHerramientas({ pestanas }) {
   const [errorAveria, setErrorAveria] = useState('')
   const [guardandoAveria, setGuardandoAveria] = useState(false)
   const [avisoAveria, setAvisoAveria] = useState('')
+  const [sugerirSolicitud, setSugerirSolicitud] = useState(false)
+  const avisoAveriaRef = useRef(null)
   const [porEntregarSol, setPorEntregarSol] = useState(null)
   const [entrega, setEntrega] = useState({ fecha_estimada_devolucion: '', observaciones: '' })
   const [errorEntrega, setErrorEntrega] = useState('')
@@ -106,6 +109,10 @@ export default function PrestamosHerramientas({ pestanas }) {
       setGuardandoDevolucion(false)
     }
   }
+  // El aviso va arriba del listado: se lleva a la vista para que la sugerencia (o la entrega del reemplazo) no pase inadvertida.
+  useEffect(() => {
+    if (avisoAveria) avisoAveriaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [avisoAveria])
   const confirmarAveria = async () => {
     if (!averia.novedad.trim()) return setErrorAveria('Debe describir la avería (novedad) para registrar el reemplazo.')
     setGuardandoAveria(true)
@@ -115,6 +122,7 @@ export default function PrestamosHerramientas({ pestanas }) {
       })
       setAveria(null)
       await recargar()
+      setSugerirSolicitud(Boolean(r.sugerir_solicitud))
       setAvisoAveria(r.sugerir_solicitud
         ? 'Avería registrada y préstamo cerrado sin reemplazo. Registre una solicitud de herramienta (Solicitudes) para que el trabajador siga con su labor.'
         : `Avería registrada: el reemplazo (${r.prestamo_reemplazo.herramienta}) quedó entregado a ${r.prestamo_reemplazo.trabajador} con devolución estimada el ${fmtFecha(r.prestamo_reemplazo.fecha_estimada_devolucion)}.`)
@@ -181,7 +189,15 @@ export default function PrestamosHerramientas({ pestanas }) {
 
       {(sol.error || pre.error) && <AlertaFormulario mensaje={sol.error || pre.error} />}
       {sol.aviso && <AlertaFormulario tipo="aviso" mensaje={sol.aviso} />}
-      {avisoAveria && <AlertaFormulario tipo="aviso" mensaje={avisoAveria} />}
+      {avisoAveria && (
+        <div ref={avisoAveriaRef} className="space-y-2">
+          <AlertaFormulario tipo="aviso" mensaje={avisoAveria} />
+          {/* HU-35 · Alt. 1: sin reemplazo se sugiere pedir la herramienta con una solicitud (HU-30). */}
+          {sugerirSolicitud && puede('solicitudes_herramientas.listar') && (
+            <Link to="/solicitudes" className="btn-ghost inline-block text-sm">Ir a Solicitudes</Link>
+          )}
+        </div>
+      )}
       {avisoDevolucion && <AlertaFormulario tipo="aviso" mensaje={avisoDevolucion} />}
 
       <section className="card overflow-hidden">
