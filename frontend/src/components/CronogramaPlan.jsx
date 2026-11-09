@@ -1,7 +1,18 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ChevronDownIcon, ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import {
+  CalendarDaysIcon,
+  CheckCircleIcon,
+  ChevronDoubleDownIcon,
+  ChevronDoubleUpIcon,
+  ChevronDownIcon,
+  EllipsisHorizontalCircleIcon,
+  ExclamationTriangleIcon,
+  PlayCircleIcon,
+  Squares2X2Icon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline'
 import { fmtCOPCompacto, fmtFecha } from '../lib/format.js'
 import { colorEtapa } from '../lib/coloresEtapa.js'
 
@@ -185,18 +196,24 @@ export default function CronogramaPlan({
     <div className="space-y-3">
       {/* Filtro por etapa: el cronograma muestra solo las actividades de la opción elegida. */}
       <div role="radiogroup" aria-label="Etapa a mostrar" className="flex flex-wrap gap-2">
-        {[{ id: 0, orden: null, nombre: 'Todas las etapas', n: actividades.length }, ...etapas.map((e) => ({ id: e.id, orden: e.orden, nombre: e.nombre, n: actividades.filter((a) => a.etapa_id === e.id).length }))].map((o) => {
+        {[{ id: 0, nombre: 'Todas las etapas', icono: Squares2X2Icon, tono: '' }, ...etapas.map((e) => ({
+          id: e.id,
+          nombre: `Etapa ${e.orden}`,
+          titulo: e.nombre,
+          ...(e.estado === 'COMPLETADA'
+            ? { icono: CheckCircleIcon, tono: 'text-emerald-500' }
+            : e.estado === 'EN_PROCESO'
+              ? { icono: PlayCircleIcon, tono: 'text-accent-500' }
+              : { icono: EllipsisHorizontalCircleIcon, tono: 'text-slate-400' }),
+        }))].map((o) => {
           const on = (elegida?.id ?? 0) === o.id
           return (
-            <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setFiltro(o.id)} title={o.nombre}
-              className={`inline-flex max-w-[16rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+            <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setFiltro(o.id)} title={o.titulo ?? o.nombre}
+              className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition ${
                 on ? 'border-brand-900 bg-brand-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-accent-400 hover:bg-accent-50'
               }`}>
-              {o.orden != null && (
-                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${on ? 'bg-accent-400 text-brand-950' : 'bg-slate-100 text-slate-600'}`}>{o.orden}</span>
-              )}
-              <span className="truncate">{o.orden != null ? `Etapa ${o.orden}` : o.nombre}</span>
-              <span className={`rounded-full px-1.5 text-[10px] ${on ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`} title={`${o.n} actividades`}>{o.n}</span>
+              <o.icono className={`h-4 w-4 shrink-0 ${on ? 'text-accent-400' : o.tono}`} />
+              {o.nombre}
             </button>
           )
         })}
@@ -204,14 +221,11 @@ export default function CronogramaPlan({
 
       {/* Controles del cronograma */}
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => irAHoy(true)}>
-          Ir a hoy
-        </button>
         <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
-          Contraer todas
+          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas
         </button>
         <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
-          Expandir todas
+          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas
         </button>
         <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
           <label htmlFor="orden-actividades" className="font-medium">Ordenar actividades por</label>
@@ -240,7 +254,11 @@ export default function CronogramaPlan({
               className="sticky left-0 z-50 flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-4 text-xs font-bold uppercase tracking-wide text-slate-500"
               style={{ width: ANCHO_ETIQUETA }}
             >
-              Etapa / actividad
+              <span className="flex-1">Etapa / actividad</span>
+              <button type="button" onClick={() => irAHoy(true)} title="Ir al mes actual"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 hover:border-accent-400 hover:bg-accent-50">
+                <CalendarDaysIcon className="h-3.5 w-3.5" /> Hoy
+              </button>
             </div>
             <div className="flex" style={{ width: rango.total }}>
               {rango.meses.map((m) => {

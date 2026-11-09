@@ -23,7 +23,8 @@ import {
   UserPlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
-import Retractil from '../components/Retractil.jsx'
+import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
+import { Interruptor, SeccionFiltros, Segmentado } from '../components/FiltrosControles.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
 import CampoMoneda from '../components/CampoMoneda.jsx'
@@ -557,7 +558,7 @@ export default function PlanProyecto() {
 
       {/* Conmutador de submódulos: la pastilla deslizante marca en cuál se está. */}
       <div role="tablist" aria-label="Secciones del proyecto"
-        className="relative grid w-full max-w-xl rounded-2xl bg-slate-100 p-1"
+        className="relative grid w-full rounded-2xl bg-slate-100 p-1"
         style={{ gridTemplateColumns: `repeat(${SECCIONES.length}, minmax(0, 1fr))` }}>
         <span aria-hidden="true"
           className="absolute inset-y-1 left-1 rounded-xl bg-brand-900 shadow-md transition-transform duration-300 ease-out"
@@ -985,71 +986,59 @@ export default function PlanProyecto() {
           )}
           </div>
 
-          <Retractil
-            titulo="Buscar y filtrar"
-            icono={FunnelIcon}
-            insignia={filtrosActivos > 0 ? `${filtrosActivos} ${filtrosActivos === 1 ? 'filtro' : 'filtros'}` : null}
-          >
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="sm:col-span-2 xl:col-span-4">
-                <label htmlFor="fa-buscar" className="label">Buscar</label>
-                <input
-                  id="fa-buscar"
-                  className="input"
-                  placeholder="Nombre, cargo, descripción o actividad…"
-                  value={filtroAcceso.buscar}
-                  onChange={(e) => filtrosAcceso.cambiar('buscar', e.target.value)}
-                />
-              </div>
+          <div className="border-b border-slate-100 px-5 py-4">
+            <FiltrosDesplegable
+              titulo="Buscar accesos"
+              ariaLabel="Filtros de acceso al proyecto"
+              activos={filtrosActivos}
+              resumen={`${gruposAcceso.length} ${gruposAcceso.length === 1 ? 'trabajador' : 'trabajadores'} ${filtrosActivos > 0 ? 'con los filtros' : 'con acceso'}`}
+            >
               <div>
-                <label htmlFor="fa-estado" className="label">Estado</label>
-                <select id="fa-estado" className="input" value={filtroAcceso.estado}
-                  onChange={(e) => filtrosAcceso.cambiar('estado', e.target.value)}>
-                  <option value="">Todos</option>
-                  <option value="ACTIVO">Vigente</option>
-                  <option value="FINALIZADO">Finalizado</option>
-                  <option value="REASIGNADO">Reasignado</option>
-                  <option value="CANCELADO">Cancelado</option>
-                </select>
+                <label htmlFor="fa-buscar" className="label">Búsqueda</label>
+                <input id="fa-buscar" type="search" className="input" placeholder="Nombre, cargo, descripción o actividad…"
+                  value={filtroAcceso.buscar} onChange={(e) => filtrosAcceso.cambiar('buscar', e.target.value)} />
               </div>
-              <div>
-                <label htmlFor="fa-alcance" className="label">Alcance</label>
-                <select id="fa-alcance" className="input" value={filtroAcceso.alcance}
-                  onChange={(e) => filtrosAcceso.cambiar('alcance', e.target.value)}>
-                  <option value="">Todos</option>
-                  <option value="PROYECTO">Todo el proyecto</option>
-                  <option value="ACTIVIDAD">Por actividad</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="fa-actividad" className="label">Actividad</label>
-                <SelectBuscable id="fa-actividad" className="input" value={filtroAcceso.actividad}
-                  onChange={(e) => filtrosAcceso.cambiar('actividad', e.target.value)}>
-                  <option value="">Todas</option>
-                  {etapas.map((et) => {
-                    const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
-                    if (delaEtapa.length === 0) return null
-                    return (
-                      <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
-                        {delaEtapa.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
-                      </optgroup>
-                    )
-                  })}
-                </SelectBuscable>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
-                <input type="checkbox" checked={filtroAcceso.vencen}
-                  onChange={(e) => filtrosAcceso.cambiar('vencen', e.target.checked)} />
-                Vencen en los próximos {DIAS_POR_VENCER} días
-              </label>
-              <div className="flex items-center justify-end sm:col-span-2">
-                <button type="button" className="btn-ghost" disabled={filtrosActivos === 0}
-                  onClick={filtrosAcceso.limpiar}>
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-          </Retractil>
+              <SeccionFiltros titulo="Situación" icono={UsersIcon}>
+                <Segmentado etiqueta="Estado" nombre="fa-estado" value={filtroAcceso.estado}
+                  onChange={(v) => filtrosAcceso.cambiar('estado', v)}
+                  opciones={[
+                    { value: '', label: 'Todos' },
+                    { value: 'ACTIVO', label: 'Vigente' },
+                    { value: 'FINALIZADO', label: 'Finalizado' },
+                    { value: 'REASIGNADO', label: 'Reasignado' },
+                    { value: 'CANCELADO', label: 'Cancelado' },
+                  ]} />
+                <Segmentado etiqueta="Alcance" nombre="fa-alcance" value={filtroAcceso.alcance}
+                  onChange={(v) => filtrosAcceso.cambiar('alcance', v)}
+                  opciones={[
+                    { value: '', label: 'Todos' },
+                    { value: 'PROYECTO', label: 'Todo el proyecto' },
+                    { value: 'ACTIVIDAD', label: 'Por actividad' },
+                  ]} />
+              </SeccionFiltros>
+              <SeccionFiltros titulo="Actividad" icono={FunnelIcon}>
+                <div>
+                  <label htmlFor="fa-actividad" className="label">Actividad</label>
+                  <select id="fa-actividad" className="input" value={filtroAcceso.actividad}
+                    onChange={(e) => filtrosAcceso.cambiar('actividad', e.target.value)}>
+                    <option value="">Todas</option>
+                    {etapas.map((et) => {
+                      const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
+                      if (delaEtapa.length === 0) return null
+                      return (
+                        <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
+                          {delaEtapa.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
+                        </optgroup>
+                      )
+                    })}
+                  </select>
+                </div>
+                <Interruptor checked={filtroAcceso.vencen} onChange={(v) => filtrosAcceso.cambiar('vencen', v)}>
+                  Vencen en los próximos {DIAS_POR_VENCER} días
+                </Interruptor>
+              </SeccionFiltros>
+            </FiltrosDesplegable>
+          </div>
 
           {asignaciones.length === 0 ? (
             <p className="px-5 py-4 text-xs text-slate-400">

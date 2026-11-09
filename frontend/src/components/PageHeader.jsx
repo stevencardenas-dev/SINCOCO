@@ -10,7 +10,7 @@ export default function PageHeader({ title, subtitle, accion, children }) {
         <div className="flex items-center gap-2.5">
           {/* Realce amarillo de marca junto al título de la página */}
           <span className="h-5 w-1.5 shrink-0 rounded-full bg-accent-400" aria-hidden="true" />
-          <h2 className="text-xl font-bold tracking-tight text-slate-900">{title}</h2>
+          <h2 className="min-w-0 text-xl font-bold tracking-tight text-slate-900 [overflow-wrap:anywhere]">{title}</h2>
           {accion && <div className="ml-1 shrink-0">{accion}</div>}
         </div>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}

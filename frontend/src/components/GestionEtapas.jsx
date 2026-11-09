@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { ChevronDoubleDownIcon, ChevronDoubleUpIcon, ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import MenuAcciones from './MenuAcciones.jsx'
 import { colorEtapa } from '../lib/coloresEtapa.js'
 import { fmtCOPCompacto, fmtFecha } from '../lib/format.js'
@@ -46,10 +46,10 @@ export default function GestionEtapas({
       <div className="flex flex-wrap items-center gap-2">
         {barra}
         <button type="button" className="btn-ghost ml-auto !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
-          Contraer todas
+          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas
         </button>
         <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
-          Expandir todas
+          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas
         </button>
         {onVerBajas && (
           <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" aria-pressed={verBajas} onClick={onVerBajas}>
