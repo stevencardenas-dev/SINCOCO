@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { urlListado } from '../hooks/useListadoUrl'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
@@ -496,7 +497,7 @@ export default function PlanProyecto() {
 
   return (
     <div className="space-y-6">
-      <Link to="/proyectos" className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
+      <Link to={urlListado('/proyectos')} className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:underline">
         <ArrowLeftIcon className="h-4 w-4" /> Volver a proyectos
       </Link>
 

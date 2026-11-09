@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
@@ -16,6 +16,10 @@ import {
   UserPlusIcon,
   UsersIcon,
 } from '@heroicons/react/24/outline'
+import Paginacion from '../components/Paginacion.jsx'
+import SelectorOrden from '../components/SelectorOrden.jsx'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { bajaInicial, filtrosIniciales, paginaInicial, useEscribirUrl, valorUrl } from '../hooks/useListadoUrl'
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
@@ -90,6 +94,23 @@ const CATALOGO_TITULO = {
 
 const SIN_FILTROS = { buscar: '', estado: '', cargo_id: '', especialidad_id: '', disponible: '', desde: '', hasta: '' }
 
+// Orden de la lista. '' = el del servidor.
+const ORDENES = [
+  { value: '', label: 'Más recientes' },
+  { value: 'nombre', label: 'Nombre (A–Z)' },
+  { value: 'cargo', label: 'Cargo' },
+  { value: 'disponibilidad', label: 'Disponibles primero' },
+]
+const RANGO_DISP = { Disponible: 0, Asignado: 1, 'No disponible': 2 }
+const ordenar = (lista, orden) => {
+  const f = {
+    nombre: (a, b) => `${a.nombres} ${a.apellidos}`.localeCompare(`${b.nombres} ${b.apellidos}`, 'es'),
+    cargo: (a, b) => String(a.cargo ?? '').localeCompare(String(b.cargo ?? ''), 'es'),
+    disponibilidad: (a, b) => RANGO_DISP[disponibilidad(a)[0]] - RANGO_DISP[disponibilidad(b)[0]],
+  }[orden]
+  return f ? [...lista].sort(f) : lista
+}
+
 const CATALOGO_VACIO = { nombre: '', descripcion: '', categoria: '', operativo: false }
 
 /** Opciones de un catálogo agrupadas por categoría (<optgroup>). */
@@ -159,21 +180,24 @@ export default function Personal() {
   const [parametros] = useSearchParams()
   const fichaPedida = useRef(parametros.get('ficha'))
   const [vista, setVista] = useState(() => {
+    const url = valorUrl('vista', ['tarjetas', 'tabla'], null)
+    if (url) return url
     try { return localStorage.getItem('personal-vista') === 'tabla' ? 'tabla' : 'tarjetas' } catch { return 'tarjetas' }
   })
+  const [orden, setOrden] = useState(() => valorUrl('orden', ORDENES.map((o) => o.value), ''))
   const cambiarVista = (v) => {
     setVista(v)
     try { localStorage.setItem('personal-vista', v) } catch { /* sin storage */ }
   }
   // HU-18: por defecto no se muestran los registros dados de baja.
-  const [incluirInactivos, setIncluirInactivos] = useState(false)
+  const [incluirInactivos, setIncluirInactivos] = useState(bajaInicial)
   const {
     filtros,
     cambiar: cambiarFiltro,
     limpiar: limpiarFiltros,
     activos: filtrosActivos,
     hayFiltros,
-  } = useFiltros(SIN_FILTROS)
+  } = useFiltros(SIN_FILTROS, { inicial: filtrosIniciales(SIN_FILTROS) })
 
   // Catálogos del cargo y la especialidad.
   const [cargos, setCargos] = useState([])
@@ -202,6 +226,24 @@ export default function Personal() {
       }),
     [incluirInactivos, filtros],
     { mensaje: 'No se pudo cargar el personal.' },
+  )
+
+  // Orden y paginación en el cliente; todo el estado del listado queda en la URL.
+  const ordenados = useMemo(() => ordenar(personal ?? [], orden), [personal, orden])
+  const pag = usePaginacion(ordenados, {
+    tamano: 24,
+    clave: JSON.stringify([filtros, incluirInactivos, orden]),
+    paginaInicial: paginaInicial(),
+  })
+  useEscribirUrl(
+    {
+      ...filtros,
+      baja: incluirInactivos,
+      vista: vista === 'tarjetas' ? '' : vista,
+      orden,
+      pag: pag.solicitada > 1 ? pag.solicitada : '',
+    },
+    '/personal',
   )
 
   useEffect(() => {
@@ -402,6 +444,7 @@ export default function Personal() {
             <PlusIcon className="h-5 w-5" /> Nuevo trabajador
           </button>
         )}
+        <SelectorOrden opciones={ORDENES} value={orden} onChange={setOrden} />
         <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
           {[
             ['tarjetas', 'Tarjetas', Squares2X2Icon],
@@ -934,9 +977,14 @@ export default function Personal() {
 
       {personal !== null && personal.length > 0 && vista === 'tarjetas' && (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-          {personal.map((t) => (
+          {pag.visibles.map((t) => (
             <TarjetaTrabajador key={t.id} t={t} onAbrir={setVerFicha} />
           ))}
+        </div>
+      )}
+      {personal !== null && personal.length > 0 && vista === 'tarjetas' && pag.paginas > 1 && (
+        <div className="card">
+          <Paginacion paginacion={pag} />
         </div>
       )}
 
@@ -1022,7 +1070,7 @@ export default function Personal() {
       {personal !== null && personal.length > 0 && vista === 'tabla' && (
         <div className="card overflow-hidden">
           <TablaFicha
-            filas={personal}
+            filas={pag.visibles}
             minWidth="md:min-w-[860px]"
             filaClase={() => 'transition hover:bg-slate-50/70'}
             // Hay celdas de varias líneas (cargo con especialidad, contacto): se

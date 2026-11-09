@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
@@ -17,6 +17,10 @@ import {
   TableCellsIcon,
   UserIcon,
 } from '@heroicons/react/24/outline'
+import Paginacion from '../components/Paginacion.jsx'
+import SelectorOrden from '../components/SelectorOrden.jsx'
+import { usePaginacion } from '../hooks/usePaginacion'
+import { bajaInicial, filtrosIniciales, paginaInicial, useEscribirUrl, valorUrl } from '../hooks/useListadoUrl'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
@@ -218,6 +222,24 @@ const CLIENTE_VACIO = {
 
 const SIN_FILTROS = { buscar: '', estado: '' }
 
+// Orden de la lista (también para la vista de tarjetas). '' = el del servidor (más recientes).
+const ORDENES = [
+  { value: '', label: 'Más recientes' },
+  { value: 'nombre', label: 'Nombre (A–Z)' },
+  { value: 'avance', label: 'Mayor avance' },
+  { value: 'fin', label: 'Fin más próximo' },
+  { value: 'presupuesto', label: 'Mayor presupuesto' },
+]
+const ordenar = (lista, orden) => {
+  const f = {
+    nombre: (a, b) => a.nombre.localeCompare(b.nombre, 'es'),
+    avance: (a, b) => Number(b.porcentaje_avance_total) - Number(a.porcentaje_avance_total),
+    fin: (a, b) => String(a.fecha_fin_programada ?? '9999').localeCompare(String(b.fecha_fin_programada ?? '9999')),
+    presupuesto: (a, b) => Number(b.presupuesto_inicial) - Number(a.presupuesto_inicial),
+  }[orden]
+  return f ? [...lista].sort(f) : lista
+}
+
 // presupuesto_inicial es decimal(15,2): 13 dígitos enteros como máximo.
 const MAX_DIGITOS_PRESUPUESTO = 13
 
@@ -259,14 +281,17 @@ export default function Proyectos() {
     limpiar: limpiarFiltros,
     activos: filtrosActivos,
     hayFiltros,
-  } = useFiltros(SIN_FILTROS, { inicial: { ...SIN_FILTROS, buscar: parametros.get('buscar') ?? '' } })
+  } = useFiltros(SIN_FILTROS, { inicial: filtrosIniciales(SIN_FILTROS) })
   // Selector de ubicación en el mapa (Leaflet), abierto desde el formulario.
   const [mapaAbierto, setMapaAbierto] = useState(false)
   // HU-18: por defecto no se muestran los proyectos dados de baja.
-  const [incluirInactivos, setIncluirInactivos] = useState(false)
+  const [incluirInactivos, setIncluirInactivos] = useState(bajaInicial)
   const [vista, setVista] = useState(() => {
+    const url = valorUrl('vista', ['tarjetas', 'tabla'], null)
+    if (url) return url
     try { return localStorage.getItem('proyectos-vista') === 'tabla' ? 'tabla' : 'tarjetas' } catch { return 'tarjetas' }
   })
+  const [orden, setOrden] = useState(() => valorUrl('orden', ORDENES.map((o) => o.value), ''))
   const cambiarVista = (v) => {
     setVista(v)
     try { localStorage.setItem('proyectos-vista', v) } catch { /* sin storage */ }
@@ -276,6 +301,24 @@ export default function Proyectos() {
     () => proyectosApi.listar({ incluirInactivos, buscar: filtros.buscar, estado: filtros.estado }),
     [incluirInactivos, filtros],
     { mensaje: 'No se pudieron cargar los proyectos. Verifique que el backend esté disponible.' },
+  )
+
+  // Orden y paginación en el cliente; todo el estado del listado queda en la URL.
+  const ordenados = useMemo(() => ordenar(proyectos ?? [], orden), [proyectos, orden])
+  const pag = usePaginacion(ordenados, {
+    tamano: 12,
+    clave: JSON.stringify([filtros, incluirInactivos, orden]),
+    paginaInicial: paginaInicial(),
+  })
+  useEscribirUrl(
+    {
+      ...filtros,
+      baja: incluirInactivos,
+      vista: vista === 'tarjetas' ? '' : vista,
+      orden,
+      pag: pag.solicitada > 1 ? pag.solicitada : '',
+    },
+    '/proyectos',
   )
 
   // Criterio 3 de HU-02: el inicio debe ser estrictamente anterior al fin.
@@ -400,6 +443,7 @@ export default function Proyectos() {
             <PlusIcon className="h-5 w-5" /> Nuevo proyecto
           </button>
         )}
+        <SelectorOrden opciones={ORDENES} value={orden} onChange={setOrden} />
         <div className="inline-flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Tipo de vista">
           {[
             ['tarjetas', 'Tarjetas', Squares2X2Icon],
@@ -813,7 +857,7 @@ export default function Proyectos() {
 
       {proyectos !== null && proyectos.length > 0 && vista === 'tarjetas' && (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {proyectos.map((p) => (
+          {pag.visibles.map((p) => (
             <TarjetaProyecto
               key={p.id}
               p={p}
@@ -824,11 +868,16 @@ export default function Proyectos() {
           ))}
         </div>
       )}
+      {proyectos !== null && proyectos.length > 0 && vista === 'tarjetas' && pag.paginas > 1 && (
+        <div className="card">
+          <Paginacion paginacion={pag} />
+        </div>
+      )}
 
       {proyectos !== null && proyectos.length > 0 && vista === 'tabla' && (
         <div className="card overflow-hidden">
           <TablaFicha
-            filas={proyectos}
+            filas={pag.visibles}
             minWidth="md:min-w-[720px]"
             filaClase={() => 'transition hover:bg-slate-50/70'}
             ficha={{
