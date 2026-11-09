@@ -51,6 +51,7 @@ import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import PresupuestoMateriales from '../components/PresupuestoMateriales.jsx'
+import ConsumoMaterialesActividad from '../components/ConsumoMaterialesActividad.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -265,9 +266,11 @@ export default function PlanProyecto() {
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
   const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
+  const [consumiendo, setConsumiendo] = useState(null) // HU-20: actividad cuyo consumo de materiales se gestiona
   const [presupuestando, setPresupuestando] = useState(null) // HU-08: actividad cuyo presupuesto de materiales se consulta
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
+  const puedeConsumos = puede('consumos_materiales.listar') // HU-20
   // Submódulos de la página: se recuerdan en la URL (?vista=) para poder recargar o compartir.
   const vigentes = asignaciones.filter((a) => a.estado === 'ACTIVO').length
   const SECCIONES = [
@@ -838,6 +841,7 @@ export default function PlanProyecto() {
             puedeEditarActividades && { label: 'Editar', icono: PencilSquareIcon, onClick: () => abrirEdicionActividad(a) },
             puedeReprogramarActividades && a.estado !== 'COMPLETADA' && { label: 'Reprogramar', icono: ArrowPathIcon, onClick: () => abrirReprogramacion('actividad', a) },
             { label: 'Presupuesto de materiales', icono: CubeIcon, onClick: () => setPresupuestando(a) },
+            puedeConsumos && { label: 'Consumo de materiales', icono: ClipboardDocumentCheckIcon, onClick: () => setConsumiendo(a) },
           ]}
           barra={
             <>
@@ -1281,6 +1285,8 @@ export default function PlanProyecto() {
         onCerrar={() => setPorExtender(null)}
         onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
       />
+
+      {consumiendo && <ConsumoMaterialesActividad actividad={consumiendo} onCerrar={() => setConsumiendo(null)} />}
 
       {/* HU-08: cantidades por material contra las que se valida cada solicitud. */}
       {presupuestando && (
