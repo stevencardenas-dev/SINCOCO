@@ -6,6 +6,8 @@ import {
   ArrowPathIcon,
   CalendarDaysIcon,
   ChartPieIcon,
+  Squares2X2Icon,
+  ArrowUturnLeftIcon,
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
@@ -29,6 +31,7 @@ import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import Ficha from '../components/Ficha.jsx'
 import CronogramaPlan from '../components/CronogramaPlan.jsx'
+import GestionEtapas from '../components/GestionEtapas.jsx'
 import { colorEtapa } from '../lib/coloresEtapa.js'
 import EncabezadoOrdenable from '../components/EncabezadoOrdenable.jsx'
 import { alternarOrden, ordenarFilas } from '../lib/ordenarTabla.js'
@@ -186,6 +189,7 @@ const CLAVES_ACCESO = {
 export default function PlanProyecto() {
   const { id } = useParams()
   const [parametros, setParametros] = useSearchParams()
+  const [verBajas, setVerBajas] = useState(false) // HU-18: mostrar también las etapas dadas de baja
   const { puede } = useAuth()
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
   // Además del permiso del rol, el plan solo lo modifica el líder del proyecto,
@@ -197,7 +201,7 @@ export default function PlanProyecto() {
       // tener: si fallan, el plan se muestra igual sin esa parte.
       const [proyectos, etapas, actividades, responsables, asignaciones, miAcceso, afectadas] = await Promise.all([
         proyectosApi.listar(),
-        etapasApi.listar({ proyecto_id: id }),
+        etapasApi.listar({ proyecto_id: id, incluirInactivos: verBajas }),
         actividadesApi.listar({ proyecto_id: id }),
         trabajadoresApi.listar().catch(() => []),
         asignacionesApi.listar({ proyecto_id: id }).catch(() => []),
@@ -208,11 +212,14 @@ export default function PlanProyecto() {
       const proyecto = proyectos.find((x) => String(x.id) === String(id)) ?? null
       return { proyecto, etapas, actividades, responsables, asignaciones, miAcceso, afectadas: afectadas.actividades_ids }
     },
-    [id],
+    [id, verBajas],
     { mensaje: 'No se pudo cargar el plan de trabajo.' },
   )
   const proyecto = datos?.proyecto ?? null
-  const etapas = datos?.etapas ?? []
+  const todasEtapas = datos?.etapas ?? []
+  const estaActiva = (e) => e.activo !== 0 && e.activo !== false
+  const etapas = todasEtapas.filter(estaActiva)
+  const etapasBaja = todasEtapas.filter((e) => !estaActiva(e))
   const actividades = datos?.actividades ?? []
   // Lo repartido entre las actividades, frente al presupuesto inicial del proyecto.
   const presupuestoAsignado = etapas.reduce((total, et) => total + Number(et.presupuesto ?? 0), 0)
@@ -257,8 +264,9 @@ export default function PlanProyecto() {
   const vigentes = asignaciones.filter((a) => a.estado === 'ACTIVO').length
   const SECCIONES = [
     { id: 'resumen', label: 'Resumen', icono: ChartPieIcon, cuenta: null },
-    { id: 'cronograma', label: 'Cronograma', icono: CalendarDaysIcon, cuenta: etapas.length },
-    ...(puedeAcceso ? [{ id: 'acceso', label: 'Acceso', icono: UsersIcon, cuenta: vigentes }] : []),
+    { id: 'cronograma', label: 'Cronograma', icono: CalendarDaysIcon, cuenta: null },
+    { id: 'etapas', label: 'Etapas', icono: Squares2X2Icon, cuenta: etapas.length, ayuda: `${etapas.length} ${etapas.length === 1 ? 'etapa' : 'etapas'} en el plan` },
+    ...(puedeAcceso ? [{ id: 'acceso', label: 'Acceso', icono: UsersIcon, cuenta: vigentes, ayuda: `${vigentes} con acceso vigente` }] : []),
   ]
   const pedida = parametros.get('vista')
   const vista = SECCIONES.some((x) => x.id === pedida) ? pedida : 'cronograma'
@@ -528,26 +536,12 @@ export default function PlanProyecto() {
 
       <PageHeader accion={<BotonActualizar onClick={recargar} />}
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
-        subtitle={
-          proyecto
-            ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)} · Presupuesto ${fmtCOP(proyecto.presupuesto_inicial)} · Asignado a actividades ${fmtCOP(presupuestoAsignado)}`
-            : 'Plan de trabajo'
-        }
+        subtitle={proyecto ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)}` : 'Plan de trabajo'}
       >
         {proyecto?.activo !== 0 && proyecto?.activo !== false && puede('proyectos.editar') && (
           <Link to={`/proyectos?editar=${id}&volver=plan`} className="btn-ghost">
             <PencilSquareIcon className="h-5 w-5" /> Editar proyecto
           </Link>
-        )}
-        {puedeAplicarPlantilla && (
-          <button className="btn-ghost" onClick={() => setPlantillaAbierta(true)}>
-            Aplicar plantilla
-          </button>
-        )}
-        {puedeEtapas && (
-          <button className="btn-primary" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
-            <PlusIcon className="h-5 w-5" /> Nueva etapa
-          </button>
         )}
       </PageHeader>
 
@@ -574,7 +568,7 @@ export default function PlanProyecto() {
               <x.icono className={`h-5 w-5 ${activa ? 'text-accent-400' : ''}`} />
               {x.label}
               {x.cuenta != null && (
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${activa ? 'bg-accent-400 text-brand-950' : 'bg-white text-slate-600'}`}>
+                <span title={x.ayuda} aria-label={x.ayuda} className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${activa ? 'bg-accent-400 text-brand-950' : 'bg-white text-slate-600'}`}>
                   {x.cuenta}
                 </span>
               )}
@@ -636,7 +630,7 @@ export default function PlanProyecto() {
         </div>
       )}
 
-      {puedeEtapas && nuevaEtapa.abierto && (
+      {vista === 'etapas' && puedeEtapas && nuevaEtapa.abierto && (
         <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
           <h3 className="text-base font-semibold text-slate-900">Definir etapa</h3>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -670,9 +664,12 @@ export default function PlanProyecto() {
         </form>
       )}
 
-      {vista === 'cronograma' && etapas.length === 0 && (
+      {(vista === 'cronograma' || vista === 'etapas') && etapas.length === 0 && etapasBaja.length === 0 && (
         <div className="card px-6 py-14 text-center text-sm text-slate-500">
           Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}
+          {puedeBajaEtapas && (
+            <button type="button" className="btn-ghost ml-2 !px-3 !py-1.5 text-xs" onClick={() => { setVerBajas(true); irA('etapas') }}>Ver etapas dadas de baja</button>
+          )}
         </div>
       )}
 
@@ -761,44 +758,6 @@ export default function PlanProyecto() {
           orden={ordenActs}
           onOrden={setOrdenActs}
           ordenarActividades={(filas) => ordenarFilas(filas, ordenActs, CLAVES_ACTIVIDAD)}
-          accionesEtapa={(et) => (
-            <>
-              <button type="button" title="Ver ficha de la etapa" aria-label="Ver ficha de la etapa"
-                className="btn-accion" onClick={() => setFichaVer({ tipo: 'etapa', dato: et })}>
-                <EyeIcon className="h-4 w-4" />
-              </button>
-              {puedeEditarEtapas && (
-                <button type="button" title="Editar etapa" aria-label="Editar etapa"
-                  className="btn-accion btn-accion-editar" onClick={() => abrirEdicionEtapa(et)}>
-                  <PencilSquareIcon className="h-4 w-4" />
-                </button>
-              )}
-              {puedeActividades && (
-                <button type="button" title="Agregar actividad" aria-label="Agregar actividad"
-                  className="btn-accion btn-accion-ok" onClick={() => nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id)}>
-                  <PlusIcon className="h-4 w-4" />
-                </button>
-              )}
-              {puedeEditarEtapas && et.estado === 'PENDIENTE' && (
-                <button type="button" title="Empezar etapa" aria-label="Empezar etapa" disabled={cambiandoEstado === `e${et.id}`}
-                  className="btn-accion btn-accion-plan disabled:opacity-60" onClick={() => empezarEtapa(et)}>
-                  <PlayIcon className="h-4 w-4" />
-                </button>
-              )}
-              {puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && et.fecha_inicio_programada && et.fecha_fin_programada && (
-                <button type="button" title="Reprogramar etapa" aria-label="Reprogramar etapa"
-                  className="btn-accion border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100" onClick={() => abrirReprogramacion('etapa', et)}>
-                  <ArrowPathIcon className="h-4 w-4" />
-                </button>
-              )}
-              {puedeBajaEtapas && (
-                <button type="button" title="Dar de baja la etapa" aria-label="Dar de baja la etapa"
-                  className="btn-accion btn-accion-peligro" onClick={() => setEtapaPorBaja(et)}>
-                  <TrashIcon className="h-4 w-4" />
-                </button>
-              )}
-            </>
-          )}
           panelActividad={(a, cerrar) => {
             const accion = (fn) => () => { cerrar(); fn() }
             return (
@@ -833,6 +792,75 @@ export default function PlanProyecto() {
               </>
             )
           }}
+        />
+      )}
+
+      {vista === 'etapas' && (etapas.length > 0 || etapasBaja.length > 0) && (
+        <GestionEtapas
+          etapas={etapas}
+          bajas={etapasBaja}
+          actividades={actividades}
+          conIncidencia={conIncidencia}
+          estadoVisible={estadoVisible}
+          etiquetas={ESTADO_ETIQUETA}
+          insignias={ESTADO_BADGE}
+          ordenarActividades={(filas) => ordenarFilas(filas, ordenActs, CLAVES_ACTIVIDAD)}
+          onFichaActividad={(a) => setFichaVer({ tipo: 'actividad', dato: a })}
+          verBajas={verBajas}
+          onVerBajas={puedeBajaEtapas ? () => setVerBajas((v) => !v) : undefined}
+          principalEtapa={(et) =>
+            puedeActividades && (
+              <button type="button" title="Agregar actividad a esta etapa" className="btn-accion btn-accion-ok"
+                onClick={() => nuevaActividad.abrir(ACTIVIDAD_VACIA, et.id)}>
+                <PlusIcon className="h-3.5 w-3.5" /> Actividad
+              </button>
+            )
+          }
+          itemsEtapa={(et) => [
+            { label: 'Ver ficha', icono: EyeIcon, onClick: () => setFichaVer({ tipo: 'etapa', dato: et }) },
+            puedeEditarEtapas && { label: 'Editar', icono: PencilSquareIcon, onClick: () => abrirEdicionEtapa(et) },
+            puedeEditarEtapas && et.estado === 'PENDIENTE' && { label: 'Empezar etapa', icono: PlayIcon, deshabilitado: cambiandoEstado === `e${et.id}`, onClick: () => empezarEtapa(et) },
+            puedeReprogramarEtapas && et.estado !== 'COMPLETADA' && et.fecha_inicio_programada && et.fecha_fin_programada && { label: 'Reprogramar', icono: ArrowPathIcon, onClick: () => abrirReprogramacion('etapa', et) },
+            puedeBajaEtapas && { label: 'Dar de baja', icono: TrashIcon, peligro: true, onClick: () => setEtapaPorBaja(et) },
+          ]}
+          itemsBaja={(et) => [
+            { label: 'Ver ficha', icono: EyeIcon, onClick: () => setFichaVer({ tipo: 'etapa', dato: et }) },
+            puedeBajaEtapas && {
+              label: 'Reactivar etapa', icono: ArrowUturnLeftIcon,
+              onClick: () => ejecutar(() => etapasApi.reactivar(et.id), { exito: `Etapa «${et.nombre}» reactivada.`, error: 'No se pudo reactivar la etapa.' }),
+            },
+          ]}
+          rapidaActividad={(a) =>
+            puedeAvance(a) && a.estado === 'PENDIENTE' ? (
+              <button type="button" title="Empezar la actividad (registra la fecha real de inicio)" disabled={cambiandoEstado === a.id}
+                className="btn-accion btn-accion-plan disabled:opacity-60" onClick={() => cambiarEstado(a)}>
+                <PlayIcon className="h-3.5 w-3.5" /> Empezar
+              </button>
+            ) : puedeAvance(a) ? (
+              <button type="button" title="Registrar avance" aria-label="Registrar avance" className="btn-accion btn-accion-ok" onClick={() => setPorAvanzar(a)}>
+                <ClipboardDocumentCheckIcon className="h-4 w-4" />
+              </button>
+            ) : null
+          }
+          itemsActividad={(a) => [
+            puedeAvance(a) && a.estado === 'PENDIENTE' && { label: 'Registrar avance', icono: ClipboardDocumentCheckIcon, onClick: () => setPorAvanzar(a) },
+            { label: 'Ver ficha', icono: EyeIcon, onClick: () => setFichaVer({ tipo: 'actividad', dato: a }) },
+            puedeEditarActividades && { label: 'Editar', icono: PencilSquareIcon, onClick: () => abrirEdicionActividad(a) },
+            puedeReprogramarActividades && a.estado !== 'COMPLETADA' && { label: 'Reprogramar', icono: ArrowPathIcon, onClick: () => abrirReprogramacion('actividad', a) },
+            { label: 'Presupuesto de materiales', icono: CubeIcon, onClick: () => setPresupuestando(a) },
+          ]}
+          barra={
+            <>
+              {puedeEtapas && (
+                <button type="button" className="btn-primary !py-2 text-sm" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
+                  <PlusIcon className="h-5 w-5" /> Nueva etapa
+                </button>
+              )}
+              {puedeAplicarPlantilla && (
+                <button type="button" className="btn-ghost !py-2 text-sm" onClick={() => setPlantillaAbierta(true)}>Aplicar plantilla</button>
+              )}
+            </>
+          }
         />
       )}
 

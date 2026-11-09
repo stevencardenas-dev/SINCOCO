@@ -57,7 +57,6 @@ export default function CronogramaPlan({
   estadoVisible,
   etiquetas,
   insignias,
-  accionesEtapa,
   panelActividad,
   orden,
   onOrden,
@@ -260,10 +259,9 @@ export default function CronogramaPlan({
                           <span>· {avance}%</span>
                           <span title="Suma del presupuesto de sus actividades">· {et.presupuesto != null ? fmtCOPCompacto(et.presupuesto) : 'sin presupuesto'}</span>
                         </p>
-                        <div className="mt-1.5">
+                        <div className="mt-2">
                           <span className={`badge ${insignias[et.estado] ?? 'bg-slate-100 text-slate-600'}`}>{etiquetas[et.estado] ?? et.estado}</span>
                         </div>
-                        <div className="mt-2 flex flex-wrap gap-1">{accionesEtapa(et)}</div>
                       </div>
                     </div>
                   </div>
