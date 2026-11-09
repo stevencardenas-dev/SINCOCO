@@ -8,6 +8,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -20,6 +21,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-07 (CU-07): catálogo de materiales con su código, categoría, unidad,
@@ -198,7 +200,7 @@ export default function Materiales() {
             <label htmlFor="mat-categoria" className="label">
               Categoría
             </label>
-            <select
+            <SelectBuscable
               id="mat-categoria"
               className="input"
               value={filtros.categoria_id}
@@ -210,13 +212,13 @@ export default function Materiales() {
                   {c.nombre}
                 </option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="mat-almacen" className="label">
               Almacén
             </label>
-            <select
+            <SelectBuscable
               id="mat-almacen"
               className="input"
               value={filtros.almacen_id}
@@ -228,7 +230,7 @@ export default function Materiales() {
                   {a.nombre}
                 </option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="mat-stock" className="label">
@@ -267,9 +269,7 @@ export default function Materiales() {
           acciones={
             editando &&
             puedeBaja && (
-              <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir(null, editando)}>
-                <span aria-hidden="true">⚠️</span> Dar de baja
-              </button>
+              <BotonDarDeBaja onClick={() => baja.abrir(null, editando)} />
             )
           }
         >
@@ -293,7 +293,7 @@ export default function Materiales() {
               <label htmlFor="m-categoria" className="label">
                 Categoría
               </label>
-              <select
+              <SelectBuscable
                 id="m-categoria"
                 className={campo('categoria_id')}
                 value={form.categoria_id}
@@ -306,7 +306,7 @@ export default function Materiales() {
                     {c.nombre}
                   </option>
                 ))}
-              </select>
+              </SelectBuscable>
             </div>
             <div className="sm:col-span-2">
               <label htmlFor="m-descripcion" className="label">
@@ -325,7 +325,7 @@ export default function Materiales() {
               <label htmlFor="m-unidad" className="label">
                 Unidad de medida
               </label>
-              <select
+              <SelectBuscable
                 id="m-unidad"
                 className={campo('unidad_medida')}
                 value={form.unidad_medida}
@@ -338,7 +338,7 @@ export default function Materiales() {
                     {u}
                   </option>
                 ))}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="m-costo" className="label">

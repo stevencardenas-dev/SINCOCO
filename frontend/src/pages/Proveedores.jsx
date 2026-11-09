@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -396,9 +397,7 @@ export default function Proveedores({ pestanas }) {
           acciones={
             editando &&
             puedeBaja && (
-              <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir(null, editando)}>
-                <span aria-hidden="true">⚠️</span> Dar de baja
-              </button>
+              <BotonDarDeBaja onClick={() => baja.abrir(null, editando)} />
             )
           }
         >

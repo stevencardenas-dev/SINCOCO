@@ -12,6 +12,7 @@ import { solicitudesHerramientasApi } from '../services/solicitudesHerramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtFecha } from '../lib/format.js'
 import { mensajeError } from '../lib/errores'
+import SelectBuscable from './SelectBuscable.jsx'
 
 /**
  * HU-11 panel de préstamos para bodega (pestaña de Herramientas).
@@ -310,13 +311,13 @@ export default function PrestamosHerramientas({ pestanas }) {
             <textarea id="av-novedad" className="input" rows={3} maxLength={500} value={averia.novedad}
               onChange={(e) => { setAveria({ ...averia, novedad: e.target.value }); setErrorAveria('') }} />
             <label htmlFor="av-reemplazo" className="label mt-4">Herramienta de reemplazo</label>
-            <select id="av-reemplazo" className="input" value={averia.reemplazo} disabled={averia.opciones === null}
+            <SelectBuscable id="av-reemplazo" className="input" value={averia.reemplazo} disabled={averia.opciones === null}
               onChange={(e) => setAveria({ ...averia, reemplazo: e.target.value })}>
               <option value="">{averia.opciones === null ? 'Cargando…' : 'Sin reemplazo (cierra solo el préstamo averiado)'}</option>
               {(averia.opciones ?? []).map((h) => (
                 <option key={h.id} value={h.id}>{h.nombre} ({h.codigo_serial}) · {h.almacen}{h.equivalente ? ' · equivalente' : ''}</option>
               ))}
-            </select>
+            </SelectBuscable>
             {averia.opciones && averia.opciones.length === 0 && (
               <p className="mt-1 text-xs text-amber-700">No hay una herramienta operativa disponible: se cerrará solo el préstamo averiado y deberá registrar una solicitud de herramienta.</p>
             )}

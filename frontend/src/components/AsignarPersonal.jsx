@@ -4,6 +4,7 @@ import { useFormulario } from '../hooks/useFormulario'
 import { proyectosApi } from '../services/proyectos'
 import { actividadesApi } from '../services/actividades'
 import { asignacionesApi } from '../services/asignaciones'
+import SelectBuscable from './SelectBuscable.jsx'
 
 const VACIO = { proyecto_id: '', actividad_id: '', fecha_inicio: '', fecha_fin_programada: '' }
 
@@ -63,19 +64,19 @@ export default function AsignarPersonal({ trabajador, periodo, onCerrar, onAsign
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label htmlFor="as-proyecto" className="label">Proyecto</label>
-          <select id="as-proyecto" className="input" required value={valores.proyecto_id}
+          <SelectBuscable id="as-proyecto" className="input" required value={valores.proyecto_id}
             onChange={(e) => { cambiar('proyecto_id', e.target.value); cambiar('actividad_id', '') }}>
             <option value="">Seleccione un proyecto</option>
             {proyectos.map((p) => <option key={p.id} value={p.id}>{p.codigo} · {p.nombre}</option>)}
-          </select>
+          </SelectBuscable>
         </div>
         <div className="sm:col-span-2">
           <label htmlFor="as-actividad" className="label">Alcance</label>
-          <select id="as-actividad" className="input" value={valores.actividad_id}
+          <SelectBuscable id="as-actividad" className="input" value={valores.actividad_id}
             disabled={!valores.proyecto_id} onChange={(e) => cambiar('actividad_id', e.target.value)}>
             <option value="">Todo el proyecto</option>
             {actividades.filter((a) => a.activo).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-          </select>
+          </SelectBuscable>
         </div>
         <div>
           <label htmlFor="as-inicio" className="label">Inicio</label>

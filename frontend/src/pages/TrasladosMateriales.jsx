@@ -15,6 +15,7 @@ import { useFiltros } from '../hooks/useFiltros'
 import { usePaginacion } from '../hooks/usePaginacion'
 import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-29 (CU-29): traslado de materiales entre almacenes.
@@ -95,26 +96,26 @@ export default function TrasladosMateriales({ pestanas }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="tr-origen" className="label">Almacén de origen</label>
-            <select id="tr-origen" className="input" value={form.almacen_origen_id} onChange={elegirOrigen} required>
+            <SelectBuscable id="tr-origen" className="input" value={form.almacen_origen_id} onChange={elegirOrigen} required>
               <option value="">Seleccione…</option>
               {almacenes.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="tr-destino" className="label">Almacén de destino</label>
-            <select id="tr-destino" className="input" value={form.almacen_destino_id} onChange={cambiar('almacen_destino_id')} required>
+            <SelectBuscable id="tr-destino" className="input" value={form.almacen_destino_id} onChange={cambiar('almacen_destino_id')} required>
               <option value="">Seleccione…</option>
               {almacenes.filter((a) => String(a.id) !== form.almacen_origen_id).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="tr-material" className="label">Material</label>
-            <select id="tr-material" className="input" value={form.material_id} onChange={cambiar('material_id')} disabled={!form.almacen_origen_id} required>
+            <SelectBuscable id="tr-material" className="input" value={form.material_id} onChange={cambiar('material_id')} disabled={!form.almacen_origen_id} required>
               <option value="">{form.almacen_origen_id ? (materiales.length ? 'Seleccione…' : 'Sin existencias en el origen') : 'Elija primero el origen'}</option>
               {materiales.map((m) => (
                 <option key={m.material_id} value={m.material_id}>{m.material_codigo} · {m.material}</option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <p className="label">Disponible en el almacén de origen</p>

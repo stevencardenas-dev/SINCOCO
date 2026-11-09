@@ -11,6 +11,7 @@ import { actividadesApi } from '../services/actividades'
 import { mensajeError } from '../lib/errores'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-20 (CU-20): consumo real de materiales por actividad.
@@ -104,10 +105,10 @@ export default function ConsumosMateriales() {
   }
 
   const selectDe = (id, valor, onChange, opciones, vacio = 'Seleccione…', deshabilitado = false) => (
-    <select id={id} className="input" value={valor} onChange={onChange} disabled={deshabilitado} required>
+    <SelectBuscable id={id} className="input" value={valor} onChange={onChange} disabled={deshabilitado} required>
       <option value="">{vacio}</option>
       {opciones.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-    </select>
+    </SelectBuscable>
   )
 
   return (

@@ -23,6 +23,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtFechaHora } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * CU-01 (HU-01): Registrar usuario y asignar rol.
@@ -298,7 +299,7 @@ export default function Usuarios() {
             <label htmlFor="u-rol" className="label">
               Rol
             </label>
-            <select
+            <SelectBuscable
               id="u-rol"
               className="input"
               value={nuevo.valores.rol_id}
@@ -311,7 +312,7 @@ export default function Usuarios() {
                   {ROL_LABEL[r.nombre] ?? r.nombre}
                 </option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div className="sm:col-span-2">
             <label htmlFor="u-trabajador" className="label">
@@ -368,7 +369,7 @@ export default function Usuarios() {
             <label htmlFor="usr-rol" className="label">
               Rol
             </label>
-            <select
+            <SelectBuscable
               id="usr-rol"
               className="input"
               value={filtros.rol_id}
@@ -380,7 +381,7 @@ export default function Usuarios() {
                   {ROL_LABEL[r.nombre] ?? r.nombre}
                 </option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="usr-estado" className="label">
@@ -455,7 +456,7 @@ export default function Usuarios() {
                 // su rol tal cual (nunca un número de relleno).
                 celda: (u) =>
                   u.activo ? (
-                    <select
+                    <SelectBuscable
                       // Mismo formato que el selector de «Estado» en Personal.
                       className="input -my-1 block w-48 py-1 pl-2.5 text-xs"
                       aria-label={`Rol de ${u.username}`}
@@ -467,7 +468,7 @@ export default function Usuarios() {
                           {ROL_LABEL[r.nombre] ?? r.nombre}
                         </option>
                       ))}
-                    </select>
+                    </SelectBuscable>
                   ) : (
                     <span>{etiquetaRol(u)}</span>
                   ),

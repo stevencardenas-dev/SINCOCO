@@ -20,6 +20,7 @@ import { actividadesApi } from '../services/actividades'
 import { herramientasApi } from '../services/herramientas'
 import { useRecurso } from '../hooks/useRecurso'
 import { fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-08 (CU-08): solicitud de materiales (pestaña Materiales de Solicitudes).
@@ -181,19 +182,19 @@ export default function SolicitudesMateriales({ pestanas }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label htmlFor="sm-proyecto" className="label">Proyecto</label>
-            <select id="sm-proyecto" className="input" value={form.proyecto_id} required
+            <SelectBuscable id="sm-proyecto" className="input" value={form.proyecto_id} required
               onChange={(e) => { setForm({ ...form, proyecto_id: e.target.value, actividad_id: '' }); setError('') }}>
               <option value="">Seleccione…</option>
               {(proyectos.datos ?? []).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="sm-actividad" className="label">Actividad</label>
-            <select id="sm-actividad" className="input" value={form.actividad_id} required disabled={!form.proyecto_id}
+            <SelectBuscable id="sm-actividad" className="input" value={form.actividad_id} required disabled={!form.proyecto_id}
               onChange={(e) => { setForm({ ...form, actividad_id: e.target.value }); setError('') }}>
               <option value="">{form.proyecto_id ? 'Seleccione…' : 'Elija primero el proyecto'}</option>
               {actividades.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="sm-fecha" className="label">Fecha requerida (opcional)</label>
@@ -207,10 +208,10 @@ export default function SolicitudesMateriales({ pestanas }) {
             <p className="label">Materiales</p>
             {lineas.map((l, i) => (
               <div key={i} className="grid items-end gap-3 sm:grid-cols-[3fr_1fr_auto]">
-                <select aria-label="Material" className="input" value={l.material_id} onChange={cambiarLinea(i, 'material_id')} required>
+                <SelectBuscable aria-label="Material" className="input" value={l.material_id} onChange={cambiarLinea(i, 'material_id')} required>
                   <option value="">Seleccione…</option>
                   {(materiales.datos ?? []).map((m) => <option key={m.id} value={m.id}>{m.codigo} · {m.descripcion}</option>)}
-                </select>
+                </SelectBuscable>
                 <input aria-label="Cantidad" type="number" min="0.01" step="0.01" placeholder="Cantidad" className="input" value={l.cantidad} onChange={cambiarLinea(i, 'cantidad')} required />
                 <button type="button" className="btn-ghost" aria-label="Quitar línea" disabled={lineas.length === 1} onClick={() => setLineas(lineas.filter((_, j) => j !== i))}>
                   <TrashIcon className="h-4 w-4" />
@@ -255,10 +256,10 @@ export default function SolicitudesMateriales({ pestanas }) {
           </div>
           <div>
             <label htmlFor="sm-f-proyecto" className="label">Proyecto</label>
-            <select id="sm-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => controles.cambiar('proyecto', e.target.value)}>
+            <SelectBuscable id="sm-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => controles.cambiar('proyecto', e.target.value)}>
               <option value="">Todos</option>
               {proyectosFila.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="sm-f-desde" className="label">Solicitada desde</label>
@@ -416,15 +417,15 @@ export default function SolicitudesMateriales({ pestanas }) {
               </div>
             ))}
             <label htmlFor="dp-almacen" className="label">Almacén de origen</label>
-            <select id="dp-almacen" className="input" value={despachando.almacen} onChange={(e) => setDespachando({ ...despachando, almacen: e.target.value })}>
+            <SelectBuscable id="dp-almacen" className="input" value={despachando.almacen} onChange={(e) => setDespachando({ ...despachando, almacen: e.target.value })}>
               <option value="">Seleccione…</option>
               {(almacenes.datos ?? []).map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-            </select>
+            </SelectBuscable>
             <label htmlFor="dp-trabajador" className="label mt-4">Entregado a</label>
-            <select id="dp-trabajador" className="input" value={despachando.trabajador} onChange={(e) => setDespachando({ ...despachando, trabajador: e.target.value })}>
+            <SelectBuscable id="dp-trabajador" className="input" value={despachando.trabajador} onChange={(e) => setDespachando({ ...despachando, trabajador: e.target.value })}>
               <option value="">Seleccione…</option>
               {(trabajadores.datos ?? []).map((t) => <option key={t.id} value={t.id}>{t.nombres} {t.apellidos}</option>)}
-            </select>
+            </SelectBuscable>
             {errorAccion && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorAccion}</p>}
             <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
               <button type="button" className="btn-primary" onClick={() => confirmar(

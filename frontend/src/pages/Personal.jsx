@@ -23,6 +23,7 @@ import { bajaInicial, filtrosIniciales, paginaInicial, useEscribirUrl, valorUrl 
 import Avatar from '../components/Avatar.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -42,6 +43,7 @@ import { useFormulario } from '../hooks/useFormulario'
 import { fmtFecha, soloDigitos } from '../lib/format.js'
 import { mensajeError } from '../lib/errores.js'
 import { CATEGORIAS, agruparPorCategoria } from '../lib/catalogos.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-04 (RF06 · RF07): registrar el personal con su cargo y especialidad.
@@ -528,7 +530,7 @@ export default function Personal() {
               <label htmlFor="per-cargo" className="label">
                 Cargo
               </label>
-              <select
+              <SelectBuscable
                 id="per-cargo"
                 className="input"
                 value={filtros.cargo_id}
@@ -536,14 +538,14 @@ export default function Personal() {
               >
                 <option value="">Todos</option>
                 <OpcionesAgrupadas filas={cargos} tipo="cargos" />
-              </select>
+              </SelectBuscable>
             </div>
             {/* CU-04 · Alt 2: el personal se filtra por especialidad para tareas específicas. */}
             <div>
               <label htmlFor="per-especialidad" className="label">
                 Especialidad
               </label>
-              <select
+              <SelectBuscable
                 id="per-especialidad"
                 className="input"
                 value={filtros.especialidad_id}
@@ -551,7 +553,7 @@ export default function Personal() {
               >
                 <option value="">Todas</option>
                 <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
-              </select>
+              </SelectBuscable>
             </div>
           </div>
         </SeccionFiltros>
@@ -610,9 +612,7 @@ export default function Personal() {
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar trabajador'}
           acciones={
             editando && (
-              <button type="button" className="btn-peligro ml-auto" onClick={pedirBaja}>
-                <span aria-hidden="true">⚠️</span> Dar de baja
-              </button>
+              <BotonDarDeBaja onClick={pedirBaja} />
             )
           }
         >
@@ -714,7 +714,7 @@ export default function Personal() {
               <label htmlFor="t-cargo" className="label">
                 Cargo
               </label>
-              <select
+              <SelectBuscable
                 id="t-cargo"
                 className={campo('cargo_id')}
                 value={form.cargo_id}
@@ -730,7 +730,7 @@ export default function Personal() {
                 <option value="">Seleccione un cargo…</option>
                 <OpcionesAgrupadas filas={cargos} tipo="cargos" />
                 {puedeCatalogos && <option value="__nuevo__">+ Registrar un cargo nuevo…</option>}
-              </select>
+              </SelectBuscable>
               <p className={`mt-1 text-xs ${cargoRetirado ? 'text-amber-700' : 'text-slate-500'}`}>
                 {cargoRetirado
                   ? `El cargo «${cargoRetirado}» ya no está en el catálogo: elija uno vigente.`
@@ -745,7 +745,7 @@ export default function Personal() {
               <label htmlFor="t-especialidad" className="label">
                 Especialidad
               </label>
-              <select
+              <SelectBuscable
                 id="t-especialidad"
                 className={campo('especialidad_id')}
                 value={form.especialidad_id}
@@ -760,7 +760,7 @@ export default function Personal() {
                 <option value="">Sin especialidad</option>
                 <OpcionesAgrupadas filas={especialidades} tipo="especialidades" />
                 {puedeCatalogos && <option value="__nuevo__">+ Registrar una especialidad nueva…</option>}
-              </select>
+              </SelectBuscable>
               <p className="mt-1 text-xs text-slate-500">
                 Obligatoria para los cargos de obra (maestro de obra, obrero, operario…): sin ella
                 no se puede filtrar al trabajador para tareas específicas.
@@ -899,7 +899,7 @@ export default function Personal() {
           <label htmlFor="cat-categoria" className="label">
             Categoría
           </label>
-          <select
+          <SelectBuscable
             id="cat-categoria"
             className="input"
             value={catalogo.valores.categoria}
@@ -911,7 +911,7 @@ export default function Personal() {
                 {c}
               </option>
             ))}
-          </select>
+          </SelectBuscable>
         </div>
         {nuevoCatalogo === 'cargos' && (
           <label className="flex items-start gap-2 text-sm text-slate-700">

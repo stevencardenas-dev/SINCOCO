@@ -32,7 +32,7 @@ export default function ModalFormulario({
   children,
 }) {
   return (
-    <Modal abierto={abierto} titulo={titulo} subtitulo={subtitulo} onCerrar={onCerrar} ancho={ancho}>
+    <Modal abierto={abierto} titulo={titulo} subtitulo={subtitulo} onCerrar={onCerrar} ancho={ancho} lateral>
       <form onSubmit={onGuardar} className={espaciado}>
         {children}
 

@@ -12,6 +12,7 @@ import { actividadesApi } from '../services/actividades'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFormulario } from '../hooks/useFormulario'
 import { fmtCOP, fmtFecha, fmtMiles, soloDigitos, montoEnPalabras } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-28 (CU-28): servicios externos contratados a un proveedor, con su
@@ -151,7 +152,7 @@ export default function ServiciosExternos({ pestanas }) {
       <div className="card flex flex-wrap items-end justify-between gap-4 px-5 py-4">
         <div className="min-w-[14rem]">
           <label htmlFor="se-filtro" className="label">Proyecto</label>
-          <select
+          <SelectBuscable
             id="se-filtro"
             className="input"
             value={filtroProyecto}
@@ -161,7 +162,7 @@ export default function ServiciosExternos({ pestanas }) {
             {proyectos.map((p) => (
               <option key={p.id} value={p.id}>{p.codigo} · {p.nombre}</option>
             ))}
-          </select>
+          </SelectBuscable>
         </div>
         <div className="text-right">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
@@ -183,13 +184,13 @@ export default function ServiciosExternos({ pestanas }) {
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="se-proveedor" className="label">Proveedor</label>
-              <select id="se-proveedor" className={campo('proveedor_id')} value={form.proveedor_id} required
+              <SelectBuscable id="se-proveedor" className={campo('proveedor_id')} value={form.proveedor_id} required
                 onChange={(e) => cambiar('proveedor_id', e.target.value)}>
                 <option value="">Seleccione un proveedor…</option>
                 {proveedores.filter((p) => p.estado === 'ACTIVO').map((p) => (
                   <option key={p.id} value={p.id}>{p.razon_social}</option>
                 ))}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="se-nombre" className="label">Servicio</label>
@@ -199,7 +200,7 @@ export default function ServiciosExternos({ pestanas }) {
             </div>
             <div>
               <label htmlFor="se-proyecto" className="label">Proyecto</label>
-              <select id="se-proyecto" className={campo('proyecto_id')} value={form.proyecto_id} required
+              <SelectBuscable id="se-proyecto" className={campo('proyecto_id')} value={form.proyecto_id} required
                 onChange={(e) => elegirProyecto(e.target.value)}>
                 <option value="">Seleccione un proyecto…</option>
                 {proyectos
@@ -207,17 +208,17 @@ export default function ServiciosExternos({ pestanas }) {
                   .map((p) => (
                     <option key={p.id} value={p.id}>{p.codigo} · {p.nombre}</option>
                   ))}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="se-actividad" className="label">Actividad</label>
-              <select id="se-actividad" className={campo('actividad_id')} value={form.actividad_id} required
+              <SelectBuscable id="se-actividad" className={campo('actividad_id')} value={form.actividad_id} required
                 disabled={!form.proyecto_id} onChange={(e) => cambiar('actividad_id', e.target.value)}>
                 <option value="">{form.proyecto_id ? 'Seleccione una actividad…' : 'Elija primero el proyecto'}</option>
                 {actividades.map((a) => (
                   <option key={a.id} value={a.id}>{a.nombre}</option>
                 ))}
-              </select>
+              </SelectBuscable>
               {actividadElegida && (
                 <p className="mt-1 text-xs text-slate-500">
                   {actividadElegida.presupuesto === null

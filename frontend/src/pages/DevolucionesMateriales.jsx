@@ -15,6 +15,7 @@ import { useFiltros } from '../hooks/useFiltros'
 import { usePaginacion } from '../hooks/usePaginacion'
 import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-09 (CU-09): devolución de materiales sobrantes.
@@ -84,10 +85,10 @@ export default function DevolucionesMateriales({ pestanas }) {
   }
 
   const selectDe = (id, valor, onChange, opcionesSelect, vacio = 'Seleccione…', deshabilitado = false) => (
-    <select id={id} className="input" value={valor} onChange={onChange} disabled={deshabilitado} required={!vacio.startsWith('Sin ')}>
+    <SelectBuscable id={id} className="input" value={valor} onChange={onChange} disabled={deshabilitado} required={!vacio.startsWith('Sin ')}>
       <option value="">{vacio}</option>
       {opcionesSelect.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-    </select>
+    </SelectBuscable>
   )
 
   const controles = useFiltros(FILTROS_VACIOS)

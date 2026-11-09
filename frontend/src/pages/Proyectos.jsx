@@ -23,6 +23,7 @@ import { usePaginacion } from '../hooks/usePaginacion'
 import { bajaInicial, filtrosIniciales, paginaInicial, useEscribirUrl, valorUrl } from '../hooks/useListadoUrl'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -38,6 +39,7 @@ import { trabajadoresApi } from '../services/trabajadores'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 // Color de la tarjeta según el estado: degradado suave arriba, filo superior, iconos y barra.
 const TONO = {
@@ -542,13 +544,7 @@ export default function Proyectos() {
           textoGuardar={editando ? 'Guardar cambios' : 'Registrar proyecto'}
           acciones={
             editando && formulario.registro.activo && puedeBaja ? (
-              <button
-                type="button"
-                className="btn-ghost ml-auto text-red-600 hover:bg-red-50"
-                onClick={() => setPorDarDeBaja(formulario.registro)}
-              >
-                <span aria-hidden="true">⚠️</span> Dar de baja
-              </button>
+              <BotonDarDeBaja onClick={() => setPorDarDeBaja(formulario.registro)} />
             ) : null
           }
         >
@@ -765,7 +761,7 @@ export default function Proyectos() {
               <label htmlFor="c-tipo" className="label">
                 Tipo de documento
               </label>
-              <select
+              <SelectBuscable
                 id="c-tipo"
                 className="input"
                 value={nuevoCliente.valores.tipo_documento}
@@ -775,7 +771,7 @@ export default function Proyectos() {
                 <option value="CC">CC</option>
                 <option value="CE">CE</option>
                 <option value="PASAPORTE">Pasaporte</option>
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="c-doc" className="label">

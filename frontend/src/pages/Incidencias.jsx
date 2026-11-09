@@ -17,6 +17,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { estadoIncidente, severidadIncidente, fmtFecha, fmtFechaHora } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-14 (CU-14): incidencias de obra (avería, accidente o retraso).
@@ -145,11 +146,11 @@ export default function Incidencias() {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label htmlFor="inc-f-proyecto" className="label">Proyecto</label>
-            <select id="inc-f-proyecto" className="input" value={filtros.proyecto_id}
+            <SelectBuscable id="inc-f-proyecto" className="input" value={filtros.proyecto_id}
               onChange={(e) => cambiarFiltro('proyecto_id', e.target.value)}>
               <option value="">Todos</option>
               {proyectos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="inc-f-estado" className="label">Estado</label>
@@ -240,19 +241,19 @@ export default function Incidencias() {
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label htmlFor="inc-proyecto" className="label">Proyecto</label>
-              <select id="inc-proyecto" className={campo('proyecto_id')} value={form.proyecto_id} required
+              <SelectBuscable id="inc-proyecto" className={campo('proyecto_id')} value={form.proyecto_id} required
                 onChange={(e) => { registro.cambiar('proyecto_id', e.target.value); registro.cambiar('actividad_id', '') }}>
                 <option value="">Seleccione un proyecto…</option>
                 {proyectos.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="inc-actividad" className="label">Actividad afectada (opcional)</label>
-              <select id="inc-actividad" className={campo('actividad_id')} value={form.actividad_id}
+              <SelectBuscable id="inc-actividad" className={campo('actividad_id')} value={form.actividad_id}
                 disabled={!form.proyecto_id} onChange={(e) => registro.cambiar('actividad_id', e.target.value)}>
                 <option value="">Ninguna en particular</option>
                 {actividades.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="inc-tipo" className="label">Tipo</label>

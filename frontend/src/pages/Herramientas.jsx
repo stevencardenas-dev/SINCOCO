@@ -8,6 +8,8 @@ import {
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
+import CampoMoneda from '../components/CampoMoneda.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
@@ -24,6 +26,7 @@ import { fmtFecha } from '../lib/format.js'
 import { mensajeError } from '../lib/errores'
 import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
 import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-10 (CU-10): catálogo de herramientas con su estado operativo y su
@@ -270,7 +273,7 @@ function CatalogoHerramientas({ pestanas }) {
             <label htmlFor="her-almacen" className="label">
               Almacén
             </label>
-            <select
+            <SelectBuscable
               id="her-almacen"
               className="input"
               value={filtros.almacen_id}
@@ -282,7 +285,7 @@ function CatalogoHerramientas({ pestanas }) {
                   {a.nombre}
                 </option>
               ))}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="her-estado" className="label">
@@ -373,9 +376,7 @@ function CatalogoHerramientas({ pestanas }) {
                   </button>
                 )}
                 {puedeBaja && (
-                  <button type="button" className="btn-peligro ml-auto" onClick={() => baja.abrir({ motivo: '' }, editando)}>
-                    <span aria-hidden="true">⚠️</span> Dar de baja
-                  </button>
+                  <BotonDarDeBaja onClick={() => baja.abrir({ motivo: '' }, editando)} />
                 )}
               </>
             )
@@ -438,7 +439,7 @@ function CatalogoHerramientas({ pestanas }) {
               <label htmlFor="h-almacen" className="label">
                 Almacén
               </label>
-              <select
+              <SelectBuscable
                 id="h-almacen"
                 className={campo('almacen_id')}
                 value={form.almacen_id}
@@ -451,7 +452,7 @@ function CatalogoHerramientas({ pestanas }) {
                     {a.nombre} ({a.codigo})
                   </option>
                 ))}
-              </select>
+              </SelectBuscable>
             </div>
             <div>
               <label htmlFor="h-estado" className="label">
@@ -560,8 +561,8 @@ function CatalogoHerramientas({ pestanas }) {
                 <input id="he-fecha" type="date" className="input" max={new Date().toLocaleDateString('en-CA')} value={cambio.fecha_salida}
                   onChange={(e) => setCambio({ ...cambio, fecha_salida: e.target.value })} />
                 <label htmlFor="he-costo" className="label mt-4">Costo de la reparación (opcional)</label>
-                <input id="he-costo" type="number" min="0" step="0.01" className="input" value={cambio.costo}
-                  onChange={(e) => setCambio({ ...cambio, costo: e.target.value })} />
+                <CampoMoneda id="he-costo" placeholder="0" value={cambio.costo}
+                  onChange={(v) => setCambio({ ...cambio, costo: v })} />
               </>
             )}
             {errorCambio && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorCambio}</p>}

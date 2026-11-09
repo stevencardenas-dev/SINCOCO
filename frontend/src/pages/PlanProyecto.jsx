@@ -9,6 +9,7 @@ import {
   Squares2X2Icon,
   ArrowUturnLeftIcon,
   CheckIcon,
+  ChevronRightIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
   CubeIcon,
@@ -25,6 +26,9 @@ import {
 import Retractil from '../components/Retractil.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import BuscadorSelect from '../components/BuscadorSelect.jsx'
+import CampoMoneda from '../components/CampoMoneda.jsx'
+import CampoEsfuerzo from '../components/CampoEsfuerzo.jsx'
+import { BotonQuitar } from '../components/BotonesBaja.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import Modal from '../components/Modal.jsx'
@@ -50,7 +54,8 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
 import { mensajeError } from '../lib/errores.js'
-import { fmtFecha, fmtCOP, fmtCOPCompacto, fmtMiles, soloDigitos, ESFUERZOS, etiquetaEsfuerzo } from '../lib/format.js'
+import { fmtFecha, fmtCOP, fmtCOPCompacto, soloDigitos, etiquetaEsfuerzo } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-03 (RF03 · RF04): plan de trabajo de un proyecto. Define etapas y, dentro
@@ -84,6 +89,8 @@ const ESTADO_ASIGNACION = {
   REASIGNADO: 'bg-amber-50 text-amber-700',
   CANCELADO: 'bg-red-50 text-red-700',
 }
+
+const ETIQUETA_ASIGNACION = { ACTIVO: 'Vigente', FINALIZADO: 'Finalizado', REASIGNADO: 'Reasignado', CANCELADO: 'Cancelado' }
 
 const ESTADO_BADGE = {
   PENDIENTE: 'bg-slate-100 text-slate-600',
@@ -909,21 +916,18 @@ export default function PlanProyecto() {
                     min={nuevaActividad.valores.fecha_inicio_programada || limiteEtapa(etapaNueva).min || undefined} max={limiteEtapa(etapaNueva).max || undefined}
                     onChange={(e) => nuevaActividad.cambiar('fecha_fin_programada', e.target.value)} required />
                 </div>
-                <div>
+                <div className="sm:col-span-2">
                   <label htmlFor={`a-esfuerzo-${actividadEn}`} className="label">Esfuerzo</label>
-                  <select id={`a-esfuerzo-${actividadEn}`} className="input" value={nuevaActividad.valores.esfuerzo}
-                    onChange={(e) => nuevaActividad.cambiar('esfuerzo', e.target.value)}>
-                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <CampoEsfuerzo id={`a-esfuerzo-${actividadEn}`} value={nuevaActividad.valores.esfuerzo}
+                    onChange={(v) => nuevaActividad.cambiar('esfuerzo', v)} />
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
                   </p>
                 </div>
                 <div className="sm:col-span-2">
                   <label htmlFor={`a-presupuesto-${actividadEn}`} className="label">Presupuesto (COP, opcional)</label>
-                  <input id={`a-presupuesto-${actividadEn}`} type="text" inputMode="numeric" autoComplete="off" className="input tabular-nums"
-                    placeholder="10.000.000" value={fmtMiles(nuevaActividad.valores.presupuesto)}
-                    onChange={(e) => nuevaActividad.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
+                  <CampoMoneda id={`a-presupuesto-${actividadEn}`} placeholder="10.000.000" value={nuevaActividad.valores.presupuesto}
+                    onChange={(v) => nuevaActividad.cambiar('presupuesto', v)} />
                   <p className="mt-1 text-xs text-slate-500">
                     Si lo define, el sistema advierte cuando un servicio externo lo excede.
                   </p>
@@ -938,10 +942,8 @@ export default function PlanProyecto() {
                           value={c}
                           onChange={(e) => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.map((x, k) => (k === i ? e.target.value : x)))} />
                         {nuevaActividad.valores.criterios.length > 1 && (
-                          <button type="button" className="btn-ghost" aria-label={`Quitar criterio ${i + 1}`}
-                            onClick={() => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.filter((_, k) => k !== i))}>
-                            Quitar
-                          </button>
+                          <BotonQuitar etiqueta={`Quitar criterio ${i + 1}`}
+                            onClick={() => nuevaActividad.cambiar('criterios', nuevaActividad.valores.criterios.filter((_, k) => k !== i))} />
                         )}
                       </div>
                     ))}
@@ -971,111 +973,17 @@ export default function PlanProyecto() {
                 Quién puede consultar este proyecto y sus actividades: solo las asignaciones vigentes dan acceso.
               </p>
             </div>
-            <span className="badge bg-slate-100 text-slate-600">
-              {asignaciones.filter((a) => a.estado === 'ACTIVO').length} con acceso vigente
-            </span>
-          </div>
-
-          <Retractil titulo="Asignar acceso" icono={UserPlusIcon}>
-          <form onSubmit={acceso.guardar} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="xl:col-span-2">
-              <label htmlFor="ac-trabajador" className="label">Trabajador</label>
-              <BuscadorSelect
-                id="ac-trabajador"
-                value={accesoForm.trabajador_id}
-                onChange={(v) => acceso.cambiar('trabajador_id', v)}
-                opciones={responsables.map((t) => ({
-                  value: t.id,
-                  label: `${t.nombres} ${t.apellidos}`,
-                  sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
-                }))}
-                placeholder="Escriba el nombre del trabajador…"
-                requerido
-              />
-            </div>
-            <div className="sm:col-span-2 xl:col-span-2">
-              <label htmlFor="ac-descripcion" className="label">Descripción de la asignación</label>
-              <textarea
-                id="ac-descripcion"
-                maxLength={5000}
-                rows={2}
-                className="input"
-                placeholder="Residente de obra, apoyo en cimentación…"
-                value={accesoForm.observaciones}
-                onChange={(e) => acceso.cambiar('observaciones', e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="ac-actividad" className="label">Actividad (opcional)</label>
-              <select
-                id="ac-actividad"
-                className="input"
-                value={accesoForm.actividad_id}
-                onChange={(e) => acceso.cambiar('actividad_id', e.target.value)}
-              >
-                <option value="">Todo el proyecto</option>
-                {etapas.map((et) => {
-                  const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
-                  if (delaEtapa.length === 0) return null
-                  return (
-                    <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
-                      {delaEtapa.map((a) => (
-                        <option key={a.id} value={a.id}>{a.nombre}</option>
-                      ))}
-                    </optgroup>
-                  )
-                })}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="ac-inicio" className="label">Inicio</label>
-              <input
-                id="ac-inicio"
-                type="date"
-                className="input"
-                required
-                value={accesoForm.fecha_inicio}
-                onChange={(e) => acceso.cambiar('fecha_inicio', e.target.value)}
-              />
-              <SugerenciaFecha
-                dia={sugerenciaAcceso.inicio}
-                origen={sugerenciaAcceso.origen('inicio')}
-                actual={accesoForm.fecha_inicio}
-                onUsar={(dia) => acceso.cambiar('fecha_inicio', dia)}
-              />
-            </div>
-            <div>
-              <label htmlFor="ac-fin" className="label">Fin programado (opcional)</label>
-              <input
-                id="ac-fin"
-                type="date"
-                className="input"
-                value={accesoForm.fecha_fin_programada}
-                onChange={(e) => acceso.cambiar('fecha_fin_programada', e.target.value)}
-              />
-              <SugerenciaFecha
-                dia={sugerenciaAcceso.fin}
-                origen={sugerenciaAcceso.origen('fin')}
-                actual={accesoForm.fecha_fin_programada}
-                onUsar={(dia) => acceso.cambiar('fecha_fin_programada', dia)}
-              />
-            </div>
-            <div className="flex items-end xl:col-span-2">
-              <button
-                type="submit"
-                className="btn-primary"
-                disabled={acceso.guardando || !accesoForm.trabajador_id}
-              >
-                {acceso.guardando ? 'Asignando…' : 'Dar acceso'}
+            <div className="flex items-center gap-3">
+              <span className="badge bg-slate-100 text-slate-600">{vigentes} con acceso vigente</span>
+              <button type="button" className="btn-primary" onClick={() => acceso.abrir()}>
+                <UserPlusIcon className="h-5 w-5" /> Asignar acceso
               </button>
             </div>
-            {acceso.error && (
-              <div className="sm:col-span-2 xl:col-span-4">
-                <AlertaFormulario mensaje={acceso.error} />
-              </div>
-            )}
-          </form>
-          </Retractil>
+          {/* Errores al finalizar o cancelar una asignación (con la ventana cerrada). */}
+          {!acceso.abierto && acceso.error && (
+            <div className="px-5 pt-3"><AlertaFormulario mensaje={acceso.error} /></div>
+          )}
+          </div>
 
           <Retractil
             titulo="Buscar y filtrar"
@@ -1115,7 +1023,7 @@ export default function PlanProyecto() {
               </div>
               <div>
                 <label htmlFor="fa-actividad" className="label">Actividad</label>
-                <select id="fa-actividad" className="input" value={filtroAcceso.actividad}
+                <SelectBuscable id="fa-actividad" className="input" value={filtroAcceso.actividad}
                   onChange={(e) => filtrosAcceso.cambiar('actividad', e.target.value)}>
                   <option value="">Todas</option>
                   {etapas.map((et) => {
@@ -1127,7 +1035,7 @@ export default function PlanProyecto() {
                       </optgroup>
                     )
                   })}
-                </select>
+                </SelectBuscable>
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700 sm:col-span-2">
                 <input type="checkbox" checked={filtroAcceso.vencen}
@@ -1155,35 +1063,145 @@ export default function PlanProyecto() {
               <table className="w-full min-w-[560px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    {['Trabajador', 'Cargo', 'Alcance', 'Estado'].map((t) => (
+                    {['Trabajador', 'Alcance'].map((t) => (
                       <EncabezadoOrdenable key={t} titulo={t} orden={ordenGrupos} className="px-5 py-3"
                         onOrden={(x) => setOrdenGrupos((o) => alternarOrden(o, x))} />
                     ))}
-                    <th className="px-5 py-3 font-semibold">Acciones</th>
+                    <th className="px-5 py-3 font-semibold">Vigencia</th>
+                    <EncabezadoOrdenable titulo="Estado" orden={ordenGrupos} className="px-5 py-3"
+                      onOrden={(x) => setOrdenGrupos((o) => alternarOrden(o, x))} />
+                    <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {ordenarFilas(gruposAcceso, ordenGrupos, CLAVES_GRUPOS).map((g) => (
-                    <tr key={g.trabajador_id}>
-                      <td className="px-5 py-3 font-medium text-slate-800">{g.trabajador_nombre}</td>
-                      <td className="px-5 py-3 text-slate-600">{g.cargo ?? '—'}</td>
-                      <td className="px-5 py-3 text-slate-600">{g.alcance}</td>
-                      <td className="px-5 py-3">
-                        <span className={`badge badge-tabla ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{g.estado}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <button type="button" className="btn-accion" onClick={() => setGrupoAbierto(g.trabajador_id)}>
-                          Ver asignaciones ({g.filas.length})
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {ordenarFilas(gruposAcceso, ordenGrupos, CLAVES_GRUPOS).map((g) => {
+                    const desde = g.filas.map((x) => soloDia(x.fecha_inicio)).filter(Boolean).sort()[0]
+                    const abierto = g.filas.some((x) => !x.fecha_fin_programada)
+                    const hasta = g.filas.map((x) => soloDia(x.fecha_fin_programada)).filter(Boolean).sort().at(-1)
+                    return (
+                      <tr key={g.trabajador_id} className="hover:bg-accent-50/40">
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-800 text-xs font-bold text-accent-400">
+                              {String(g.trabajador_nombre ?? '?').split(' ').map((x) => x[0]).slice(0, 2).join('').toUpperCase()}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800">{g.trabajador_nombre}</p>
+                              <p className="text-xs text-slate-500">{g.cargo ?? '—'}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-slate-600">{g.alcance}</td>
+                        <td className="whitespace-nowrap px-5 py-3 text-xs text-slate-500">
+                          {desde ? fmtFecha(desde) : '—'}{abierto ? ' → sin fin' : hasta ? ` → ${fmtFecha(hasta)}` : ''}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span className={`badge ${ESTADO_ASIGNACION[g.estado] ?? 'bg-slate-100 text-slate-600'}`}>{ETIQUETA_ASIGNACION[g.estado] ?? g.estado}</span>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <button type="button" className="btn-accion" onClick={() => setGrupoAbierto(g.trabajador_id)}>
+                            Ver ({g.filas.length}) <ChevronRightIcon className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       )}
+
+      {/* Asignar acceso: ventana con el formulario (antes era un bloque plegable). */}
+      <ModalFormulario {...acceso.propsModal} abierto={acceso.abierto && puedeAcceso} titulo="Asignar acceso"
+        subtitulo={proyecto?.nombre} textoGuardar="Dar acceso" textoGuardando="Asignando…"
+        deshabilitado={!accesoForm.trabajador_id}>
+        <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="ac-trabajador" className="label">Trabajador</label>
+              <BuscadorSelect
+                id="ac-trabajador"
+                value={accesoForm.trabajador_id}
+                onChange={(v) => acceso.cambiar('trabajador_id', v)}
+                opciones={responsables.map((t) => ({
+                  value: t.id,
+                  label: `${t.nombres} ${t.apellidos}`,
+                  sublabel: [t.cargo, t.especialidad].filter(Boolean).join(' · '),
+                }))}
+                placeholder="Escriba el nombre del trabajador…"
+                requerido
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label htmlFor="ac-descripcion" className="label">Descripción de la asignación</label>
+              <textarea
+                id="ac-descripcion"
+                maxLength={5000}
+                rows={2}
+                className="input"
+                placeholder="Residente de obra, apoyo en cimentación…"
+                value={accesoForm.observaciones}
+                onChange={(e) => acceso.cambiar('observaciones', e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="ac-actividad" className="label">Actividad (opcional)</label>
+              <SelectBuscable
+                id="ac-actividad"
+                className="input"
+                value={accesoForm.actividad_id}
+                onChange={(e) => acceso.cambiar('actividad_id', e.target.value)}
+              >
+                <option value="">Todo el proyecto</option>
+                {etapas.map((et) => {
+                  const delaEtapa = actividades.filter((a) => a.etapa_id === et.id)
+                  if (delaEtapa.length === 0) return null
+                  return (
+                    <optgroup key={et.id} label={`${et.orden}. ${et.nombre}`}>
+                      {delaEtapa.map((a) => (
+                        <option key={a.id} value={a.id}>{a.nombre}</option>
+                      ))}
+                    </optgroup>
+                  )
+                })}
+              </SelectBuscable>
+            </div>
+            <div>
+              <label htmlFor="ac-inicio" className="label">Inicio</label>
+              <input
+                id="ac-inicio"
+                type="date"
+                className="input"
+                required
+                value={accesoForm.fecha_inicio}
+                onChange={(e) => acceso.cambiar('fecha_inicio', e.target.value)}
+              />
+              <SugerenciaFecha
+                dia={sugerenciaAcceso.inicio}
+                origen={sugerenciaAcceso.origen('inicio')}
+                actual={accesoForm.fecha_inicio}
+                onUsar={(dia) => acceso.cambiar('fecha_inicio', dia)}
+              />
+            </div>
+            <div>
+              <label htmlFor="ac-fin" className="label">Fin programado (opcional)</label>
+              <input
+                id="ac-fin"
+                type="date"
+                className="input"
+                value={accesoForm.fecha_fin_programada}
+                onChange={(e) => acceso.cambiar('fecha_fin_programada', e.target.value)}
+              />
+              <SugerenciaFecha
+                dia={sugerenciaAcceso.fin}
+                origen={sugerenciaAcceso.origen('fin')}
+                actual={accesoForm.fecha_fin_programada}
+                onUsar={(dia) => acceso.cambiar('fecha_fin_programada', dia)}
+              />
+            </div>
+        </div>
+      </ModalFormulario>
 
       {/* Asignaciones del trabajador (acceso general y actividades) con sus acciones. */}
       <Modal abierto={Boolean(grupoElegido)} titulo={grupoElegido?.trabajador_nombre ?? ''}
@@ -1370,12 +1388,10 @@ export default function PlanProyecto() {
                   onChange={(e) => edicion.cambiar('fecha_fin_programada', e.target.value)} />
               </div>
               {editandoActividad && (
-                <div>
+                <div className="sm:col-span-2">
                   <label htmlFor="ed-esfuerzo" className="label">Esfuerzo</label>
-                  <select id="ed-esfuerzo" className={`input${marca('esfuerzo')}`} value={edicion.valores.esfuerzo ?? 'MEDIO'}
-                    onChange={(e) => edicion.cambiar('esfuerzo', e.target.value)}>
-                    {ESFUERZOS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                  </select>
+                  <CampoEsfuerzo id="ed-esfuerzo" value={edicion.valores.esfuerzo ?? 'MEDIO'}
+                    onChange={(v) => edicion.cambiar('esfuerzo', v)} />
                   <p className="mt-1 text-xs text-slate-500">
                     Pondera la actividad en el avance de la etapa y del proyecto.
                   </p>
@@ -1384,10 +1400,9 @@ export default function PlanProyecto() {
               {editandoActividad && (
                 <div className="sm:col-span-2">
                   <label htmlFor="ed-presupuesto" className="label">Presupuesto (COP, opcional)</label>
-                  <input id="ed-presupuesto" type="text" inputMode="numeric" autoComplete="off"
-                    className={`input tabular-nums${marca('presupuesto')}`} placeholder="10.000.000"
-                    value={fmtMiles(edicion.valores.presupuesto ?? '')}
-                    onChange={(e) => edicion.cambiar('presupuesto', soloDigitos(e.target.value).slice(0, 13))} />
+                  <CampoMoneda id="ed-presupuesto" placeholder="10.000.000"
+                    value={edicion.valores.presupuesto ?? ''}
+                    onChange={(v) => edicion.cambiar('presupuesto', v)} />
                   <p className="mt-1 text-xs text-slate-500">
                     Referencia para advertir cuando un servicio externo la excede; vacío = sin presupuesto. Las cantidades de materiales se definen en «Presupuesto de materiales».
                   </p>

@@ -19,6 +19,7 @@ import { proyectosApi } from '../services/proyectos'
 import { asignacionesApi } from '../services/asignaciones'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFormulario } from '../hooks/useFormulario'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-30 (CU-30): solicitud de herramientas.
@@ -119,10 +120,10 @@ export default function SolicitudesHerramientas({ pestanas }) {
           </div>
           <div>
             <label htmlFor="sh-f-proyecto" className="label">Proyecto</label>
-            <select id="sh-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => cambiarFiltro('proyecto', e.target.value)}>
+            <SelectBuscable id="sh-f-proyecto" className="input" value={filtros.proyecto} onChange={(e) => cambiarFiltro('proyecto', e.target.value)}>
               <option value="">Todos</option>
               {proyectosFila.map((p) => <option key={p} value={p}>{p}</option>)}
-            </select>
+            </SelectBuscable>
           </div>
           <div>
             <label htmlFor="sh-f-desde" className="label">Solicitada desde</label>

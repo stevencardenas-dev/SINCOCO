@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { ChevronDownIcon, ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { fmtCOPCompacto, fmtFecha } from '../lib/format.js'
@@ -341,9 +342,10 @@ export default function CronogramaPlan({
       </div>
 
       {/* Panel de la actividad: sus datos y todas sus acciones. */}
-      {abiertaActual && (
-        <div className="fixed inset-0 z-40" role="dialog" aria-label={`Actividad ${abiertaActual.nombre}`}>
-          <div className="absolute inset-0 bg-slate-900/35" onClick={() => setAbierta(null)} />
+      {/* Portal al body: dentro del cronograma el telón quedaba por debajo de la barra superior. */}
+      {abiertaActual && createPortal(
+        <div className="fixed inset-0 z-50" role="dialog" aria-label={`Actividad ${abiertaActual.nombre}`}>
+          <div className="absolute inset-0 bg-brand-950/50 backdrop-blur-sm" onClick={() => setAbierta(null)} />
           <aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl">
             <header className="bg-brand-900 p-5 text-white">
               <button type="button" onClick={() => setAbierta(null)} className="float-right rounded-lg bg-white/10 p-1.5 hover:bg-white/20" aria-label="Cerrar">
@@ -391,7 +393,8 @@ export default function CronogramaPlan({
               <div className="grid gap-2">{panelActividad(abiertaActual, () => setAbierta(null))}</div>
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )

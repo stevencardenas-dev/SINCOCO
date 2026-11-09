@@ -40,7 +40,7 @@ function liberarScroll() {
  *
  * Se cierra con Escape, con el botón de la esquina y haciendo clic fuera.
  */
-export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, ancho = 'max-w-lg' }) {
+export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, ancho = 'max-w-lg', lateral = false }) {
   // Se guarda en una ref para que el efecto no se re-ejecute en cada render
   // cuando el padre pasa una función nueva (p. ej. una flecha en línea).
   const onCerrarRef = useRef(onCerrar)
@@ -72,6 +72,38 @@ export default function Modal({ abierto, titulo, subtitulo, onCerrar, children, 
 
   // Portal al body: así el desenfoque cubre toda la pantalla, incluido el
   // encabezado fijo (que tiene su propio backdrop-blur y quedaba nítido).
+  //
+  // `lateral`: los formularios se abren como panel a la derecha (mismo patrón
+  // que la ficha de actividad del cronograma): cabecera oscura, cuerpo con
+  // scroll y la pantalla de fondo a la vista, oscurecida.
+  if (lateral) {
+    return createPortal(
+      <div className="fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label={titulo}>
+        <div className="absolute inset-0 bg-brand-950/50 backdrop-blur-sm" onClick={onCerrar} />
+        <aside className="absolute inset-y-0 right-0 flex w-full max-w-xl flex-col bg-white shadow-2xl">
+          <header className="flex items-start justify-between gap-4 bg-brand-900 px-6 py-5 text-white">
+            <div className="min-w-0">
+              {subtitulo && <p className="text-xs text-slate-300">{subtitulo}</p>}
+              <h3 className="mt-0.5 text-lg font-bold leading-snug">{titulo}</h3>
+            </div>
+            <button
+              type="button"
+              onClick={onCerrar}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-white/10 p-1.5 transition hover:bg-white/20"
+              aria-label="Cerrar"
+              aria-keyshortcuts="Escape"
+            >
+              <kbd className="hidden rounded border border-white/20 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-slate-300 sm:inline">Esc</kbd>
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </header>
+          <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        </aside>
+      </div>,
+      document.body,
+    )
+  }
+
   return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-brand-950/50 p-4 backdrop-blur-sm sm:p-6"

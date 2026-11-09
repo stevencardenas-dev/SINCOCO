@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { ArrowPathIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { TablaFicha } from '../components/Ficha.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import PageHeader from '../components/PageHeader.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
+import { BotonQuitar } from '../components/BotonesBaja.jsx'
 import FiltrosMovimiento, { enRango } from '../components/FiltrosMovimiento.jsx'
 import Paginacion from '../components/Paginacion.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
@@ -17,6 +18,7 @@ import { useFiltros } from '../hooks/useFiltros'
 import { usePaginacion } from '../hooks/usePaginacion'
 import { coincide } from '../lib/busqueda.js'
 import { fmtCOP, fmtFecha } from '../lib/format.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * HU-19 (CU-19): ingreso de materiales al inventario.
@@ -88,10 +90,10 @@ export default function EntradasInventario({ pestanas }) {
   }
 
   const selectDe = (id, valor, onChange, opciones, vacio = 'Seleccione…') => (
-    <select id={id} className="input" value={valor} onChange={onChange}>
+    <SelectBuscable id={id} className="input" value={valor} onChange={onChange}>
       <option value="">{vacio}</option>
       {opciones.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-    </select>
+    </SelectBuscable>
   )
 
   const controles = useFiltros(FILTROS_VACIOS)
@@ -151,9 +153,7 @@ export default function EntradasInventario({ pestanas }) {
                   (materiales.datos ?? []).map((m) => [m.id, `${m.codigo} · ${m.descripcion}`]))}
                 <input aria-label="Cantidad" type="number" min="0.01" step="0.01" placeholder="Cantidad" className="input" value={l.cantidad} onChange={cambiarLinea(i, 'cantidad')} required />
                 <input aria-label="Costo unitario" type="number" min="0.01" step="0.01" placeholder="Costo unitario" className="input" value={l.costo_unitario} onChange={cambiarLinea(i, 'costo_unitario')} required />
-                <button type="button" className="btn-ghost" aria-label="Quitar línea" disabled={lineas.length === 1} onClick={() => setLineas(lineas.filter((_, j) => j !== i))}>
-                  <TrashIcon className="h-4 w-4" />
-                </button>
+                <BotonQuitar etiqueta="Quitar línea" disabled={lineas.length === 1} onClick={() => setLineas(lineas.filter((_, j) => j !== i))} />
               </div>
             ))}
             <button type="button" className="btn-ghost text-xs" onClick={() => setLineas([...lineas, { ...LINEA }])}>

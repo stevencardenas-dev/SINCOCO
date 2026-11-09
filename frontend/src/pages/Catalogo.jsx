@@ -22,6 +22,7 @@ import { useRecurso } from '../hooks/useRecurso'
 import { useFormulario } from '../hooks/useFormulario'
 import { useAuth } from '../context/AuthContext.jsx'
 import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
+import SelectBuscable from '../components/SelectBuscable.jsx'
 
 /**
  * Gestión Administrativa (RF01 · RF06 · RF02): mantiene los valores de dominio
@@ -439,11 +440,11 @@ export default function Catalogo() {
             </div>
             <div>
               <label htmlFor="cat-categoria" className="label">Categoría</label>
-              <select id="cat-categoria" className="input" value={form.categoria}
+              <SelectBuscable id="cat-categoria" className="input" value={form.categoria}
                 onChange={(e) => formulario.cambiar('categoria', e.target.value)}>
                 <option value="">Sin categoría (aparece en «{SIN_CATEGORIA}»)</option>
                 {CATEGORIAS[tipo].map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+              </SelectBuscable>
               <p className="mt-1 text-xs text-slate-500">
                 Agrupa este valor en los selectores del formulario de personal.
               </p>
