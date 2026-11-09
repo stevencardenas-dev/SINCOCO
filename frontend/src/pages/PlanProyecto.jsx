@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { urlListado } from '../hooks/useListadoUrl'
 import {
   ArrowLeftIcon,
   ArrowPathIcon,
   CalendarDaysIcon,
+  ChartPieIcon,
   CheckIcon,
   ClipboardDocumentCheckIcon,
   ClipboardDocumentIcon,
@@ -17,6 +18,7 @@ import {
   PlusIcon,
   TrashIcon,
   UserPlusIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline'
 import Retractil from '../components/Retractil.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
@@ -183,6 +185,7 @@ const CLAVES_ACCESO = {
 
 export default function PlanProyecto() {
   const { id } = useParams()
+  const [parametros, setParametros] = useSearchParams()
   const { puede } = useAuth()
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
   // Además del permiso del rol, el plan solo lo modifica el líder del proyecto,
@@ -250,6 +253,17 @@ export default function PlanProyecto() {
   const [presupuestando, setPresupuestando] = useState(null) // HU-08: actividad cuyo presupuesto de materiales se consulta
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
+  // Submódulos de la página: se recuerdan en la URL (?vista=) para poder recargar o compartir.
+  const vigentes = asignaciones.filter((a) => a.estado === 'ACTIVO').length
+  const SECCIONES = [
+    { id: 'resumen', label: 'Resumen', icono: ChartPieIcon, cuenta: null },
+    { id: 'cronograma', label: 'Cronograma', icono: CalendarDaysIcon, cuenta: etapas.length },
+    ...(puedeAcceso ? [{ id: 'acceso', label: 'Acceso', icono: UsersIcon, cuenta: vigentes }] : []),
+  ]
+  const pedida = parametros.get('vista')
+  const vista = SECCIONES.some((x) => x.id === pedida) ? pedida : 'cronograma'
+  const irA = (v) =>
+    setParametros((p) => { const n = new URLSearchParams(p); n.set('vista', v); return n }, { replace: true })
   const puedeExtender = puede('asignaciones.extender') // HU-31: solo el administrador
 
   // Formularios del plan. Los errores de negocio se muestran dentro de cada
@@ -540,6 +554,36 @@ export default function PlanProyecto() {
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
+      {/* Conmutador de submódulos: la pastilla deslizante marca en cuál se está. */}
+      <div role="tablist" aria-label="Secciones del proyecto"
+        className="relative grid w-full max-w-xl rounded-2xl bg-slate-100 p-1"
+        style={{ gridTemplateColumns: `repeat(${SECCIONES.length}, minmax(0, 1fr))` }}>
+        <span aria-hidden="true"
+          className="absolute inset-y-1 left-1 rounded-xl bg-brand-900 shadow-md transition-transform duration-300 ease-out"
+          style={{
+            width: `calc((100% - 0.5rem) / ${SECCIONES.length})`,
+            transform: `translateX(${SECCIONES.findIndex((x) => x.id === vista) * 100}%)`,
+          }} />
+        {SECCIONES.map((x) => {
+          const activa = x.id === vista
+          return (
+            <button key={x.id} type="button" role="tab" aria-selected={activa} onClick={() => irA(x.id)}
+              className={`relative z-10 flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors ${
+                activa ? 'text-white' : 'text-slate-500 hover:text-brand-800'
+              }`}>
+              <x.icono className={`h-5 w-5 ${activa ? 'text-accent-400' : ''}`} />
+              {x.label}
+              {x.cuenta != null && (
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${activa ? 'bg-accent-400 text-brand-950' : 'bg-white text-slate-600'}`}>
+                  {x.cuenta}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+
       {/* HU-18: la baja es lógica; la etapa y sus actividades se conservan en el historial. */}
       <Modal abierto={Boolean(etapaPorBaja)} titulo="Dar de baja la etapa" subtitulo={etapaPorBaja?.nombre}
         onCerrar={() => setEtapaPorBaja(null)}>
@@ -626,14 +670,14 @@ export default function PlanProyecto() {
         </form>
       )}
 
-      {etapas.length === 0 && (
+      {vista === 'cronograma' && etapas.length === 0 && (
         <div className="card px-6 py-14 text-center text-sm text-slate-500">
           Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}
         </div>
       )}
 
       {/* Resumen del proyecto: avance, presupuesto por etapa y plazo. */}
-      {proyecto && (
+      {vista === 'resumen' && proyecto && (
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="card flex items-center gap-5 p-5">
             <div className="relative h-24 w-24 shrink-0">
@@ -705,7 +749,7 @@ export default function PlanProyecto() {
         </div>
       )}
 
-      {etapas.length > 0 && (
+      {vista === 'cronograma' && etapas.length > 0 && (
         <CronogramaPlan
           proyecto={proyecto}
           etapas={etapas}
@@ -890,7 +934,7 @@ export default function PlanProyecto() {
 
       {/* RBAC: gestión de acceso al proyecto. Solo quien puede administrarlo ve
           el formulario; los demás roles no necesitan esta caja. */}
-      {puedeAcceso && proyecto && (
+      {vista === 'acceso' && puedeAcceso && proyecto && (
         <div className="card overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
             <div>
