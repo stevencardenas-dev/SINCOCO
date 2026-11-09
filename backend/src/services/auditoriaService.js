@@ -52,9 +52,14 @@ async function resolverEntidades(filas) {
 }
 
 /** Arma el WHERE y sus parámetros a partir de los filtros de la consulta. */
-function construirFiltro({ usuario, tabla, accion, desde, hasta }) {
+function construirFiltro({ buscar, usuario, tabla, accion, desde, hasta }) {
   const condiciones = []
   const parametros = []
+  const texto = String(buscar ?? '').trim().slice(0, 100)
+  if (texto) {
+    condiciones.push('(u.username LIKE ? OR b.tabla_afectada LIKE ? OR b.accion LIKE ? OR b.detalles LIKE ?)')
+    parametros.push(...Array(4).fill(`%${texto}%`))
+  }
   if (usuario) {
     // El filtro acepta el id (lo que manda el selector) o el nombre de usuario.
     if (/^\d+$/.test(String(usuario))) {

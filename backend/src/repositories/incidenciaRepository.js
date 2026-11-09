@@ -26,9 +26,13 @@ export async function findById(id) {
  * `trabajadorId` viene, solo las de proyectos donde esa persona es responsable
  * o tiene una asignación vigente (mismo alcance que `tieneAcceso`).
  */
-export async function listar({ proyectoId, actividadId, estado, severidad, trabajadorId, limitarAcceso } = {}) {
+export async function listar({ proyectoId, actividadId, estado, severidad, buscar, trabajadorId, limitarAcceso } = {}) {
   const where = []
   const params = []
+  if (buscar) {
+    where.push('(i.titulo LIKE ? OR i.descripcion LIKE ? OR p.nombre LIKE ? OR a.nombre LIKE ?)')
+    params.push(...Array(4).fill(`%${buscar}%`))
+  }
   if (proyectoId) { where.push('i.proyecto_id = ?'); params.push(proyectoId) }
   if (actividadId) { where.push('i.actividad_id = ?'); params.push(actividadId) }
   if (estado) { where.push('i.estado = ?'); params.push(estado) }

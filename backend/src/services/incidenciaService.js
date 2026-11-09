@@ -112,6 +112,7 @@ export async function listarIncidencias(filtros = {}, usuario = null) {
     actividadId: actividad_id ? Number(actividad_id) : undefined,
     estado: estadoN,
     severidad: severidadN,
+    buscar: String(filtros.buscar ?? '').trim().slice(0, 100) || undefined,
     trabajadorId: alcance.trabajadorId,
     limitarAcceso: !alcance.total,
   })

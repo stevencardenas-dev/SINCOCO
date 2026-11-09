@@ -42,7 +42,7 @@ const ROL_LABEL = {
   ENCARGADO_BODEGA: 'Encargado de bodega',
 }
 
-const SIN_FILTROS = { usuario: '', tabla: '', accion: '', desde: '', hasta: '' }
+const SIN_FILTROS = { buscar: '', usuario: '', tabla: '', accion: '', desde: '', hasta: '' }
 
 const TITULO_TABLA = {
   usuarios: 'Usuarios',
@@ -91,6 +91,11 @@ export default function Auditoria() {
         ariaLabel="Filtros de auditoría"
         activos={activos}
       >
+        <div>
+          <label htmlFor="a-buscar" className="label">Búsqueda</label>
+          <input id="a-buscar" type="search" className="input" placeholder="Usuario, tabla, acción o detalle"
+            value={filtros.buscar} onChange={(e) => cambiar('buscar', e.target.value)} />
+        </div>
 
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
           <div>

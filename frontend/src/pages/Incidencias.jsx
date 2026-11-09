@@ -46,7 +46,7 @@ const SIGUIENTES = {
 }
 
 const VACIO = { proyecto_id: '', actividad_id: '', tipo: '', titulo: '', descripcion: '', severidad: 'MEDIA', evidencia: '', foto: '' }
-const SIN_FILTROS = { proyecto_id: '', estado: '', severidad: '' }
+const SIN_FILTROS = { buscar: '', proyecto_id: '', estado: '', severidad: '' }
 const VACIO_SEGUIMIENTO = { estado: '', fecha_resolucion: '' }
 
 const Insignia = ({ mapa, valor }) => {
@@ -143,6 +143,11 @@ export default function Incidencias() {
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
 
       <FiltrosDesplegable titulo="Filtrar incidencias" ariaLabel="Filtros de incidencias" activos={filtrosActivos}>
+        <div>
+          <label htmlFor="inc-buscar" className="label">Búsqueda</label>
+          <input id="inc-buscar" type="search" className="input" placeholder="Título, descripción, proyecto o actividad"
+            value={filtros.buscar} onChange={(e) => cambiarFiltro('buscar', e.target.value)} />
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div>
             <label htmlFor="inc-f-proyecto" className="label">Proyecto</label>
