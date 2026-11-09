@@ -484,7 +484,6 @@ export default function Materiales() {
                 ),
               },
               { titulo: 'Categoría', tdClase: 'text-slate-600', celda: (m) => m.categoria },
-              { titulo: 'Unidad', tdClase: 'text-slate-600', celda: (m) => m.unidad_medida },
               {
                 titulo: 'Existencia',
                 movil: true,
@@ -511,6 +510,7 @@ export default function Materiales() {
                     },
                   ]
                 : []),
+              { titulo: 'Unidad', tdClase: 'text-slate-600', celda: (m) => m.unidad_medida },
               {
                 titulo: 'Nivel mínimo',
                 tdClase: 'tabular-nums text-slate-600',
@@ -519,7 +519,12 @@ export default function Materiales() {
               {
                 titulo: 'Costo ref.',
                 tdClase: 'tabular-nums text-slate-600',
-                celda: (m) => fmtCOP(m.costo_referencia),
+                celda: (m) => (
+                  <>
+                    {fmtCOP(m.costo_referencia)}
+                    <span className="text-xs text-slate-400"> / {m.unidad_medida}</span>
+                  </>
+                ),
               },
               {
                 titulo: 'Acciones',
