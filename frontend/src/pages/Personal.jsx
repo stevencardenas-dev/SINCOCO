@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
+  ArrowLeftIcon,
   ArrowUturnLeftIcon,
   CalendarDaysIcon,
   WrenchScrewdriverIcon,
@@ -178,6 +179,8 @@ export default function Personal() {
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
   const [verFicha, setVerFicha] = useState(null)
+  // Ficha desde la que se abrió la edición: al cancelar (flecha, Esc) se vuelve a ella.
+  const [volverFicha, setVolverFicha] = useState(null)
   // /personal?ficha=ID abre directamente la ficha de esa persona (enlace desde Proyectos).
   const [parametros] = useSearchParams()
   const fichaPedida = useRef(parametros.get('ficha'))
@@ -400,6 +403,7 @@ export default function Personal() {
   /** Pasa el trabajador a edición: el formulario se abre con sus datos actuales. */
   const abrirEditar = (t) => {
     setAviso('')
+    setVolverFicha(null)
     formulario.abrir({
       numero_documento: t.numero_documento ?? '',
       tipo_documento: t.tipo_documento ?? 'CC',
@@ -412,6 +416,13 @@ export default function Personal() {
       especialidad_id: t.especialidad_id ? String(t.especialidad_id) : '',
       estado: t.estado ?? 'ACTIVO',
     }, t)
+  }
+
+  /** Cierra el formulario; si venía de la ficha, la vuelve a mostrar. */
+  const volverAFicha = () => {
+    formulario.cerrar()
+    if (volverFicha && editando) setVerFicha(volverFicha)
+    setVolverFicha(null)
   }
 
   /** «⚠️ Dar de baja» del formulario de edición: abre la confirmación encima. */
@@ -602,7 +613,23 @@ export default function Personal() {
       {(puedeCrear || puedeEditar) && (
         <ModalFormulario
           {...formulario.propsModal}
-          titulo={editando ? 'Actualizar información del trabajador' : 'Registrar personal'}
+          onCerrar={volverAFicha}
+          titulo={
+            editando && volverFicha ? (
+              <span className="inline-flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={volverAFicha}
+                  aria-label="Volver a la ficha"
+                  title="Volver a la ficha"
+                  className="rounded-md p-1 text-slate-300 hover:bg-white/10 hover:text-white"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
+                </button>
+                Actualizar información del trabajador
+              </span>
+            ) : editando ? 'Actualizar información del trabajador' : 'Registrar personal'
+          }
           subtitulo={
             editando
               ? 'El cambio queda registrado en la bitácora de trazabilidad'
@@ -1045,7 +1072,7 @@ export default function Personal() {
                   {t.activo ? (
                     <>
                       {puedeEditar && (
-                        <button className="btn-primary" onClick={() => { setVerFicha(null); abrirEditar(t) }}>
+                        <button className="btn-primary" onClick={() => { setVerFicha(null); abrirEditar(t); setVolverFicha(t) }}>
                           <PencilSquareIcon className="h-4 w-4" /> Editar
                         </button>
                       )}
