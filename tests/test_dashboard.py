@@ -127,7 +127,13 @@ try:
         'ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)' % CATEGORIA
     ).returncode == 0, 'no se pudo sembrar la categoría de prueba'
     categoria_id = int(scalar(f"SELECT id FROM categorias_materiales WHERE nombre='{CATEGORIA}'"))
-    for codigo, existencia, minimo in (('TEST-DASH-BAJO', 3, 1000000), ('TEST-DASH-OK', 20, 5)):
+    # El detalle muestra solo los 5 de mayor faltante: el mínimo se calcula para
+    # superar el mayor faltante actual y no depender de los datos semilla.
+    mayor_faltante = int(scalar(
+        'SELECT COALESCE(MAX(nivel_minimo - existencia_total), 0) FROM materiales '
+        "WHERE activo=1 AND codigo <> 'TEST-DASH-BAJO'"))
+    minimo_bajo = 3 + max(mayor_faltante, 0) + 1
+    for codigo, existencia, minimo in (('TEST-DASH-BAJO', 3, minimo_bajo), ('TEST-DASH-OK', 20, 5)):
         assert sql(
             'INSERT INTO materiales (codigo, categoria_id, descripcion, unidad_medida, '
             'existencia_total, costo_referencia, nivel_minimo) '
@@ -144,7 +150,7 @@ try:
     assert 'TEST-DASH-BAJO' in detalle, f'el material bajo mínimo no se alerta: {detalle}'
     assert 'TEST-DASH-OK' not in detalle, f'el material con existencia suficiente no debe alertar: {detalle}'
     fila = next(m for m in d3['inventario']['detalle'] if m['codigo'] == 'TEST-DASH-BAJO')
-    assert (fila['existencia_total'], fila['nivel_minimo']) == (3, 1000000), f'valores distintos: {fila}'
+    assert (fila['existencia_total'], fila['nivel_minimo']) == (3, minimo_bajo), f'valores distintos: {fila}'
     print(f'inventario -> {d3["inventario"]["bajo_stock"]} bajo mínimo; detalle incluye '
           f'{fila["codigo"]} ({fila["existencia_total"]} < {fila["nivel_minimo"]}) y excluye TEST-DASH-OK')
 finally:
