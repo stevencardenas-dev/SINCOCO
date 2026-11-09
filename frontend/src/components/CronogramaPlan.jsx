@@ -61,6 +61,11 @@ const COLOR_ETAPA = {
 }
 const ORDEN_OPCIONES = ['Actividad', 'Responsable', 'Fechas', 'Estado', 'Avance']
 
+// Recordatorio visual del atajo de teclado.
+const Tecla = ({ children }) => (
+  <kbd className="rounded border border-slate-300 bg-slate-50 px-1 font-sans text-[10px] font-bold text-slate-500">{children}</kbd>
+)
+
 export default function CronogramaPlan({
   proyecto,
   etapas,
@@ -174,6 +179,26 @@ export default function CronogramaPlan({
     return () => window.removeEventListener('keydown', alTeclear)
   }, [abierta])
 
+  // Atajos de una tecla: C contrae, E expande y H va al mes actual. No actúan al escribir
+  // en un campo, con Ctrl/Alt/Cmd, ni con una ventana o panel abierto.
+  useEffect(() => {
+    const alTeclear = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
+      const t = e.target
+      if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '')) return
+      if (document.querySelector('[role="dialog"]')) return
+      const k = e.key.toLowerCase()
+      if (k === 'c') setCerradas(new Set(etapas.map((x) => x.id)))
+      else if (k === 'e') setCerradas(new Set())
+      else if (k === 'h') irAHoy(true)
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [etapas])
+
   const alternar = (id) =>
     setCerradas((s) => {
       const n = new Set(s)
@@ -221,11 +246,11 @@ export default function CronogramaPlan({
 
       {/* Controles del cronograma */}
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
-          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas
+        <button type="button" title="Contraer todas (C)" aria-keyshortcuts="C" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
+          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas <Tecla>C</Tecla>
         </button>
-        <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
-          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas
+        <button type="button" title="Expandir todas (E)" aria-keyshortcuts="E" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
+          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas <Tecla>E</Tecla>
         </button>
         <div className="ml-auto flex items-center gap-2 text-xs text-slate-500">
           <label htmlFor="orden-actividades" className="font-medium">Ordenar actividades por</label>
@@ -255,7 +280,7 @@ export default function CronogramaPlan({
               style={{ width: ANCHO_ETIQUETA }}
             >
               <span className="flex-1">Etapa / actividad</span>
-              <button type="button" onClick={() => irAHoy(true)} title="Ir al mes actual"
+              <button type="button" onClick={() => irAHoy(true)} title="Ir al mes actual (H)" aria-keyshortcuts="H"
                 className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-semibold normal-case tracking-normal text-slate-600 hover:border-accent-400 hover:bg-accent-50">
                 <CalendarDaysIcon className="h-3.5 w-3.5" /> Hoy
               </button>

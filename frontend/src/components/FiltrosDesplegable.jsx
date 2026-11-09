@@ -120,6 +120,21 @@ export default function FiltrosDesplegable({
     }
   })
 
+  // Atajo «F»: abre el panel de filtros (se cierra con Escape). No actúa al escribir en un
+  // campo, con Ctrl/Alt/Cmd, ni con una ventana abierta.
+  useEffect(() => {
+    const alTeclear = (e) => {
+      if (e.key.toLowerCase() !== 'f' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
+      const t = e.target
+      if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '')) return
+      if (document.querySelector('[role="dialog"]')) return
+      e.preventDefault()
+      setAbierto(true)
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [])
+
   // El panel se cierra al hacer clic fuera o con Escape.
   useEffect(() => {
     if (!abierto) return
@@ -200,6 +215,8 @@ export default function FiltrosDesplegable({
           type="button"
           onClick={() => setAbierto((v) => !v)}
           aria-expanded={abierto}
+          aria-keyshortcuts="F"
+          title="Filtros (F)"
           className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400 ${
             total > 0 || abierto
               ? 'border-accent-500 bg-accent-400 text-brand-950'
@@ -211,6 +228,7 @@ export default function FiltrosDesplegable({
           {total > 0 && (
             <span className="rounded-full bg-brand-900 px-1.5 text-[11px] font-bold leading-[18px] text-white">{total}</span>
           )}
+          <kbd className="hidden rounded border border-black/15 bg-white/60 px-1 font-sans text-[10px] font-bold text-slate-500 sm:inline">F</kbd>
         </button>
 
         {hayAlgo && (
