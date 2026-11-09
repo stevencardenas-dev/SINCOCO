@@ -127,7 +127,7 @@ try:
         'ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)' % CATEGORIA
     ).returncode == 0, 'no se pudo sembrar la categoría de prueba'
     categoria_id = int(scalar(f"SELECT id FROM categorias_materiales WHERE nombre='{CATEGORIA}'"))
-    for codigo, existencia, minimo in (('TEST-DASH-BAJO', 3, 10), ('TEST-DASH-OK', 20, 5)):
+    for codigo, existencia, minimo in (('TEST-DASH-BAJO', 3, 1000000), ('TEST-DASH-OK', 20, 5)):
         assert sql(
             'INSERT INTO materiales (codigo, categoria_id, descripcion, unidad_medida, '
             'existencia_total, costo_referencia, nivel_minimo) '
