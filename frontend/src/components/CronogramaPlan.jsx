@@ -65,6 +65,7 @@ export default function CronogramaPlan({
 }) {
   const [cerradas, setCerradas] = useState(() => new Set(etapas.filter((e) => e.estado === 'COMPLETADA').map((e) => e.id)))
   const [abierta, setAbierta] = useState(null) // actividad cuyo panel está abierto
+  const [filtro, setFiltro] = useState(0) // 0 = todas las etapas; si no, id de la etapa que se muestra
   const visor = useRef(null)
   const [anchoVisor, setAnchoVisor] = useState(0)
 
@@ -92,6 +93,10 @@ export default function CronogramaPlan({
     }
     return { desde, total: diasEntre(desde, hasta) * PX_DIA, meses }
   }, [proyecto, etapas, actividades, hoy])
+
+  // Etapa elegida (si ya no existe, por una baja, se vuelve a «Todas»).
+  const elegida = etapas.find((e) => e.id === filtro) ?? null
+  const visibles = elegida ? [elegida] : etapas
 
   const x = (fecha) => diasEntre(rango.desde, fecha) * PX_DIA
   const xHoy = x(hoy) + PX_DIA / 2
@@ -131,6 +136,17 @@ export default function CronogramaPlan({
     return () => o.disconnect()
   }, [])
 
+  // Al elegir una etapa, la línea de tiempo salta a su inicio (o al mes actual si hoy cae dentro de ella).
+  useLayoutEffect(() => {
+    const el = visor.current
+    if (!el || !anchoVisor) return
+    const ini = aFecha(elegida?.fecha_inicio_programada)
+    const fin = aFecha(elegida?.fecha_fin_programada)
+    const destino = ini && !(fin && ini <= hoy && hoy <= fin) ? inicioMes(ini) : inicioMes(hoy)
+    el.scrollTo({ left: Math.max(0, x(destino)), top: 0 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtro])
+
   const centrado = useRef(false)
   useLayoutEffect(() => {
     // Solo la primera vez que hay medida, y de nuevo si cambia el rango (p. ej. tras reprogramar).
@@ -167,6 +183,25 @@ export default function CronogramaPlan({
 
   return (
     <div className="space-y-3">
+      {/* Filtro por etapa: el cronograma muestra solo las actividades de la opción elegida. */}
+      <div role="radiogroup" aria-label="Etapa a mostrar" className="flex flex-wrap gap-2">
+        {[{ id: 0, orden: null, nombre: 'Todas las etapas', n: actividades.length }, ...etapas.map((e) => ({ id: e.id, orden: e.orden, nombre: e.nombre, n: actividades.filter((a) => a.etapa_id === e.id).length }))].map((o) => {
+          const on = (elegida?.id ?? 0) === o.id
+          return (
+            <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setFiltro(o.id)} title={o.nombre}
+              className={`inline-flex max-w-[16rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                on ? 'border-brand-900 bg-brand-900 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-accent-400 hover:bg-accent-50'
+              }`}>
+              {o.orden != null && (
+                <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full text-[10px] font-bold ${on ? 'bg-accent-400 text-brand-950' : 'bg-slate-100 text-slate-600'}`}>{o.orden}</span>
+              )}
+              <span className="truncate">{o.orden != null ? `Etapa ${o.orden}` : o.nombre}</span>
+              <span className={`rounded-full px-1.5 text-[10px] ${on ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`} title={`${o.n} actividades`}>{o.n}</span>
+            </button>
+          )
+        })}
+      </div>
+
       {/* Controles del cronograma */}
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => irAHoy(true)}>
@@ -224,7 +259,8 @@ export default function CronogramaPlan({
             </div>
           </div>
 
-          {etapas.map((et, i) => {
+          {visibles.map((et) => {
+            const i = etapas.indexOf(et)
             const acts = ordenarActividades(actividades.filter((a) => a.etapa_id === et.id))
             const cerrada = cerradas.has(et.id)
             const col = COLOR_ETAPA[et.estado] ?? COLOR_ETAPA.PENDIENTE
