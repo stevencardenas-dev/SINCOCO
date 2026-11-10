@@ -659,10 +659,20 @@ export default function PlanProyecto() {
 
       {(vista === 'cronograma' || vista === 'etapas') && etapas.length === 0 && etapasBaja.length === 0 && (
         <div className="card px-6 py-14 text-center text-sm text-slate-500">
-          Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}
-          {puedeBajaEtapas && (
-            <button type="button" className="btn-ghost ml-2 !px-3 !py-1.5 text-xs" onClick={() => { setVerBajas(true); irA('etapas') }}>Ver etapas dadas de baja</button>
-          )}
+          <p>Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}</p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {puedeEtapas && (
+              <button type="button" className="btn-primary !py-2 text-sm" title="Nueva etapa (N)" onClick={() => nuevaEtapa.abrir()}>
+                <PlusIcon className="h-5 w-5" /> Nueva etapa
+              </button>
+            )}
+            {puedeAplicarPlantilla && (
+              <button type="button" className="btn-ghost !py-2 text-sm" onClick={() => setPlantillaAbierta(true)}>Aplicar plantilla</button>
+            )}
+            {puedeBajaEtapas && (
+              <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => { setVerBajas(true); irA('etapas') }}>Ver etapas dadas de baja</button>
+            )}
+          </div>
         </div>
       )}
 
