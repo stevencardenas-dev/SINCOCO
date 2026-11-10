@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import CampoPassword from '../components/CampoPassword.jsx'
 import Logo from '../components/Logo.jsx'
+import logoUfps from '../assets/ufps-ingenieria-sistemas.png'
 import Modal from '../components/Modal.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { authApi } from '../services/auth'
@@ -123,9 +124,12 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="relative text-xs text-slate-400">
-          Proyecto académico · Control integral de proyectos de construcción
-        </p>
+        <div className="relative">
+          <img src={logoUfps} alt="Universidad Francisco de Paula Santander · Programa de Ingeniería de Sistemas" className="mb-4 h-16 w-auto" />
+          <p className="text-xs text-slate-400">
+            Proyecto académico · Control integral de proyectos de construcción
+          </p>
+        </div>
       </div>
 
       {/* Form panel */}

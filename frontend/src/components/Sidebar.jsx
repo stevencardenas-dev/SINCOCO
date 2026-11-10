@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import Logo from './Logo.jsx'
+import logoUfps from '../assets/ufps-ingenieria-sistemas.png'
 import { useAuth } from '../context/AuthContext.jsx'
 import {
   BellAlertIcon,
@@ -230,11 +231,7 @@ export default function Sidebar({ open, onClose, collapsed = false, onToggle }) 
       </div>
 
       <div className={`border-t border-brand-800 px-6 py-4 ${collapsed ? 'lg:hidden' : ''}`}>
-        <p className="text-[11px] leading-relaxed text-slate-400">
-          Constructora XYZ · Cúcuta
-          <br />
-          Control integral de proyectos de construcción
-        </p>
+        <img src={logoUfps} alt="Universidad Francisco de Paula Santander · Programa de Ingeniería de Sistemas" className="mx-auto w-full max-w-[200px]" />
       </div>
     </aside>
   )
