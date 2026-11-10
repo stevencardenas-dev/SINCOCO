@@ -3,6 +3,7 @@ import * as actividadRepository from '../repositories/actividadRepository.js'
 import * as proyectoRepository from '../repositories/proyectoRepository.js'
 import * as asignacionRepository from '../repositories/asignacionRepository.js'
 import * as reprogramacionRepository from '../repositories/reprogramacionRepository.js'
+import * as usuarioRepository from '../repositories/usuarioRepository.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
 import {
@@ -47,6 +48,15 @@ async function asignacionesFuera(actividadId, inicio, fin) {
  */
 
 /** Fila del historial para un elemento cuyas fechas cambian. */
+/** HU-34: quien autoriza, si se indica, debe ser un usuario existente y activo. */
+async function validarAutorizador(dto) {
+  if (!dto.autorizado_por_usuario_id) return
+  const u = await usuarioRepository.findById(dto.autorizado_por_usuario_id)
+  if (!u || !u.activo) {
+    throw new AppError('El usuario que autoriza no existe o está dado de baja', 400, 'autorizado_por_usuario_id')
+  }
+}
+
 function filaHistorial(tipo, elemento, proyectoId, nuevo, dto, ctx, origen = 'DIRECTA') {
   return {
     proyecto_id: proyectoId,
@@ -55,6 +65,7 @@ function filaHistorial(tipo, elemento, proyectoId, nuevo, dto, ctx, origen = 'DI
     origen,
     motivo: dto.motivo,
     usuario_id: ctx.usuarioId,
+    autorizado_por_usuario_id: dto.autorizado_por_usuario_id ?? ctx.usuarioId,
     fecha_inicio_anterior: aFechaDia(elemento.fecha_inicio_programada),
     fecha_fin_anterior: aFechaDia(elemento.fecha_fin_programada),
     fecha_inicio_nueva: nuevo.inicio,
@@ -147,6 +158,7 @@ export async function reprogramarEtapa(id, dto, ctx = {}) {
   if (!etapa) throw new AppError('Etapa no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, etapa.proyecto_id)
   if (!etapa.activo) throw new AppError('La etapa está dada de baja', 400)
+  await validarAutorizador(dto)
   // HU-34 · criterio 5: lo ya completado no se reprograma.
   if (etapa.estado === 'COMPLETADA') {
     throw new AppError('La etapa ya está completada y no se puede reprogramar', 409, 'estado')
@@ -286,6 +298,7 @@ export async function reprogramarActividad(id, dto, ctx = {}) {
   if (!actividad) throw new AppError('Actividad no encontrada', 404)
   await verificarGestionPlan(ctx.usuario, actividad.proyecto_id)
   if (!actividad.activo) throw new AppError('La actividad está dada de baja', 400)
+  await validarAutorizador(dto)
   // HU-34 · criterio 5: lo ya completado no se reprograma.
   if (actividad.estado === 'COMPLETADA') {
     throw new AppError('La actividad ya está completada y no se puede reprogramar', 409, 'estado')

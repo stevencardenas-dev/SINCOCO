@@ -10,8 +10,10 @@ import { LARGO, revisarLargo } from '../../utils/campos.js'
  *    completo, no corregir un solo extremo.
  */
 export class ReprogramarDto {
-  constructor({ motivo, fecha_inicio_programada, fecha_fin_programada, confirmar }) {
+  constructor({ motivo, fecha_inicio_programada, fecha_fin_programada, confirmar, autorizado_por_usuario_id = null }) {
     this.motivo = motivo
+    // Quién autorizó el cambio (opcional): si no llega, el service usa al usuario que registra.
+    this.autorizado_por_usuario_id = autorizado_por_usuario_id
     this.confirmar = confirmar
     this.fecha_inicio_programada = fecha_inicio_programada
     this.fecha_fin_programada = fecha_fin_programada
@@ -31,6 +33,14 @@ export class ReprogramarDto {
     }
     // Solo `true` (o 'true') confirma: cualquier otro valor cuenta como no confirmado.
     const confirmar = body.confirmar === true || body.confirmar === 'true'
-    return new ReprogramarDto({ motivo, ...fechas, confirmar })
+    let autorizado_por_usuario_id = null
+    const autorizado = body.autorizado_por_usuario_id
+    if (autorizado !== undefined && autorizado !== null && autorizado !== '') {
+      autorizado_por_usuario_id = Number(autorizado)
+      if (!Number.isInteger(autorizado_por_usuario_id) || autorizado_por_usuario_id <= 0) {
+        throw new AppError('autorizado_por_usuario_id debe ser el id de un usuario', 400, 'autorizado_por_usuario_id')
+      }
+    }
+    return new ReprogramarDto({ motivo, ...fechas, confirmar, autorizado_por_usuario_id })
   }
 }
