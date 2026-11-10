@@ -19,6 +19,14 @@
 }
 
 @layer components {
+  /* Confirmación (éxito): gris grafito con la franja y el icono amarillos de marca. */
+  .alerta-aviso {
+    @apply flex items-start gap-2 rounded-xl border-l-4 border-accent-400 bg-brand-900 px-4 py-3 text-sm font-medium text-white shadow-sm;
+  }
+  /* Campo con error de validación: borde rojo; al enfocarlo conserva el foco amarillo. */
+  .input[aria-invalid='true'], select[aria-invalid='true'], textarea[aria-invalid='true'], input[aria-invalid='true'] {
+    @apply border-red-400 ring-2 ring-red-200;
+  }
   .card {
     @apply rounded-2xl border border-slate-200 bg-white shadow-card;
   }
