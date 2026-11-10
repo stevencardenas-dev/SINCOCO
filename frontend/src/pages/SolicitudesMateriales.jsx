@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ArrowPathIcon, ChevronDownIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ClipboardDocumentListIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
@@ -7,6 +7,7 @@ import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import Paginacion from '../components/Paginacion.jsx'
+import { TablaFicha } from '../components/Ficha.jsx'
 import { useFiltros } from '../hooks/useFiltros'
 import { usePaginacion } from '../hooks/usePaginacion'
 import { coincide } from '../lib/busqueda.js'
@@ -62,7 +63,7 @@ export default function SolicitudesMateriales({ pestanas }) {
   const { filtros } = controles
   const [aprobando, setAprobando] = useState(null) // { solicitud, cantidades }
   const [despachando, setDespachando] = useState(null) // { solicitud, almacen, trabajador, cantidades }
-  const [abiertaId, setAbiertaId] = useState(null) // diseño B: solicitud desplegada
+  const [detalleId, setDetalleId] = useState(null) // solicitud abierta en la ventana de detalle
   const [rechazando, setRechazando] = useState(null) // { solicitud, motivo }
   const [cancelandoSaldo, setCancelandoSaldo] = useState(null) // { solicitud, motivo }
   const [errorAccion, setErrorAccion] = useState('')
@@ -143,6 +144,7 @@ export default function SolicitudesMateriales({ pestanas }) {
     && (!filtros.proyecto || s.proyecto === filtros.proyecto)
     && (!filtros.desde || String(s.fecha_solicitud).slice(0, 10) >= filtros.desde))
   const proyectosFila = [...new Set((solicitudes.datos ?? []).map((s) => s.proyecto).filter(Boolean))].sort()
+  const detalle = detalleId === null ? null : ((solicitudes.datos ?? []).find((s) => s.id === detalleId) ?? null)
   const paginacion = usePaginacion(filtradas, { clave: JSON.stringify(filtros) })
 
   const acciones = (s) => (
@@ -241,39 +243,83 @@ export default function SolicitudesMateriales({ pestanas }) {
     </>
   )
 
-  // Bandeja compacta: una fila por solicitud que se despliega con su detalle y sus acciones.
-  const bandeja = () => (
-    <div className="card">
-      {paginacion.visibles.map((s) => {
-        const abierta = abiertaId === s.id
-        return (
-          <div key={s.id} className={abierta ? 'relative z-10 my-3 rounded-xl border border-l-4 border-slate-200 border-l-accent-400 bg-white shadow-lg ring-1 ring-accent-200/70' : 'border-t border-slate-100 first:border-t-0'}>
-            <button type="button" aria-expanded={abierta} onClick={() => setAbiertaId(abierta ? null : s.id)}
-              className={`flex w-full flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3 text-left ${abierta ? 'rounded-t-xl bg-accent-50' : 'hover:bg-slate-50'}`}>
-              <span className="w-24 shrink-0 text-sm font-semibold text-slate-900">{s.codigo}</span>
-              <span className="min-w-0 flex-1 text-sm text-slate-700">
-                <span className="block truncate">{s.proyecto}</span>
-                <span className="block truncate text-xs text-slate-400">{s.actividad ?? 'Sin actividad'} · {s.detalles.length} {s.detalles.length === 1 ? 'material' : 'materiales'}</span>
-              </span>
-              <span className="hidden text-xs text-slate-500 sm:block">{s.solicitante}<span className="block text-slate-400">{fmtFecha(s.fecha_solicitud)}</span></span>
-              <span className="flex flex-wrap items-center gap-2">{insignias(s)}</span>
-              <ChevronDownIcon className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${abierta ? 'rotate-180' : ''}`} />
-            </button>
-            {abierta && (
-              <div className="space-y-3 rounded-b-xl border-t border-accent-200 bg-slate-50 px-5 py-4">
-                {notas(s)}
-                <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
-                  <p className="pt-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">Materiales de la solicitud</p>
-                  {tablaMateriales(s)}
+  // Avance de despacho: lo despachado sobre lo aprobado, sumando todas las líneas de la solicitud.
+  const avanceDespacho = (s) => {
+    const aprobado = s.detalles.reduce((t, d) => t + (Number(d.cantidad_aprobada) || 0), 0)
+    const despachado = s.detalles.reduce((t, d) => t + (Number(d.cantidad_despachada) || 0), 0)
+    return aprobado > 0 ? Math.min(100, Math.round((despachado / aprobado) * 100)) : null
+  }
+
+  // Lista en tabla (como Proyectos): una fila por solicitud, con ficha en celular y el detalle en una ventana.
+  const tabla = () => (
+    <div className="card overflow-hidden">
+      <TablaFicha
+        filas={paginacion.visibles}
+        minWidth="md:min-w-[760px]"
+        filaClase={() => 'transition hover:bg-slate-50/70'}
+        ficha={{
+          titulo: (s) => s.codigo,
+          subtitulo: (s) => s.proyecto,
+          extras: (s) => [
+            ['Solicitó', s.solicitante],
+            ['Fecha', fmtFecha(s.fecha_solicitud)],
+          ],
+        }}
+        columnas={[
+          {
+            titulo: 'Solicitud',
+            movil: true,
+            celda: (s) => (
+              <>
+                <p className="font-semibold text-slate-900">{s.codigo}</p>
+                <p className="text-xs text-slate-400">{s.proyecto}{s.actividad ? ' · ' + s.actividad : ''}</p>
+              </>
+            ),
+            valor: (s) => s.codigo,
+          },
+          {
+            titulo: 'Solicitó',
+            tdClase: 'text-slate-600',
+            celda: (s) => (
+              <>
+                <p>{s.solicitante}</p>
+                <p className="text-xs text-slate-400">{fmtFecha(s.fecha_solicitud)}</p>
+              </>
+            ),
+            orden: (s) => s.fecha_solicitud,
+          },
+          { titulo: 'Estado', movil: true, celda: (s) => <div className="flex flex-wrap items-center gap-1">{insignias(s)}</div>, valor: (s) => s.estado },
+          {
+            titulo: 'Despacho',
+            thClase: 'md:w-36',
+            celda: (s) => {
+              const avance = avanceDespacho(s)
+              if (avance === null) return <span className="text-xs text-slate-400">—</span>
+              return (
+                <div className="flex items-center gap-2">
+                  <div className="h-2 w-16 overflow-hidden rounded-full bg-brand-100">
+                    <div className="h-full rounded-full bg-accent-500 transition-all" style={{ width: `${avance}%` }} />
+                  </div>
+                  <span className="text-xs font-semibold tabular-nums text-slate-600">{avance}%</span>
                 </div>
-                <div className="flex flex-wrap gap-2 empty:hidden">{acciones(s)}</div>
-              </div>
-            )}
-          </div>
-        )
-      })}
+              )
+            },
+            valor: (s) => avanceDespacho(s) ?? -1,
+          },
+          {
+            titulo: 'Detalle',
+            acciones: true,
+            celda: (s) => (
+              <button type="button" className="btn-accion btn-accion-plan" onClick={() => setDetalleId(s.id)}>
+                <ClipboardDocumentListIcon className="h-4 w-4" /> Ver materiales
+              </button>
+            ),
+          },
+        ]}
+      />
     </div>
   )
+
 
   return (
     <div className="space-y-6">
@@ -406,11 +452,11 @@ export default function SolicitudesMateriales({ pestanas }) {
           </p>
         ) : filtradas.length === 0 ? (
           <p className="card px-5 py-6 text-sm text-slate-500">{solicitudes.datos.length === 0 ? 'No hay solicitudes de materiales.' : 'Ninguna solicitud coincide con los filtros.'}</p>
-        ) : bandeja()}
+        ) : tabla()}
         {filtradas.length > 0 && <div className="card"><Paginacion paginacion={paginacion} /></div>}
       </section>
 
-      <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" onCerrar={() => setAprobando(null)} ancho="max-w-md">
+      <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" onCerrar={() => setAprobando(null)} lateral>
         {aprobando && (
           <>
             <p className="mb-3 text-xs text-slate-500">Ajuste lo que aprueba según el stock real: no puede superar lo solicitado ni la existencia. Lo que no apruebe queda como saldo pendiente y se avisa al solicitante. Una línea en cero exige observación.</p>
@@ -446,7 +492,7 @@ export default function SolicitudesMateriales({ pestanas }) {
         )}
       </Modal>
 
-      <Modal abierto={rechazando !== null} titulo="Rechazar solicitud" onCerrar={() => setRechazando(null)} ancho="max-w-md">
+      <Modal abierto={rechazando !== null} titulo="Rechazar solicitud" onCerrar={() => setRechazando(null)} lateral>
         {rechazando && (
           <>
             <label htmlFor="sm-motivo" className="label">Observación (obligatoria)</label>
@@ -462,7 +508,7 @@ export default function SolicitudesMateriales({ pestanas }) {
       </Modal>
 
       {/* HU-36: cancelar el saldo pendiente con una observación obligatoria. */}
-      <Modal abierto={cancelandoSaldo !== null} titulo="Cancelar el saldo pendiente" onCerrar={() => setCancelandoSaldo(null)} ancho="max-w-md">
+      <Modal abierto={cancelandoSaldo !== null} titulo="Cancelar el saldo pendiente" onCerrar={() => setCancelandoSaldo(null)} lateral>
         {cancelandoSaldo && (
           <>
             <p className="mb-3 text-xs text-slate-500">La solicitud se cierra con lo despachado y se avisa al solicitante. Pendiente por despachar que se cancela:</p>
@@ -484,7 +530,7 @@ export default function SolicitudesMateriales({ pestanas }) {
         )}
       </Modal>
 
-      <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} ancho="max-w-2xl">
+      <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} lateral>
         {despachando && (
           <>
             <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material: por defecto lo aprobado que falta, y puede sumar el saldo pendiente si ya hay existencia. La solicitud se cierra cuando sale todo lo solicitado.</p>
@@ -559,6 +605,23 @@ export default function SolicitudesMateriales({ pestanas }) {
               <button type="button" className="btn-ghost" onClick={() => setDespachando(null)}>Cancelar</button>
             </div>
           </>
+        )}
+      </Modal>
+
+      {/* Detalle de la solicitud: materiales con su avance de despacho y las acciones disponibles. */}
+      <Modal abierto={detalle !== null} titulo={detalle?.codigo ?? ''} subtitulo="Materiales de la solicitud" onCerrar={() => setDetalleId(null)} lateral>
+        {detalle && (
+          <div className="space-y-4">
+            {detalle.fecha_requerida && (
+              <p className="text-xs text-slate-500">Requerida para el <strong className="font-medium text-slate-700">{fmtFecha(detalle.fecha_requerida)}</strong></p>
+            )}
+            {notas(detalle)}
+            {tablaMateriales(detalle)}
+            <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4 empty:hidden"
+              onClick={(e) => { if (e.target.closest('button')) setDetalleId(null) }}>
+              {acciones(detalle)}
+            </div>
+          </div>
         )}
       </Modal>
     </div>
