@@ -28,7 +28,9 @@ export default function Ficha({ titulo, subtitulo, onCerrar, campos = [], accion
           <div
             className="grid grid-cols-2 gap-2 [&>*]:w-full [&>*]:justify-center [&>*:only-child]:col-span-2"
             onClick={(e) => {
-              if (e.target.closest('button, a')) onCerrar()
+              // `data-conserva-ficha`: la acción abre otro panel encima y la ficha queda debajo (Esc vuelve a ella).
+              const control = e.target.closest('button, a')
+              if (control && !control.hasAttribute('data-conserva-ficha')) onCerrar()
             }}
           >
             {acciones}
