@@ -18,6 +18,23 @@
   }
 }
 
+/* Notificación de éxito (AlertaFormulario): sube desde abajo, permanece y se retira; la barra marca el tiempo restante. */
+@keyframes toast-ciclo {
+  0% { opacity: 0; transform: translateY(1.5rem); }
+  7% { opacity: 1; transform: translateY(0); }
+  93% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(1.5rem); }
+}
+@keyframes toast-progreso {
+  from { width: 100%; }
+  to { width: 0; }
+}
+.toast-aviso { animation: toast-ciclo var(--toast-duracion, 5s) ease forwards; }
+.toast-progreso { animation: toast-progreso var(--toast-duracion, 5s) linear forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .toast-aviso { animation: none; }
+}
+
 @layer components {
   /* Confirmación (éxito): gris grafito con la franja y el icono amarillos de marca. */
   .alerta-aviso {

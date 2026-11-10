@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 
 /** Segundos que permanece visible la confirmación de éxito antes de ocultarse sola. */
@@ -29,14 +30,27 @@ export default function AlertaFormulario({ tipo = 'error', mensaje, campo }) {
 
   if (tipo === 'aviso') {
     if (!visible) return null
-    return (
-      <p
-        role="status"
-        className="alerta-aviso"
-      >
-        <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0 text-accent-400" />
-        <span>{mensaje}</span>
-      </p>
+    // Ventana emergente que sube desde abajo, con una barra que se vacía durante los 5 s que permanece visible.
+    // Va en un portal para no empujar el contenido de la pantalla ni quedar tapada por el panel lateral.
+    return createPortal(
+      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[70] flex justify-center px-4">
+        <div
+          key={mensaje}
+          role="status"
+          aria-live="polite"
+          style={{ '--toast-duracion': `${SEGUNDOS_AVISO}s` }}
+          className="toast-aviso pointer-events-auto relative w-full max-w-md overflow-hidden rounded-xl border-l-4 border-accent-400 bg-brand-900 text-white shadow-2xl ring-1 ring-black/10"
+        >
+          <div className="flex items-start gap-3 px-4 py-3 text-sm font-medium">
+            <CheckCircleIcon className="mt-0.5 h-5 w-5 shrink-0 text-accent-400" />
+            <span>{mensaje}</span>
+          </div>
+          <div className="h-1 w-full bg-white/10">
+            <div className="toast-progreso h-full bg-accent-400" />
+          </div>
+        </div>
+      </div>,
+      document.body,
     )
   }
 
