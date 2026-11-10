@@ -9,9 +9,9 @@ import { alternarOrden, comparar } from '../lib/ordenarTabla.js'
  * `campos`: [[etiqueta, valor], …]; los valores vacíos se muestran como «—».
  * `acciones`: botones/enlaces; cualquier clic en uno de ellos cierra la ficha.
  */
-export default function Ficha({ titulo, subtitulo, onCerrar, campos = [], acciones }) {
+export default function Ficha({ titulo, subtitulo, onCerrar, campos = [], acciones, lateral = false }) {
   return (
-    <Modal abierto titulo={titulo} subtitulo={subtitulo} onCerrar={onCerrar} ancho="max-w-md">
+    <Modal abierto titulo={titulo} subtitulo={subtitulo} onCerrar={onCerrar} ancho="max-w-md" lateral={lateral}>
       <dl className="divide-y divide-slate-100">
         {campos.map(([etiqueta, valor]) => (
           <div key={etiqueta} className="grid grid-cols-3 gap-3 py-2.5 text-sm">
@@ -28,7 +28,9 @@ export default function Ficha({ titulo, subtitulo, onCerrar, campos = [], accion
           <div
             className="grid grid-cols-2 gap-2 [&>*]:w-full [&>*]:justify-center [&>*:only-child]:col-span-2"
             onClick={(e) => {
-              if (e.target.closest('button, a')) onCerrar()
+              // `data-conserva-ficha`: la acción abre otro panel encima y la ficha queda debajo (Esc vuelve a ella).
+              const control = e.target.closest('button, a')
+              if (control && !control.hasAttribute('data-conserva-ficha')) onCerrar()
             }}
           >
             {acciones}
@@ -71,7 +73,8 @@ function claveOrden(columna, fila) {
  *    campos; `valor(fila)` permite mostrar en la ficha algo distinto (p. ej. el
  *    texto completo de una celda truncada).
  *
- * `ficha`: { titulo(fila), subtitulo?(fila), etiqueta?(fila), extras?(fila) }
+ * `ficha`: { titulo(fila), subtitulo?(fila), etiqueta?(fila), extras?(fila), lateral? }
+ * (`lateral`: la ficha se abre como panel a la derecha)
  * donde `extras` añade campos que no tienen columna propia.
  * El botón «Ver ficha» solo aparece en el celular.
  *
@@ -209,6 +212,7 @@ export function TablaFicha({
         <Ficha
           titulo={ficha.titulo(actual)}
           subtitulo={ficha.subtitulo?.(actual)}
+          lateral={ficha.lateral}
           onCerrar={() => setFichaId(null)}
           campos={campos}
           acciones={botones.length > 0 ? botones.map((b, i) => <Fragment key={i}>{b}</Fragment>) : null}

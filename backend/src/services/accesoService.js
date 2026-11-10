@@ -195,7 +195,8 @@ export async function registrarAsignacion(dto, ctx = {}) {
     )
   }
 
-  const id = await asignacionRepository.create({
+  // Validación y escritura definitivas en una transacción con bloqueo del trabajador (concurrencia).
+  const id = await asignacionRepository.crearConBloqueo({
     trabajador_id: dto.trabajador_id,
     proyecto_id: dto.proyecto_id,
     actividad_id: dto.actividad_id,
@@ -204,7 +205,7 @@ export async function registrarAsignacion(dto, ctx = {}) {
     rol_en_proyecto: dto.rol_en_proyecto,
     estado: 'ACTIVO',
     observaciones: dto.observaciones,
-  })
+  }, dto.actividad_id ? dto.proyecto_id : null)
 
   await bitacora({
     usuarioId: ctx.usuarioId,

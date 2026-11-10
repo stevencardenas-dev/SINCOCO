@@ -142,15 +142,11 @@ jobs:
           node scripts/seed.js   # reemplaza los hashes de marcador por bcrypt real
 
       # Pruebas unitarias del backend: sin MySQL, con dobles en memoria.
-      # hu05 queda fuera hasta corregir sus fallos actuales.
+      # Corre todas las suites de backend/test/ (el glob lo expande node, no bash).
       - name: Pruebas unitarias del backend
         working-directory: backend
         run: |
-          node --test --test-force-exit --experimental-test-module-mocks \
-            test/hu07_materiales.test.js test/hu10_herramientas.test.js \
-            test/hu10_herramientas_consulta.test.js test/hu17_auditoria.test.js \
-            test/hu21_avance.test.js test/hu30_solicitud_herramientas.test.js \
-            test/hu34_reprogramacion.test.js
+          node --test --test-force-exit --experimental-test-module-mocks "test/*.test.js"
 
       - name: Arrancar el backend
         working-directory: backend
@@ -170,7 +166,7 @@ jobs:
           # Las tres últimas cubren las funciones de este sprint: sesión única
           # por cuenta, gestión de acceso a proyectos y actividades (RBAC) y la
           # batería de casos límite (entradas imposibles → 400, nunca 500).
-          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py test_sesion_unica.py test_rbac_acceso_proyectos.py test_bordes_api.py; do
+          for prueba in test_hu01_permisos.py test_roles_permisos.py test_hu17_auditoria.py test_dashboard.py test_hu03_plan.py test_hu04_personal.py test_catalogos.py test_hu18_baja_logica.py test_sesion_unica.py test_rbac_acceso_proyectos.py test_bordes_api.py test_e2e_materiales.py; do
             echo "::group::$prueba"
             python3 "$prueba"
             echo "::endgroup::"

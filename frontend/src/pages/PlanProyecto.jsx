@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { urlListado } from '../hooks/useListadoUrl'
 import {
@@ -51,6 +51,7 @@ import AplicarPlantillaEtapas from '../components/AplicarPlantillaEtapas.jsx'
 import ExtenderAsignacion from '../components/ExtenderAsignacion.jsx'
 import RegistrarAvance from '../components/RegistrarAvance.jsx'
 import PresupuestoMateriales from '../components/PresupuestoMateriales.jsx'
+import ConsumoMaterialesActividad from '../components/ConsumoMaterialesActividad.jsx'
 import { useRecurso } from '../hooks/useRecurso'
 import { useFiltros } from '../hooks/useFiltros'
 import { useFormulario } from '../hooks/useFormulario'
@@ -265,9 +266,11 @@ export default function PlanProyecto() {
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
   const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
+  const [consumiendo, setConsumiendo] = useState(null) // HU-20: actividad cuyo consumo de materiales se gestiona
   const [presupuestando, setPresupuestando] = useState(null) // HU-08: actividad cuyo presupuesto de materiales se consulta
   const [fichaVer, setFichaVer] = useState(null) // { tipo: 'etapa' | 'actividad', dato }
   const puedeAcceso = puede('proyectos.gestionar_acceso')
+  const puedeConsumos = puede('consumos_materiales.listar') // HU-20
   // Submódulos de la página: se recuerdan en la URL (?vista=) para poder recargar o compartir.
   const vigentes = asignaciones.filter((a) => a.estado === 'ACTIVO').length
   const SECCIONES = [
@@ -291,6 +294,21 @@ export default function PlanProyecto() {
       return recargar()
     },
     error: 'No se pudo registrar la etapa.',
+  })
+
+  // Atajo «N» en la vista Etapas: abre «Nueva etapa» (no actúa al escribir ni con una ventana abierta).
+  useEffect(() => {
+    if (vista !== 'etapas' || !puedeEtapas) return undefined
+    const alTeclear = (e) => {
+      if (e.key.toLowerCase() !== 'n' || e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
+      const t = e.target
+      if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '')) return
+      if (document.querySelector('[role="dialog"]')) return
+      e.preventDefault()
+      nuevaEtapa.abrir()
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
   })
 
   // `registro` es el id de la etapa donde se está agregando la actividad.
@@ -638,46 +656,23 @@ export default function PlanProyecto() {
         </div>
       )}
 
-      {vista === 'etapas' && puedeEtapas && nuevaEtapa.abierto && (
-        <form onSubmit={nuevaEtapa.guardar} className="card space-y-4 p-6">
-          <h3 className="text-base font-semibold text-slate-900">Definir etapa</h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="e-nombre" className="label">Nombre</label>
-              <input id="e-nombre" className="input" maxLength={100} value={nuevaEtapa.valores.nombre}
-                onChange={(e) => nuevaEtapa.cambiar('nombre', e.target.value)} required />
-            </div>
-            <div>
-              <label htmlFor="e-inicio" className="label">Inicio programado</label>
-              <input id="e-inicio" type="date" className="input" required value={nuevaEtapa.valores.fecha_inicio_programada}
-                min={proyDesde || undefined} max={nuevaEtapa.valores.fecha_fin_programada || proyHasta || undefined}
-                onChange={(e) => nuevaEtapa.cambiar('fecha_inicio_programada', e.target.value)} />
-            </div>
-            <div>
-              <label htmlFor="e-fin" className="label">Fin programado</label>
-              <input id="e-fin" type="date" className="input" required value={nuevaEtapa.valores.fecha_fin_programada}
-                min={nuevaEtapa.valores.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
-                onChange={(e) => nuevaEtapa.cambiar('fecha_fin_programada', e.target.value)} />
-            </div>
-          </div>
-          <p className="text-xs text-slate-500">
-            El orden se asigna solo según la fecha de inicio, y las fechas no pueden solaparse con las de otra etapa.
-          </p>
-          <div className="flex items-center gap-3">
-            <AlertaFormulario mensaje={nuevaEtapa.error} />
-            <button type="submit" className="btn-primary disabled:opacity-60" disabled={nuevaEtapa.guardando}>Registrar etapa</button>
-            <button type="button" className="btn-ghost"
-              onClick={nuevaEtapa.cerrar}>Cancelar</button>
-          </div>
-        </form>
-      )}
 
       {(vista === 'cronograma' || vista === 'etapas') && etapas.length === 0 && etapasBaja.length === 0 && (
         <div className="card px-6 py-14 text-center text-sm text-slate-500">
-          Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}
-          {puedeBajaEtapas && (
-            <button type="button" className="btn-ghost ml-2 !px-3 !py-1.5 text-xs" onClick={() => { setVerBajas(true); irA('etapas') }}>Ver etapas dadas de baja</button>
-          )}
+          <p>Este proyecto aún no tiene etapas. {puedeEtapas && 'Defina la primera con «Nueva etapa».'}</p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {puedeEtapas && (
+              <button type="button" className="btn-primary !py-2 text-sm" title="Nueva etapa (N)" onClick={() => nuevaEtapa.abrir()}>
+                <PlusIcon className="h-5 w-5" /> Nueva etapa
+              </button>
+            )}
+            {puedeAplicarPlantilla && (
+              <button type="button" className="btn-ghost !py-2 text-sm" onClick={() => setPlantillaAbierta(true)}>Aplicar plantilla</button>
+            )}
+            {puedeBajaEtapas && (
+              <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => { setVerBajas(true); irA('etapas') }}>Ver etapas dadas de baja</button>
+            )}
+          </div>
         </div>
       )}
 
@@ -856,12 +851,14 @@ export default function PlanProyecto() {
             puedeEditarActividades && { label: 'Editar', icono: PencilSquareIcon, onClick: () => abrirEdicionActividad(a) },
             puedeReprogramarActividades && a.estado !== 'COMPLETADA' && { label: 'Reprogramar', icono: ArrowPathIcon, onClick: () => abrirReprogramacion('actividad', a) },
             { label: 'Presupuesto de materiales', icono: CubeIcon, onClick: () => setPresupuestando(a) },
+            puedeConsumos && { label: 'Consumo de materiales', icono: ClipboardDocumentCheckIcon, onClick: () => setConsumiendo(a) },
           ]}
           barra={
             <>
               {puedeEtapas && (
-                <button type="button" className="btn-primary !py-2 text-sm" onClick={() => (nuevaEtapa.abierto ? nuevaEtapa.cerrar() : nuevaEtapa.abrir())}>
+                <button type="button" className="btn-primary !py-2 text-sm" aria-keyshortcuts="N" title="Nueva etapa (N)" onClick={() => nuevaEtapa.abrir()}>
                   <PlusIcon className="h-5 w-5" /> Nueva etapa
+                  <kbd className="hidden rounded border border-black/15 bg-white/60 px-1 font-sans text-[10px] font-bold text-slate-500 sm:inline">N</kbd>
                 </button>
               )}
               {puedeAplicarPlantilla && (
@@ -871,6 +868,37 @@ export default function PlanProyecto() {
           }
         />
       )}
+
+      {/* Nueva etapa: ventana con el formulario (como «Nueva actividad»). */}
+      <ModalFormulario
+        {...nuevaEtapa.propsModal}
+        abierto={nuevaEtapa.abierto && puedeEtapas}
+        titulo="Definir etapa"
+        textoGuardar="Registrar etapa"
+      >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label htmlFor="e-nombre" className="label">Nombre</label>
+          <input id="e-nombre" className="input" maxLength={100} value={nuevaEtapa.valores.nombre}
+            onChange={(e) => nuevaEtapa.cambiar('nombre', e.target.value)} required />
+        </div>
+        <div>
+          <label htmlFor="e-inicio" className="label">Inicio programado</label>
+          <input id="e-inicio" type="date" className="input" required value={nuevaEtapa.valores.fecha_inicio_programada}
+            min={proyDesde || undefined} max={nuevaEtapa.valores.fecha_fin_programada || proyHasta || undefined}
+            onChange={(e) => nuevaEtapa.cambiar('fecha_inicio_programada', e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="e-fin" className="label">Fin programado</label>
+          <input id="e-fin" type="date" className="input" required value={nuevaEtapa.valores.fecha_fin_programada}
+            min={nuevaEtapa.valores.fecha_inicio_programada || proyDesde || undefined} max={proyHasta || undefined}
+            onChange={(e) => nuevaEtapa.cambiar('fecha_fin_programada', e.target.value)} />
+        </div>
+      </div>
+      <p className="text-xs text-slate-500">
+        El orden se asigna solo según la fecha de inicio, y las fechas no pueden solaparse con las de otra etapa.
+      </p>
+      </ModalFormulario>
 
       {/* Nueva actividad: ventana con el formulario (antes se abría dentro de la etapa). */}
       <ModalFormulario
@@ -1267,6 +1295,8 @@ export default function PlanProyecto() {
         onCerrar={() => setPorExtender(null)}
         onExtendida={(mensaje) => { setAviso(mensaje); recargar() }}
       />
+
+      {consumiendo && <ConsumoMaterialesActividad actividad={consumiendo} onCerrar={() => setConsumiendo(null)} />}
 
       {/* HU-08: cantidades por material contra las que se valida cada solicitud. */}
       {presupuestando && (

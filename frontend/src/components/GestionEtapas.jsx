@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ChevronDoubleDownIcon, ChevronDoubleUpIcon, ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import MenuAcciones from './MenuAcciones.jsx'
 import { colorEtapa } from '../lib/coloresEtapa.js'
@@ -13,6 +13,11 @@ import { fmtCOPCompacto, fmtFecha } from '../lib/format.js'
  *  - `itemsEtapa(et)` / `itemsBaja(et)`: opciones del menú «⋯» de la etapa.
  *  - `rapidaActividad(a)` / `itemsActividad(a)`: acción destacada y menú de la actividad.
  */
+// Recordatorio visual del atajo de teclado.
+const Tecla = ({ children }) => (
+  <kbd className="rounded border border-slate-300 bg-slate-50 px-1 font-sans text-[10px] font-bold text-slate-500">{children}</kbd>
+)
+
 export default function GestionEtapas({
   etapas,
   bajas,
@@ -33,6 +38,24 @@ export default function GestionEtapas({
   onVerBajas,
 }) {
   const [cerradas, setCerradas] = useState(() => new Set())
+  // Atajos de una tecla (los mismos del cronograma): C contrae y E expande todas. No actúan
+  // al escribir en un campo, con Ctrl/Alt/Cmd, ni con una ventana abierta.
+  useEffect(() => {
+    const alTeclear = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return
+      const t = e.target
+      if (t?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '')) return
+      if (document.querySelector('[role="dialog"]')) return
+      const k = e.key.toLowerCase()
+      if (k === 'c') setCerradas(new Set(etapas.map((x) => x.id)))
+      else if (k === 'e') setCerradas(new Set())
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('keydown', alTeclear)
+    return () => window.removeEventListener('keydown', alTeclear)
+  }, [etapas])
+
   const alternar = (id) =>
     setCerradas((s) => {
       const n = new Set(s)
@@ -45,11 +68,11 @@ export default function GestionEtapas({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
         {barra}
-        <button type="button" className="btn-ghost ml-auto !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
-          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas
+        <button type="button" title="Contraer todas (C)" aria-keyshortcuts="C" className="btn-ghost ml-auto !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set(etapas.map((e) => e.id)))}>
+          <ChevronDoubleUpIcon className="h-3.5 w-3.5" /> Contraer todas <Tecla>C</Tecla>
         </button>
-        <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
-          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas
+        <button type="button" title="Expandir todas (E)" aria-keyshortcuts="E" className="btn-ghost !px-3 !py-1.5 text-xs" onClick={() => setCerradas(new Set())}>
+          <ChevronDoubleDownIcon className="h-3.5 w-3.5" /> Expandir todas <Tecla>E</Tecla>
         </button>
         {onVerBajas && (
           <button type="button" className="btn-ghost !px-3 !py-1.5 text-xs" aria-pressed={verBajas} onClick={onVerBajas}>

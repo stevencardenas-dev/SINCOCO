@@ -17,7 +17,6 @@ const Personal = lazy(() => import('./pages/Personal.jsx'))
 const PlanProyecto = lazy(() => import('./pages/PlanProyecto.jsx'))
 const Herramientas = lazy(() => import('./pages/Herramientas.jsx'))
 const Solicitudes = lazy(() => import('./pages/Solicitudes.jsx'))
-const ConsumosMateriales = lazy(() => import('./pages/ConsumosMateriales.jsx'))
 const Movimientos = lazy(() => import('./pages/Movimientos.jsx'))
 const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
@@ -114,15 +113,8 @@ export default function App() {
           <Route path="salidas" element={<Navigate to="/movimientos?tab=salidas" replace />} />
           <Route path="devoluciones" element={<Navigate to="/movimientos?tab=devoluciones" replace />} />
           <Route path="traslados" element={<Navigate to="/movimientos?tab=traslados" replace />} />
-          {/* HU-20: consumo real de materiales por actividad. */}
-          <Route
-            path="consumos"
-            element={
-              <RutaPorPermiso permisos={['consumos_materiales.listar']}>
-                <ConsumosMateriales />
-              </RutaPorPermiso>
-            }
-          />
+          {/* HU-20: el consumo de materiales ya no es una sección; se registra desde cada actividad del plan. */}
+          <Route path="consumos" element={<Navigate to="/proyectos" replace />} />
           <Route
             path="alertas"
             element={

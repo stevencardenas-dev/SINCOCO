@@ -24,7 +24,7 @@ mock.module('../src/repositories/asignacionRepository.js', {
     // Duplicado: nunca. Acceso previo al proyecto (HU-30): existe si `accesoProyecto` y se pregunta sin actividad.
     existeActiva: async (_t, _p, actividadId) => (!actividadId && estado.accesoProyecto ? { id: 98 } : null),
     existeSolapada: async () => (estado.solapada ? { id: 99 } : null),
-    create: async (a) => {
+    crearConBloqueo: async (a) => {
       const id = estado.asignaciones.length + 1
       estado.asignaciones.push({ id, fecha_fin_real: null, ...a })
       estado.escrituras.push({ tipo: 'create', ...a })

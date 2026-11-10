@@ -38,6 +38,13 @@ export default function BuscadorSelect({
   const contenedor = useRef(null)
 
   const seleccionada = opciones.find((o) => String(o.value) === String(value ?? '')) ?? null
+  // Sin selección real (valor vacío) el campo obligatorio no debe darse por lleno aunque muestre el texto
+  // «Seleccione…»: se marca como inválido para que el formulario no se envíe y avise qué falta.
+  const entrada = useRef(null)
+  const sinSeleccion = String(value ?? '') === ''
+  useEffect(() => {
+    entrada.current?.setCustomValidity(requerido && sinSeleccion && !disabled ? 'Seleccione una opción' : '')
+  }, [requerido, sinSeleccion, disabled])
 
   const filtradas = useMemo(() => {
     const t = normalizar(texto)
@@ -112,6 +119,7 @@ export default function BuscadorSelect({
       <div className="relative">
         <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input
+          ref={entrada}
           id={id}
           type="text"
           role="combobox"

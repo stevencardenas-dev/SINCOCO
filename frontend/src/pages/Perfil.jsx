@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import {
   ArrowPathIcon,
   IdentificationIcon,
@@ -103,7 +104,7 @@ export default function Perfil() {
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
       )}
       {aviso && (
-        <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{aviso}</p>
+        <AlertaFormulario tipo="aviso" mensaje={aviso} />
       )}
 
       {perfil === null && !error && (

@@ -128,6 +128,7 @@ SINCOCO/
 | `docs/schema.sql` | dump de la entrega: 33 tablas, 4 triggers, 10 CHECK |
 | `docs/seed_usuarios_prueba.sql` | usuarios de prueba por actor |
 | `docs/seed_proyectos_prueba.sql` | datos de prueba para HU-02 / CU-02 |
+| `docs/seed_materiales_prueba.sql` | catálogo de 34 materiales de construcción y su stock inicial (se carga después de `seed_operaciones_prueba.sql`) |
 
 ## Pruebas
 

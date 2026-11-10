@@ -1,0 +1,102 @@
+name: Pruebas en pull request
+
+# Condición de merge: cada pull request hacia main corre TODAS las suites de
+# backend/test (npm test). No toca AWS ni la base: las pruebas usan dobles en
+# memoria. Para que bloquee el merge, la regla de rama protegida de main debe
+# exigir el check «Pruebas backend (npm test)» (ver docs/RAMA_PROTEGIDA.md).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas-backend:
+    name: Pruebas backend (npm test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+      - name: npm test (todas las suites)
+        working-directory: backend
+        env:
+          JWT_SECRET: secreto-solo-para-ci
+        run: npm test
+
+  # E2E por API contra MySQL 8 desechable (no toca AWS ni ninguna base real):
+  # solicitud de materiales con exceso, aprobación parcial, despachos (uno
+  # concurrente) y existencias finales. Informativo: no es el check obligatorio.
+  e2e-materiales:
+    name: E2E materiales (API + MySQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: raiz
+          MYSQL_DATABASE: sincoco
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 --silent"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar el cliente de MySQL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mysql-client
+      - name: Cargar esquema, datos de prueba y migraciones
+        env:
+          MYSQL_PWD: raiz
+        run: |
+          shopt -s nullglob
+          sed 's|/\*!50017 DEFINER=[^*]*\*/||g' docs/schema.sql > /tmp/schema.sql
+          mysql -h 127.0.0.1 -u root < /tmp/schema.sql
+          for f in docs/seed_catalogos_prueba.sql docs/seed_usuarios_prueba.sql docs/seed_permisos_prueba.sql docs/seed_proyectos_prueba.sql docs/migraciones/aplicadas/*.sql docs/migraciones/pendientes/*.sql; do
+            mysql -h 127.0.0.1 -u root sincoco < "$f"
+          done
+      - name: Preparar y arrancar el backend
+        working-directory: backend
+        run: |
+          npm ci
+          {
+            echo "PORT=3005"
+            echo "DB_HOST=127.0.0.1"
+            echo "DB_USER=root"
+            echo "DB_PASSWORD=raiz"
+            echo "DB_NAME=sincoco"
+            echo "JWT_SECRET=secreto-solo-para-ci"
+          } > .env
+          node scripts/seed.js
+          nohup node src/server.js > /tmp/backend.log 2>&1 &
+          for _ in $(seq 1 30); do
+            sleep 1
+            estado=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3005/api/usuarios)
+            [ "$estado" = "401" ] && break
+          done
+          [ "$estado" = "401" ] || { cat /tmp/backend.log; exit 1; }
+      - name: E2E materiales
+        working-directory: tests
+        run: python3 test_e2e_materiales.py
