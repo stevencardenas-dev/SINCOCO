@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ArrowUturnLeftIcon, CalendarDaysIcon, ExclamationTriangleIcon, InformationCircleIcon, UserIcon, WrenchIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 import Modal from './Modal.jsx'
+import ModalFormulario from './ModalFormulario.jsx'
 import TablaSolicitudes from './TablaSolicitudes.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import BotonActualizar from './BotonActualizar.jsx'
@@ -38,6 +39,37 @@ const insignia = (mapa, valor) => (
 const Cargando = () => (
   <p className="flex items-center gap-3 px-5 py-6 text-sm text-slate-500">
     <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando…
+  </p>
+)
+
+/** Resumen del préstamo sobre el que actúa un formulario (herramienta, trabajador y fecha estimada). */
+const ResumenPrestamo = ({ prestamo }) => (
+  <dl className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+    <div className="flex items-center gap-2 text-slate-800">
+      <WrenchIcon className="h-4 w-4 shrink-0 text-brand-700" aria-hidden="true" />
+      <dt className="sr-only">Herramienta</dt>
+      <dd className="font-semibold">{prestamo.herramienta} <span className="font-normal text-slate-500">({prestamo.codigo_serial})</span></dd>
+    </div>
+    <div className="flex items-center gap-2 text-slate-600">
+      <UserIcon className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+      <dt className="sr-only">Trabajador</dt>
+      <dd>{prestamo.trabajador}</dd>
+    </div>
+    <div className="flex items-center gap-2 text-slate-600">
+      <CalendarDaysIcon className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+      <dt className="sr-only">Devolución estimada</dt>
+      <dd>Devolución estimada {fmtFecha(prestamo.fecha_estimada_devolucion)}</dd>
+    </div>
+  </dl>
+)
+
+/** Nota con icono bajo los campos de un formulario. */
+const Nota = ({ children, aviso = false }) => (
+  <p className={`flex items-start gap-2 text-xs ${aviso ? 'text-amber-700' : 'text-slate-500'}`}>
+    {aviso
+      ? <ExclamationTriangleIcon className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />
+      : <InformationCircleIcon className="mt-px h-4 w-4 shrink-0" aria-hidden="true" />}
+    <span>{children}</span>
   </p>
 )
 
@@ -224,7 +256,7 @@ export default function PrestamosHerramientas({ pestanas }) {
             filas={pre.datos}
             compacta
             minWidth="md:min-w-0"
-            ficha={{ titulo: (p) => p.herramienta, subtitulo: (p) => p.trabajador }}
+            ficha={{ titulo: (p) => p.herramienta, subtitulo: (p) => p.trabajador, lateral: true }}
             columnas={[
               { titulo: 'Herramienta', movil: true, tdClase: 'text-slate-700', celda: (p) => `${p.herramienta} (${p.codigo_serial})` },
               { titulo: 'Trabajador', movil: true, tdClase: 'text-slate-600', celda: (p) => p.trabajador },
@@ -249,8 +281,8 @@ export default function PrestamosHerramientas({ pestanas }) {
                 derecha: true,
                 celda: (p, enFicha) => (enFicha && VIGENTES.includes(p.estado_prestamo) ? (
                   <>
-                    {puedeDevolver && <button type="button" className="btn-primary text-xs" onClick={() => abrirDevolucion(p)}>Registrar devolución</button>}
-                    {puedeReemplazar && <button type="button" className="btn-ghost text-xs" onClick={() => abrirAveria(p)}>Registrar avería y reemplazo</button>}
+                    {puedeDevolver && <button type="button" className="btn-primary inline-flex items-center gap-1.5 text-xs" onClick={() => abrirDevolucion(p)}><ArrowUturnLeftIcon className="h-4 w-4" aria-hidden="true" /> Registrar devolución</button>}
+                    {puedeReemplazar && <button type="button" className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => abrirAveria(p)}><WrenchScrewdriverIcon className="h-4 w-4" aria-hidden="true" /> Registrar avería y reemplazo</button>}
                   </>
                 ) : null),
               },
@@ -278,78 +310,72 @@ export default function PrestamosHerramientas({ pestanas }) {
         </div>
       </Modal>
 
-      {/* HU-12: devolución de una herramienta prestada. */}
-      <Modal abierto={devolucion !== null} titulo="Registrar devolución" onCerrar={() => !guardandoDevolucion && setDevolucion(null)} ancho="max-w-md">
+      {/* HU-12: devolución de una herramienta prestada (panel lateral). */}
+      <ModalFormulario abierto={devolucion !== null} titulo="Registrar devolución" subtitulo="Préstamo de herramienta"
+        onCerrar={() => !guardandoDevolucion && setDevolucion(null)} onGuardar={(e) => { e.preventDefault(); confirmarDevolucion() }}
+        guardando={guardandoDevolucion} error={errorDevolucion} textoGuardar="Confirmar devolución" textoGuardando="Registrando…" espaciado="space-y-4">
         {devolucion && (
           <>
-            <p className="mb-3 text-sm text-slate-600">
-              {devolucion.prestamo.herramienta} ({devolucion.prestamo.codigo_serial}) prestada a {devolucion.prestamo.trabajador} · devolución estimada {fmtFecha(devolucion.prestamo.fecha_estimada_devolucion)}
-            </p>
-            <label htmlFor="dv-condicion" className="label">Condición de la herramienta al devolverla</label>
-            <select id="dv-condicion" className="input" value={devolucion.condicion}
-              onChange={(e) => { setDevolucion({ ...devolucion, condicion: e.target.value }); setErrorDevolucion('') }}>
-              {CONDICIONES.map(([valor, texto]) => <option key={valor} value={valor}>{texto}</option>)}
-            </select>
-            <label htmlFor="dv-fecha" className="label mt-4">Fecha de devolución (opcional)</label>
-            <input id="dv-fecha" type="date" className="input" value={devolucion.fecha}
-              min={String(devolucion.prestamo.fecha_prestamo ?? '').slice(0, 10)} max={new Date().toLocaleDateString('en-CA')}
-              onChange={(e) => { setDevolucion({ ...devolucion, fecha: e.target.value }); setErrorDevolucion('') }} />
-            <p className="mt-1 text-xs text-slate-500">Si no la indica, se registra la fecha y hora actuales.</p>
-            <label htmlFor="dv-obs" className="label mt-4">
-              Observaciones{CON_NOVEDAD.includes(devolucion.condicion) ? ' (obligatorias)' : ' (opcionales)'}
-            </label>
-            <textarea id="dv-obs" className="input" rows={3} maxLength={500} value={devolucion.observaciones}
-              onChange={(e) => { setDevolucion({ ...devolucion, observaciones: e.target.value }); setErrorDevolucion('') }} />
-            <p className="mt-3 text-xs text-slate-500">
+            <ResumenPrestamo prestamo={devolucion.prestamo} />
+            <div>
+              <label htmlFor="dv-condicion" className="label">Condición de la herramienta al devolverla</label>
+              <select id="dv-condicion" className="input" value={devolucion.condicion}
+                onChange={(e) => { setDevolucion({ ...devolucion, condicion: e.target.value }); setErrorDevolucion('') }}>
+                {CONDICIONES.map(([valor, texto]) => <option key={valor} value={valor}>{texto}</option>)}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="dv-fecha" className="label">Fecha de devolución (opcional)</label>
+              <input id="dv-fecha" type="date" className="input" value={devolucion.fecha}
+                min={String(devolucion.prestamo.fecha_prestamo ?? '').slice(0, 10)} max={new Date().toLocaleDateString('en-CA')}
+                onChange={(e) => { setDevolucion({ ...devolucion, fecha: e.target.value }); setErrorDevolucion('') }} />
+              <p className="mt-1 text-xs text-slate-500">Si no la indica, se registra la fecha y hora actuales.</p>
+            </div>
+            <div>
+              <label htmlFor="dv-obs" className="label">
+                Observaciones{CON_NOVEDAD.includes(devolucion.condicion) ? ' (obligatorias)' : ' (opcionales)'}
+              </label>
+              <textarea id="dv-obs" className="input" rows={3} maxLength={500} value={devolucion.observaciones}
+                onChange={(e) => { setDevolucion({ ...devolucion, observaciones: e.target.value }); setErrorDevolucion('') }} />
+            </div>
+            <Nota aviso={CON_NOVEDAD.includes(devolucion.condicion)}>
               {devolucion.condicion === 'DANIADA' && 'La herramienta pasará a reparación y se generará una incidencia.'}
               {devolucion.condicion === 'PERDIDA' && 'La herramienta se dará de baja y se generará una incidencia.'}
               {!CON_NOVEDAD.includes(devolucion.condicion) && 'La herramienta quedará disponible con esa condición.'}
-            </p>
-            {errorDevolucion && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorDevolucion}</p>}
-            <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
-              <button type="button" className="btn-primary disabled:opacity-60" disabled={guardandoDevolucion} onClick={confirmarDevolucion}>
-                {guardandoDevolucion ? 'Registrando…' : 'Confirmar devolución'}
-              </button>
-              <button type="button" className="btn-ghost" disabled={guardandoDevolucion} onClick={() => setDevolucion(null)}>Cancelar</button>
-            </div>
+            </Nota>
           </>
         )}
-      </Modal>
+      </ModalFormulario>
 
-      {/* HU-35: avería de una herramienta prestada, con su reemplazo. */}
-      <Modal abierto={averia !== null} titulo="Registrar avería y reemplazo" onCerrar={() => !guardandoAveria && setAveria(null)} ancho="max-w-md">
+      {/* HU-35: avería de una herramienta prestada, con su reemplazo (panel lateral). */}
+      <ModalFormulario abierto={averia !== null} titulo="Registrar avería y reemplazo" subtitulo="Préstamo de herramienta"
+        onCerrar={() => !guardandoAveria && setAveria(null)} onGuardar={(e) => { e.preventDefault(); confirmarAveria() }}
+        guardando={guardandoAveria} error={errorAveria} textoGuardar="Registrar avería" textoGuardando="Registrando…" espaciado="space-y-4">
         {averia && (
           <>
-            <p className="mb-3 text-sm text-slate-600">
-              {averia.prestamo.herramienta} ({averia.prestamo.codigo_serial}) prestada a {averia.prestamo.trabajador} · devolución estimada {fmtFecha(averia.prestamo.fecha_estimada_devolucion)}
-            </p>
-            <label htmlFor="av-novedad" className="label">Novedad: descripción de la avería</label>
-            <textarea id="av-novedad" className="input" rows={3} maxLength={500} value={averia.novedad}
-              onChange={(e) => { setAveria({ ...averia, novedad: e.target.value }); setErrorAveria('') }} />
-            <label htmlFor="av-reemplazo" className="label mt-4">Herramienta de reemplazo</label>
-            <SelectBuscable id="av-reemplazo" className="input" value={averia.reemplazo} disabled={averia.opciones === null}
-              onChange={(e) => setAveria({ ...averia, reemplazo: e.target.value })}>
-              <option value="">{averia.opciones === null ? 'Cargando…' : 'Sin reemplazo (cierra solo el préstamo averiado)'}</option>
-              {(averia.opciones ?? []).map((h) => (
-                <option key={h.id} value={h.id}>{h.nombre} ({h.codigo_serial}) · {h.almacen}{h.equivalente ? ' · equivalente' : ''}</option>
-              ))}
-            </SelectBuscable>
-            {averia.opciones && averia.opciones.length === 0 && (
-              <p className="mt-1 text-xs text-amber-700">No hay una herramienta operativa disponible: se cerrará solo el préstamo averiado y deberá registrar una solicitud de herramienta.</p>
-            )}
-            <p className="mt-3 text-xs text-slate-500">
-              La herramienta averiada pasa a reparación y se genera la incidencia. El reemplazo se entrega al mismo trabajador, con la misma fecha estimada de devolución.
-            </p>
-            {errorAveria && <p role="alert" className="mt-2 text-xs font-medium text-red-600">{errorAveria}</p>}
-            <div className="mt-4 flex gap-3 border-t border-slate-100 pt-4">
-              <button type="button" className="btn-primary disabled:opacity-60" disabled={guardandoAveria} onClick={confirmarAveria}>
-                {guardandoAveria ? 'Registrando…' : 'Confirmar'}
-              </button>
-              <button type="button" className="btn-ghost" disabled={guardandoAveria} onClick={() => setAveria(null)}>Cancelar</button>
+            <ResumenPrestamo prestamo={averia.prestamo} />
+            <div>
+              <label htmlFor="av-novedad" className="label">Novedad: descripción de la avería</label>
+              <textarea id="av-novedad" className="input" rows={3} maxLength={500} value={averia.novedad}
+                onChange={(e) => { setAveria({ ...averia, novedad: e.target.value }); setErrorAveria('') }} />
             </div>
+            <div>
+              <label htmlFor="av-reemplazo" className="label">Herramienta de reemplazo</label>
+              <SelectBuscable id="av-reemplazo" className="input" value={averia.reemplazo} disabled={averia.opciones === null}
+                onChange={(e) => setAveria({ ...averia, reemplazo: e.target.value })}>
+                <option value="">{averia.opciones === null ? 'Cargando…' : 'Sin reemplazo (cierra solo el préstamo averiado)'}</option>
+                {(averia.opciones ?? []).map((h) => (
+                  <option key={h.id} value={h.id}>{h.nombre} ({h.codigo_serial}) · {h.almacen}{h.equivalente ? ' · equivalente' : ''}</option>
+                ))}
+              </SelectBuscable>
+            </div>
+            {averia.opciones && averia.opciones.length === 0 && (
+              <Nota aviso>No hay una herramienta operativa disponible: se cerrará solo el préstamo averiado y deberá registrar una solicitud de herramienta.</Nota>
+            )}
+            <Nota>La herramienta averiada pasa a reparación y se genera la incidencia. El reemplazo se entrega al mismo trabajador, con la misma fecha estimada de devolución.</Nota>
           </>
         )}
-      </Modal>
+      </ModalFormulario>
 
       <Modal abierto={porRechazar !== null} titulo="Rechazar solicitud" onCerrar={() => setPorRechazar(null)} ancho="max-w-md">
         <label htmlFor="sh-motivo" className="label">Observación (obligatoria)</label>
