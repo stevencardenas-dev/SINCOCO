@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { ArrowPathIcon, ClipboardDocumentListIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, CheckIcon, ClipboardDocumentListIcon, DocumentTextIcon, NoSymbolIcon, PlusIcon, TrashIcon, TruckIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
@@ -43,6 +44,8 @@ const ESTADOS_DESPACHABLES = ['APROBADA', 'APROBADA_PARCIAL', 'DESPACHADA_PARCIA
 const LINEA = { material_id: '', cantidad: '' }
 // Lo aprobado que aún no se despacha de una línea (redondeado a 2 decimales como en la base).
 const pendienteDespacho = (d) => Math.max(0, Math.round((Number(d.cantidad_aprobada) - Number(d.cantidad_despachada)) * 100) / 100)
+// Cantidad que se propone despachar: lo aprobado que falta o, si ya salió todo lo aprobado, el saldo pendiente.
+const sugeridoDespacho = (d) => pendienteDespacho(d) || Math.max(0, Number(d.por_despachar) || 0)
 const FILTROS_VACIOS = { buscar: '', estado: '', proyecto: '', desde: '' }
 const VACIO = { proyecto_id: '', actividad_id: '', fecha_requerida: '', observaciones: '' }
 
@@ -57,6 +60,7 @@ export default function SolicitudesMateriales({ pestanas }) {
   const [excesos, setExcesos] = useState([]) // materiales que superan lo presupuestado (CU-08 Alt 1)
   const [confirmaExceso, setConfirmaExceso] = useState(false)
   const [aviso, setAviso] = useState('')
+  const [verConstancia, setVerConstancia] = useState(false) // tras un despacho: enlace a la constancia (Movimientos → Salidas)
   const [guardando, setGuardando] = useState(false)
   const [abierto, setAbierto] = useState(false)
   const controles = useFiltros(FILTROS_VACIOS)
@@ -117,11 +121,14 @@ export default function SolicitudesMateriales({ pestanas }) {
   const accion = (fn, s, texto) =>
     solicitudes.ejecutar(() => fn(s.id), { exito: `${texto} ${s.codigo}.`, error: 'No se pudo completar la acción.' })
 
-  const confirmar = async (fn, cerrar) => {
+  const confirmar = async (fn, cerrar, mensaje, constancia = false) => {
     try {
-      await fn()
+      const r = await fn()
       cerrar()
       setErrorAccion('')
+      setError('')
+      setAviso(typeof mensaje === 'function' ? mensaje(r) : (mensaje ?? ''))
+      setVerConstancia(constancia)
       await Promise.all([solicitudes.recargar(), existencias.recargar()])
     } catch (err) {
       setErrorAccion(mensajeError(err, 'No se pudo completar la acción.'))
@@ -151,20 +158,20 @@ export default function SolicitudesMateriales({ pestanas }) {
     <>
               {puedeResolver && s.estado === 'PENDIENTE' && (
                 <>
-                  <button type="button" className="btn-primary text-xs" onClick={() => abrirAprobar(s)}>Aprobar</button>
-                  <button type="button" className="btn-ghost text-xs" onClick={() => { setErrorAccion(''); setRechazando({ solicitud: s, motivo: '' }) }}>Rechazar</button>
+                  <button type="button" data-conserva-detalle className="btn-primary inline-flex items-center gap-1.5 text-xs" onClick={() => abrirAprobar(s)}><CheckIcon className="h-4 w-4" aria-hidden="true" /> Aprobar</button>
+                  <button type="button" data-conserva-detalle className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => { setErrorAccion(''); setRechazando({ solicitud: s, motivo: '' }) }}><XMarkIcon className="h-4 w-4" aria-hidden="true" /> Rechazar</button>
                 </>
               )}
               {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && (
-                <button type="button" className="btn-primary text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(pendienteDespacho(d))])) }) }}>
-                  {s.detalles.some((d) => d.saldo_pendiente > 0) ? 'Despachar (incluye el saldo)' : 'Despachar'}
+                <button type="button" data-conserva-detalle className="btn-primary inline-flex items-center gap-1.5 text-xs" onClick={() => { setErrorAccion(''); setDespachando({ solicitud: s, almacen: '', trabajador: '', cantidades: Object.fromEntries(s.detalles.map((d) => [d.id, String(sugeridoDespacho(d))])) }) }}>
+                  <TruckIcon className="h-4 w-4" aria-hidden="true" /> {s.detalles.some((d) => d.saldo_pendiente > 0) ? 'Despachar (incluye el saldo)' : 'Despachar'}
                 </button>
               )}
               {puedeResolver && ESTADOS_DESPACHABLES.includes(s.estado) && s.detalles.some((d) => d.por_despachar > 0) && (
-                <button type="button" className="btn-ghost text-xs" onClick={() => { setErrorAccion(''); setCancelandoSaldo({ solicitud: s, motivo: '' }) }}>Cancelar saldo</button>
+                <button type="button" data-conserva-detalle className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => { setErrorAccion(''); setCancelandoSaldo({ solicitud: s, motivo: '' }) }}><NoSymbolIcon className="h-4 w-4" aria-hidden="true" /> Cancelar saldo</button>
               )}
               {(s.estado === 'PENDIENTE' || s.estado === 'APROBADA' || s.estado === 'APROBADA_PARCIAL') && (
-                <button type="button" className="btn-ghost text-xs" onClick={() => accion(solicitudesMaterialesApi.cancelar, s, 'Cancelada')}>Cancelar</button>
+                <button type="button" className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => accion(solicitudesMaterialesApi.cancelar, s, 'Cancelada')}><TrashIcon className="h-4 w-4" aria-hidden="true" /> Cancelar solicitud</button>
               )}
     </>
   )
@@ -177,7 +184,7 @@ export default function SolicitudesMateriales({ pestanas }) {
     ...p,
     almacen,
     cantidades: Object.fromEntries(p.solicitud.detalles.filter((d) => d.por_despachar > 0)
-      .map((d) => [d.id, Math.min(pendienteDespacho(d), disponibleDespacho(d, almacen) ?? Infinity)])),
+      .map((d) => [d.id, Math.min(sugeridoDespacho(d), disponibleDespacho(d, almacen) ?? Infinity)])),
   }))
 
   const insignias = (s) => (
@@ -334,6 +341,11 @@ export default function SolicitudesMateriales({ pestanas }) {
       {solicitudes.error && <AlertaFormulario mensaje={solicitudes.error} />}
       {solicitudes.aviso && <AlertaFormulario tipo="aviso" mensaje={solicitudes.aviso} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
+      {aviso && verConstancia && puede('salidas_materiales.listar') && (
+        <Link to="/movimientos?tab=salidas" className="btn-ghost inline-flex items-center gap-1.5 text-sm">
+          <DocumentTextIcon className="h-4 w-4" aria-hidden="true" /> Ver constancia del despacho
+        </Link>
+      )}
       {materiales.error && <AlertaFormulario mensaje={materiales.error} />}
       {trabajadores.error && <AlertaFormulario mensaje={trabajadores.error} />}
 
@@ -456,7 +468,7 @@ export default function SolicitudesMateriales({ pestanas }) {
         {filtradas.length > 0 && <div className="card"><Paginacion paginacion={paginacion} /></div>}
       </section>
 
-      <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" onCerrar={() => setAprobando(null)} lateral>
+      <Modal abierto={aprobando !== null} titulo="Aprobar solicitud" subtitulo={aprobando?.solicitud.codigo} onCerrar={() => setAprobando(null)} lateral>
         {aprobando && (
           <>
             <p className="mb-3 text-xs text-slate-500">Ajuste lo que aprueba según el stock real: no puede superar lo solicitado ni la existencia. Lo que no apruebe queda como saldo pendiente y se avisa al solicitante. Una línea en cero exige observación.</p>
@@ -485,7 +497,12 @@ export default function SolicitudesMateriales({ pestanas }) {
                   detalles: aprobando.solicitud.detalles.map((d) => ({
                     detalle_id: d.id, cantidad_aprobada: Number(aprobando.cantidades[d.id]), observacion: (aprobando.observaciones[d.id] ?? '').trim() || undefined,
                   })),
-                }), () => setAprobando(null))}>Aprobar</button>
+                }), () => setAprobando(null), () => {
+                  const parcial = aprobando.solicitud.detalles.some((d) => Number(aprobando.cantidades[d.id]) < Number(d.cantidad_solicitada))
+                  return parcial
+                    ? `Solicitud ${aprobando.solicitud.codigo} aprobada parcialmente: el resto queda como saldo pendiente y se avisó al solicitante.`
+                    : `Solicitud ${aprobando.solicitud.codigo} aprobada: se avisó al solicitante.`
+                })}><CheckIcon className="h-4 w-4" aria-hidden="true" /> Aprobar</button>
               <button type="button" className="btn-ghost" onClick={() => setAprobando(null)}>Cancelar</button>
             </div>
           </>
@@ -530,7 +547,7 @@ export default function SolicitudesMateriales({ pestanas }) {
         )}
       </Modal>
 
-      <Modal abierto={despachando !== null} titulo="Despachar materiales" onCerrar={() => setDespachando(null)} lateral>
+      <Modal abierto={despachando !== null} titulo="Despachar materiales" subtitulo={despachando?.solicitud.codigo} onCerrar={() => setDespachando(null)} lateral>
         {despachando && (
           <>
             <p className="mb-3 text-xs text-slate-500">Indique cuánto despachar de cada material: por defecto lo aprobado que falta, y puede sumar el saldo pendiente si ya hay existencia. La solicitud se cierra cuando sale todo lo solicitado.</p>
@@ -601,7 +618,9 @@ export default function SolicitudesMateriales({ pestanas }) {
                   almacen_origen_id: despachando.almacen, entregado_a_trabajador_id: despachando.trabajador,
                   detalles: despachando.solicitud.detalles.filter((d) => d.por_despachar > 0)
                     .map((d) => ({ detalle_id: d.id, cantidad: Number(despachando.cantidades[d.id] || 0) })),
-                }), () => setDespachando(null))}>Despachar</button>
+                }), () => setDespachando(null),
+                (r) => `Despacho de ${despachando.solicitud.codigo} registrado: la existencia se descontó del almacén y la constancia quedó en Movimientos → Salidas.${r?.estado === 'DESPACHADA_TOTAL' ? ' La solicitud quedó despachada en su totalidad.' : ' Aún queda material por despachar.'}`,
+                true)}><TruckIcon className="h-4 w-4" aria-hidden="true" /> Despachar</button>
               <button type="button" className="btn-ghost" onClick={() => setDespachando(null)}>Cancelar</button>
             </div>
           </>
@@ -618,7 +637,7 @@ export default function SolicitudesMateriales({ pestanas }) {
             {notas(detalle)}
             {tablaMateriales(detalle)}
             <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4 empty:hidden"
-              onClick={(e) => { if (e.target.closest('button')) setDetalleId(null) }}>
+              onClick={(e) => { const b = e.target.closest('button'); if (b && !b.hasAttribute('data-conserva-detalle')) setDetalleId(null) }}>
               {acciones(detalle)}
             </div>
           </div>
