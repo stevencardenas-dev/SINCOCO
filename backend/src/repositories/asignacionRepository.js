@@ -1,4 +1,5 @@
 import { pool } from '../db/pool.js'
+import { AppError } from '../utils/AppError.js'
 
 /**
  * Repositorio de `asignaciones_personal` (gestión de acceso a proyectos y
@@ -117,6 +118,68 @@ export async function create(asignacion) {
     ],
   )
   return result.insertId
+}
+
+/**
+ * HU-05 / HU-31 / HU-33 · concurrencia: valida y escribe la asignación en UNA
+ * transacción. Bloquea la fila del trabajador (SELECT ... FOR UPDATE), así dos
+ * asignaciones simultáneas del mismo trabajador se atienden de una en una: la
+ * segunda vuelve a comprobar duplicado y solapamiento ya con la primera escrita
+ * y responde 409. Las comprobaciones del service siguen dando el mensaje
+ * temprano; estas son la garantía final.
+ */
+export async function crearConBloqueo(asignacion, ignorarAccesoDeProyecto = null) {
+  const conn = await pool.getConnection()
+  try {
+    await conn.beginTransaction()
+    await conn.query('SELECT id FROM trabajadores WHERE id = ? FOR UPDATE', [asignacion.trabajador_id])
+    const [duplicada] = await conn.query(
+      `SELECT id FROM asignaciones_personal
+        WHERE trabajador_id = ? AND proyecto_id = ? AND estado = 'ACTIVO'
+          AND ${asignacion.actividad_id ? 'actividad_id = ?' : 'actividad_id IS NULL'}
+        LIMIT 1`,
+      asignacion.actividad_id
+        ? [asignacion.trabajador_id, asignacion.proyecto_id, asignacion.actividad_id]
+        : [asignacion.trabajador_id, asignacion.proyecto_id],
+    )
+    if (duplicada.length) throw new AppError('Ese trabajador ya tiene esa asignación activa', 409, 'trabajador_id')
+    const fin = asignacion.fecha_fin_programada ?? null
+    const [solapada] = await conn.query(
+      `SELECT id FROM asignaciones_personal
+        WHERE trabajador_id = ? AND estado = 'ACTIVO'
+          AND (? IS NULL OR fecha_inicio <= ?)
+          AND (fecha_fin_programada IS NULL OR fecha_fin_programada >= ?)
+          AND (? IS NULL OR NOT (actividad_id IS NULL AND proyecto_id = ?))
+        LIMIT 1`,
+      [asignacion.trabajador_id, fin, fin, asignacion.fecha_inicio, ignorarAccesoDeProyecto, ignorarAccesoDeProyecto],
+    )
+    if (solapada.length) {
+      throw new AppError('Las fechas se solapan con otra asignación activa del trabajador', 409, 'fecha_inicio')
+    }
+    const [result] = await conn.query(
+      `INSERT INTO asignaciones_personal
+         (trabajador_id, proyecto_id, actividad_id, fecha_inicio,
+          fecha_fin_programada, rol_en_proyecto, estado, observaciones)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        asignacion.trabajador_id,
+        asignacion.proyecto_id,
+        asignacion.actividad_id,
+        asignacion.fecha_inicio,
+        asignacion.fecha_fin_programada,
+        asignacion.rol_en_proyecto,
+        asignacion.estado,
+        asignacion.observaciones,
+      ],
+    )
+    await conn.commit()
+    return result.insertId
+  } catch (err) {
+    await conn.rollback()
+    throw err
+  } finally {
+    conn.release()
+  }
 }
 
 /**
