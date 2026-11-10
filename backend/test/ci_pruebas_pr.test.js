@@ -24,4 +24,9 @@ describe('CI · pruebas en pull request y antes de desplegar', () => {
     assert.match(wf, /needs: \[pruebas\]/)
     assert.match(wf, /test\/\*\.test\.js/)
   })
+
+  test('la prueba E2E de materiales corre en el despliegue y en cada pull request', () => {
+    assert.match(leer('desplegar.yml'), /test_e2e_materiales\.py/)
+    assert.match(leer('pruebas-pr.yml'), /run: python3 test_e2e_materiales\.py/)
+  })
 })
