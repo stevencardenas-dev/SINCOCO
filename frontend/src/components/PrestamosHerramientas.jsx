@@ -281,8 +281,8 @@ export default function PrestamosHerramientas({ pestanas }) {
                 derecha: true,
                 celda: (p, enFicha) => (enFicha && VIGENTES.includes(p.estado_prestamo) ? (
                   <>
-                    {puedeDevolver && <button type="button" className="btn-primary inline-flex items-center gap-1.5 text-xs" onClick={() => abrirDevolucion(p)}><ArrowUturnLeftIcon className="h-4 w-4" aria-hidden="true" /> Registrar devolución</button>}
-                    {puedeReemplazar && <button type="button" className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => abrirAveria(p)}><WrenchScrewdriverIcon className="h-4 w-4" aria-hidden="true" /> Registrar avería y reemplazo</button>}
+                    {puedeDevolver && <button type="button" data-conserva-ficha className="btn-primary inline-flex items-center gap-1.5 text-xs" onClick={() => abrirDevolucion(p)}><ArrowUturnLeftIcon className="h-4 w-4" aria-hidden="true" /> Registrar devolución</button>}
+                    {puedeReemplazar && <button type="button" data-conserva-ficha className="btn-ghost inline-flex items-center gap-1.5 text-xs" onClick={() => abrirAveria(p)}><WrenchScrewdriverIcon className="h-4 w-4" aria-hidden="true" /> Registrar avería y reemplazo</button>}
                   </>
                 ) : null),
               },
