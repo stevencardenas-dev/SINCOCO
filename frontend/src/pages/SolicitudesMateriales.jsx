@@ -372,7 +372,7 @@ export default function SolicitudesMateriales({ pestanas }) {
           <div>
             <label htmlFor="sm-proyecto" className="label">Proyecto</label>
             <SelectBuscable id="sm-proyecto" className="input" value={form.proyecto_id} required
-              onChange={(e) => { setForm({ ...form, proyecto_id: e.target.value, actividad_id: '' }); setError('') }}>
+              onChange={(e) => { setForm({ ...form, proyecto_id: e.target.value, actividad_id: '' }); setError(''); setExcesos([]); setConfirmaExceso(false) }}>
               <option value="">Seleccione…</option>
               {(proyectos.datos ?? []).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </SelectBuscable>
@@ -380,7 +380,7 @@ export default function SolicitudesMateriales({ pestanas }) {
           <div>
             <label htmlFor="sm-actividad" className="label">Actividad</label>
             <SelectBuscable id="sm-actividad" className="input" value={form.actividad_id} required disabled={!form.proyecto_id}
-              onChange={(e) => { setForm({ ...form, actividad_id: e.target.value }); setError('') }}>
+              onChange={(e) => { setForm({ ...form, actividad_id: e.target.value }); setError(''); setExcesos([]); setConfirmaExceso(false) }}>
               <option value="">{form.proyecto_id ? 'Seleccione…' : 'Elija primero el proyecto'}</option>
               {actividades.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
             </SelectBuscable>
