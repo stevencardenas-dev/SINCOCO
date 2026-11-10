@@ -1,0 +1,39 @@
+name: Pruebas en pull request
+
+# Condición de merge: cada pull request hacia main corre TODAS las suites de
+# backend/test (npm test). No toca AWS ni la base: las pruebas usan dobles en
+# memoria. Para que bloquee el merge, la regla de rama protegida de main debe
+# exigir el check «Pruebas backend (npm test)» (ver docs/RAMA_PROTEGIDA.md).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pruebas-pr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pruebas-backend:
+    name: Pruebas backend (npm test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Instalar dependencias
+        working-directory: backend
+        run: npm ci
+      - name: npm test (todas las suites)
+        working-directory: backend
+        env:
+          JWT_SECRET: secreto-solo-para-ci
+        run: npm test

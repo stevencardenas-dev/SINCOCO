@@ -5,12 +5,16 @@ import EntradasInventario from './EntradasInventario.jsx'
 import SalidasMateriales from './SalidasMateriales.jsx'
 import DevolucionesMateriales from './DevolucionesMateriales.jsx'
 import TrasladosMateriales from './TrasladosMateriales.jsx'
+import Pestanas from '../components/Pestanas.jsx'
+import { ArrowDownTrayIcon, ArrowUpTrayIcon, ArrowUturnLeftIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
 
 /**
  * Movimientos de inventario de materiales, en pestañas como Solicitudes y Herramientas.
  * Cada pestaña es la pantalla de su movimiento, con su propio formulario y su propio
  * permiso: solo aparece a quien puede consultarla.
  */
+const ICONOS_TAB = { ingresos: ArrowDownTrayIcon, salidas: ArrowUpTrayIcon, devoluciones: ArrowUturnLeftIcon, traslados: ArrowsRightLeftIcon }
+
 export const PESTANAS_MOVIMIENTOS = [
   { id: 'ingresos', label: 'Ingresos', permiso: 'entradas_inventario.listar', pagina: EntradasInventario },
   { id: 'salidas', label: 'Salidas', permiso: 'salidas_materiales.listar', pagina: SalidasMateriales },
@@ -27,20 +31,7 @@ export default function Movimientos() {
   if (!actual) return null
 
   const pestanas = (
-    <div className="flex flex-wrap gap-2 border-b border-slate-200">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => setTab(t.id)}
-          className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
-            t.id === actual.id ? 'border-b-2 border-accent-400 text-brand-900' : 'text-slate-500 hover:text-brand-800'
-          }`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
+    <Pestanas tabs={tabs.map((t) => ({ id: t.id, label: t.label, icono: ICONOS_TAB[t.id] }))} activo={actual.id} onCambiar={setTab} />
   )
 
   const Pagina = actual.pagina
