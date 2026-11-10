@@ -56,12 +56,12 @@ export async function fijarFechas(conn, tipo, id, inicio, fin) {
 export async function registrar(conn, cambio) {
   await conn.query(
     `INSERT INTO reprogramaciones_plan
-       (proyecto_id, entidad_tipo, entidad_id, origen, motivo, usuario_id,
+       (proyecto_id, entidad_tipo, entidad_id, origen, motivo, usuario_id, autorizado_por_usuario_id,
         fecha_inicio_anterior, fecha_fin_anterior, fecha_inicio_nueva, fecha_fin_nueva)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       cambio.proyecto_id, cambio.entidad_tipo, cambio.entidad_id, cambio.origen ?? 'DIRECTA',
-      cambio.motivo, cambio.usuario_id,
+      cambio.motivo, cambio.usuario_id, cambio.autorizado_por_usuario_id ?? cambio.usuario_id,
       cambio.fecha_inicio_anterior, cambio.fecha_fin_anterior,
       cambio.fecha_inicio_nueva, cambio.fecha_fin_nueva,
     ],
@@ -70,11 +70,14 @@ export async function registrar(conn, cambio) {
 
 const SELECT_HISTORIAL = `
   SELECT r.id, r.proyecto_id, r.entidad_tipo, r.entidad_id, r.origen, r.motivo,
-         r.usuario_id, u.username AS usuario_nombre, r.fecha_registro,
+         r.usuario_id, u.username AS usuario_nombre,
+         COALESCE(r.autorizado_por_usuario_id, r.usuario_id) AS autorizado_por_usuario_id,
+         COALESCE(ua.username, u.username) AS autorizado_por_nombre, r.fecha_registro,
          r.fecha_inicio_anterior, r.fecha_fin_anterior,
          r.fecha_inicio_nueva, r.fecha_fin_nueva
   FROM reprogramaciones_plan r
   JOIN usuarios u ON u.id = r.usuario_id
+  LEFT JOIN usuarios ua ON ua.id = r.autorizado_por_usuario_id
 `
 
 /** Historial de un elemento (etapa, actividad o proyecto), del más reciente al más antiguo. */
