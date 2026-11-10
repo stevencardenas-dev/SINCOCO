@@ -23,6 +23,8 @@ import { useFormulario } from '../hooks/useFormulario'
 import { useAuth } from '../context/AuthContext.jsx'
 import { CATEGORIAS, SIN_CATEGORIA } from '../lib/catalogos.js'
 import SelectBuscable from '../components/SelectBuscable.jsx'
+import Pestanas from '../components/Pestanas.jsx'
+import { IdentificationIcon, UserGroupIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline'
 
 /**
  * Gestión Administrativa (RF01 · RF06 · RF02): mantiene los valores de dominio
@@ -42,6 +44,8 @@ import SelectBuscable from '../components/SelectBuscable.jsx'
  * Cargos y especialidades llevan una categoría (lib/catalogos.js) con la que
  * Personal agrupa sus selectores; lo que no la tiene aparece en «Otros».
  */
+
+const ICONOS_TAB = { cargos: IdentificationIcon, especialidades: WrenchScrewdriverIcon, clientes: UserGroupIcon }
 
 const TABS = [
   {
@@ -194,22 +198,7 @@ export default function Catalogo() {
       </PageHeader>
 
       {/* Pestañas: un catálogo a la vez, misma mecánica para los tres. */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => { setTipo(t.id); limpiarMensajes() }}
-            className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
-              t.id === tipo
-                ? 'border-b-2 border-accent-400 text-brand-900'
-                : 'text-slate-500 hover:text-brand-800'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Pestanas tabs={TABS.map((t) => ({ id: t.id, label: t.label, icono: ICONOS_TAB[t.id] }))} activo={tipo} onCambiar={(id) => { setTipo(id); limpiarMensajes() }} />
 
       <p className="text-sm text-slate-500">{tab.descripcion}</p>
 
@@ -217,7 +206,7 @@ export default function Catalogo() {
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</p>
       )}
       {aviso && (
-        <p role="status" className="rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">{aviso}</p>
+        <AlertaFormulario tipo="aviso" mensaje={aviso} />
       )}
 
       {datos === null && !error && (
