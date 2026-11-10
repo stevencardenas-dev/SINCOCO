@@ -27,6 +27,8 @@ import { mensajeError } from '../lib/errores'
 import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
 import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
 import SelectBuscable from '../components/SelectBuscable.jsx'
+import Pestanas from '../components/Pestanas.jsx'
+import { BuildingStorefrontIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 
 /**
  * HU-10 (CU-10): catálogo de herramientas con su estado operativo y su
@@ -728,6 +730,8 @@ function CatalogoHerramientas({ pestanas }) {
   )
 }
 
+const ICONOS_TAB = { herramientas: WrenchScrewdriverIcon, almacenes: BuildingStorefrontIcon, prestamos: ClipboardDocumentListIcon }
+
 const TABS = [
   { id: 'herramientas', label: 'Herramientas' },
   { id: 'almacenes', label: 'Almacenes' },
@@ -741,20 +745,7 @@ export default function Herramientas() {
   const tabs = TABS.filter((t) => !t.permiso || puede(t.permiso))
 
   const pestanas = (
-    <div className="flex flex-wrap gap-2 border-b border-slate-200">
-      {tabs.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          onClick={() => setTab(t.id)}
-          className={`-mb-px rounded-t-xl px-4 py-2.5 text-sm font-semibold transition ${
-            t.id === tab ? 'border-b-2 border-accent-400 text-brand-900' : 'text-slate-500 hover:text-brand-800'
-          }`}
-        >
-          {t.label}
-        </button>
-      ))}
-    </div>
+    <Pestanas tabs={tabs.map((t) => ({ ...t, icono: ICONOS_TAB[t.id] }))} activo={tab} onCambiar={setTab} />
   )
 
   if (tab === 'prestamos' && puede('prestamos_herramientas.listar')) return <PrestamosHerramientas pestanas={pestanas} />
