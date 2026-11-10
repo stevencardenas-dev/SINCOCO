@@ -5,7 +5,7 @@ Rutas relativas a `backend/src/`. Pruebas unitarias en `backend/test/`; pruebas 
 
 Diagramas de referencia: Drive, carpeta «Sprint 3 - Diagramas UML» (una subcarpeta por HU con
 `4 - secuencia.png`, y `Generales/clases.png`). La columna «Diferencias con el diagrama» queda
-pendiente: hay que revisar esas imágenes una por una (no tienen texto legible por herramientas).
+se llenó el 2026-11-10 comparando cada `4 - secuencia.png` con el código (sección final).
 
 ## Historias pedidas en la evaluación
 
@@ -37,7 +37,28 @@ pendiente: hay que revisar esas imágenes una por una (no tienen texto legible p
 
 - HU-36 no tiene archivo de prueba propio: sus casos están dentro de `hu08_solicitud_materiales.test.js`.
 - HU-33 no tiene prueba unitaria propia: la cubren `tests/test_hu33_disponibilidad.py` (API) y la prueba de concurrencia de asignaciones.
-- Varias HU no tienen controller propio con su nombre (las rutas importan controladores compartidos); la capa
-  de negocio está siempre en `services/` y el acceso a datos en `repositories/`.
+- Todos los controladores que nombran los diagramas existen en `controllers/` con ese nombre
+  (solicitudMaterialController, devolucionMaterialController, prestamoHerramientaController, entradaInventarioController,
+  consumoMaterialController, alertaController, trasladoMaterialController, herramientaController).
 - Las migraciones de HU-12 y HU-29 siguen en `docs/migraciones/pendientes/` aunque ya se aplicaron en producción:
   falta fusionar el PR automático «Registrar migraciones aplicadas en producción».
+
+## Diferencias entre los diagramas de secuencia (Drive) y el código
+
+Revisados los 12 diagramas `4 - secuencia.png` del Sprint 3. Endpoint, controlador, service, repositorio,
+bloqueo `SELECT ... FOR UPDATE` dentro de la transacción y registro en la bitácora después del COMMIT coinciden en todos,
+salvo lo siguiente:
+
+| HU | Diagrama | Código | Qué corregir |
+|---|---|---|---|
+| HU-35 | Rama «sin reemplazo» termina en ROLLBACK | Sin reemplazo también se confirma: cierra el préstamo averiado, crea la incidencia y la reparación y hace COMMIT; solo no se entrega otra herramienta (`repositories/prestamoHerramientaRepository.js`, `reemplazar`) | El diagrama: cambiar ROLLBACK por «cerrar préstamo; INSERT incidencia; INSERT reparación; COMMIT» |
+| HU-36 | Participante `:notificacionService`, llamado solo si la aprobación es parcial (opt) | No existe `notificacionService`: la notificación la inserta `solicitudMaterialRepository.aprobar` dentro de la misma transacción, y se envía siempre (parcial o total, con distinto título) (`services/solicitudMaterialService.js`, `aprobarSolicitud`) | El diagrama: quitar `notificacionService`, mover la notificación dentro de `aprobar(...)` y quitar el opt |
+| HU-37 | `herramientaRepository.cambiarEstado` | `herramientaEstadoRepository.cambiarEstado`; `herramientaRepository` solo se usa al final para `findById` (`services/herramientaEstadoService.js`) | El diagrama: renombrar el participante a `:herramientaEstadoRepository` |
+| HU-08 | Solo la rama «exceso sin confirmar → 409» | Además: exceso confirmado sin observaciones → 400 (justificación obligatoria) (`services/solicitudMaterialService.js`, `crearSolicitud`) | El diagrama: agregar la rama 400 |
+| HU-29 | `findAlmacenes() / findMaterial()` en el service antes de `registrar` | El service llama directo a `repo.registrar(...)`; la validación de almacenes y material va dentro de la transacción; después hace `findById` | Diferencia menor: actualizar el diagrama |
+
+Sin diferencias relevantes: HU-09, HU-11, HU-12, HU-19, HU-20, HU-23, HU-26.
+
+No se compararon: el diagrama de clases general (`Generales/clases.png`, demasiado denso para leerlo con fiabilidad) ni los
+diagramas de casos de uso, actividad, estados y comunicación de cada HU. HU-34, HU-30, HU-33 y HU-17 no tienen carpeta
+en «Sprint 3 - Diagramas UML».
