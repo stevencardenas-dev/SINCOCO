@@ -280,3 +280,27 @@ export async function proyectosAccesibles(trabajadorId) {
   )
   return rows.map((r) => Number(r.id))
 }
+
+/**
+ * HU-06 · historial de asignaciones de un trabajador, de la más antigua a la
+ * más reciente. `incluirInactivos` decide si entran las asignaciones a
+ * proyectos dados de baja lógica: por omisión no se muestran (criterio 4).
+ */
+export async function historialTrabajador(trabajadorId, { incluirInactivos = false } = {}) {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.trabajador_id, a.proyecto_id, a.actividad_id,
+            a.fecha_inicio, a.fecha_fin_programada, a.fecha_fin_real,
+            a.rol_en_proyecto, a.estado, a.observaciones,
+            p.nombre AS proyecto_nombre, p.codigo AS proyecto_codigo,
+            p.activo AS proyecto_activo,
+            act.nombre AS actividad_nombre
+       FROM asignaciones_personal a
+       JOIN proyectos p ON p.id = a.proyecto_id
+       LEFT JOIN actividades act ON act.id = a.actividad_id
+      WHERE a.trabajador_id = ?
+        AND (? = 1 OR p.activo = 1)
+      ORDER BY a.fecha_inicio ASC, a.id ASC`,
+    [trabajadorId, incluirInactivos ? 1 : 0],
+  )
+  return rows
+}
