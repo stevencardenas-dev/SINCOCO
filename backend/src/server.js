@@ -7,6 +7,7 @@ import rolesRoutes from './routes/roles.js'
 import auditoriaRoutes from './routes/auditoria.js'
 import dashboardRoutes from './routes/dashboard.js'
 import costosRoutes from './routes/costos.js'
+import evidenciasRoutes from './routes/evidencias.js'
 import proyectosRoutes from './routes/proyectos.js'
 import clientesRoutes from './routes/clientes.js'
 import proveedoresRoutes from './routes/proveedores.js'
@@ -63,6 +64,8 @@ app.use('/api/auditoria', rutasSeguras(auditoriaRoutes))
 app.use('/api/dashboard', rutasSeguras(dashboardRoutes))
 // HU-15: costo real consolidado por proyecto.
 app.use('/api/costos', rutasSeguras(costosRoutes))
+// HU-22: evidencias del avance de las actividades.
+app.use('/api/evidencias', rutasSeguras(evidenciasRoutes))
 app.use('/api/proyectos', rutasSeguras(proyectosRoutes))
 app.use('/api/clientes', rutasSeguras(clientesRoutes))
 app.use('/api/proveedores', rutasSeguras(proveedoresRoutes))
