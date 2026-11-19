@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Modal from './Modal.jsx'
 import { proyectosApi } from '../services/proyectos'
 
@@ -36,6 +36,16 @@ export default function EstadoProyecto({ proyecto, onCerrar, onCambiado }) {
   const [confirmar, setConfirmar] = useState(false)
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
+
+  // Cada apertura empieza limpia: sin esto el modal conservaba la acción y el
+  // motivo de la vez anterior, y reabría en «reanudar» un proyecto ya reanudado.
+  useEffect(() => {
+    if (!proyecto) return
+    setAccion(acciones[0] ?? '')
+    setMotivo('')
+    setConfirmar(false)
+    setError('')
+  }, [proyecto?.id, proyecto?.estado])
 
   if (!proyecto) return null
 
