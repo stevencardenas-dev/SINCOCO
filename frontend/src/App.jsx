@@ -22,6 +22,7 @@ const Alertas = lazy(() => import('./pages/Alertas.jsx'))
 const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
 const ProveedoresServicios = lazy(() => import('./pages/ProveedoresServicios.jsx'))
+const Costos = lazy(() => import('./pages/Costos.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -121,6 +122,15 @@ export default function App() {
               <RutaPorPermiso permisos={['alertas.listar']}>
                 <Alertas />
               </RutaPorPermiso>
+            }
+          />
+          {/* HU-15: costo real consolidado por proyecto y su desviación. */}
+          <Route
+            path="costos"
+            element={
+              <RutaPorRol roles={[ADMIN, GERENTE]}>
+                <Costos />
+              </RutaPorRol>
             }
           />
           {/* Inventario de herramientas */}
