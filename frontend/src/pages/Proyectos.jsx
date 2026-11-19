@@ -1019,6 +1019,19 @@ export default function Proyectos() {
             <Link to={`/proyectos/${menu.id}`} className="btn-primary justify-center" onClick={() => setMenu(null)}>
               <ClipboardDocumentListIcon className="h-5 w-5" /> Abrir plan
             </Link>
+            {!!menu.activo && puedeEditar && ['EN_EJECUCION', 'PAUSADO'].includes(menu.estado) && (
+              <button
+                type="button"
+                className="btn-ghost justify-center"
+                onClick={() => {
+                  const elegido = menu
+                  setMenu(null)
+                  setEstadoModal(elegido)
+                }}
+              >
+                Cambiar estado del proyecto
+              </button>
+            )}
             {!menu.activo && puedeBaja && (
               <button
                 type="button"
