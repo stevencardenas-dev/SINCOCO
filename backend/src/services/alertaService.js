@@ -1,4 +1,5 @@
 import * as repo from '../repositories/alertaRepository.js'
+import { severidadDe } from './alertaOperativaService.js'
 import { registrar as bitacora } from '../db/bitacora.js'
 import { AppError } from '../utils/AppError.js'
 
@@ -13,7 +14,9 @@ export async function listarAlertas({ tipo = '', atendida = '' } = {}) {
     if (!['0', '1', 'true', 'false'].includes(String(atendida))) throw new AppError('atendida debe ser 0 o 1', 400, 'atendida')
     a = ['1', 'true'].includes(String(atendida))
   }
-  return repo.listar({ tipo: t, atendida: a })
+  const filas = await repo.listar({ tipo: t, atendida: a })
+  // HU-24: la severidad se deriva de los días de atraso de la referencia.
+  return filas.map((f) => ({ ...f, severidad: severidadDe(f) }))
 }
 
 /** La alerta permanece pendiente hasta que bodega la gestiona. */

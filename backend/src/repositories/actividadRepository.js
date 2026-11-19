@@ -102,3 +102,29 @@ export async function update(id, campos) {
     [...Object.values(campos), id],
   )
 }
+
+/**
+ * HU-24 · actividades atrasadas: la fecha fin programada ya pasó y el avance es
+ * menor a 100. Solo considera actividades y proyectos vigentes (no dados de
+ * baja ni de proyectos finalizados o cancelados).
+ */
+export async function atrasadas() {
+  const [rows] = await pool.query(
+    `SELECT ac.id, ac.nombre, ac.fecha_fin_programada, ac.porcentaje_avance,
+            ac.responsable_id, ac.proyecto_id,
+            p.nombre AS proyecto_nombre, p.codigo AS proyecto_codigo,
+            TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS responsable_nombre,
+            t.email AS responsable_email
+       FROM actividades ac
+       JOIN etapas_proyecto ep ON ep.id = ac.etapa_id
+       JOIN proyectos p ON p.id = ep.proyecto_id
+       LEFT JOIN trabajadores t ON t.id = ac.responsable_id
+      WHERE ac.activo = 1 AND ep.activo = 1 AND p.activo = 1
+        AND p.estado NOT IN ('FINALIZADO', 'CANCELADO')
+        AND ac.estado NOT IN ('COMPLETADA', 'SUSPENDIDA')
+        AND ac.fecha_fin_programada < CURDATE()
+        AND ac.porcentaje_avance < 100
+      ORDER BY ac.fecha_fin_programada ASC, ac.id ASC`,
+  )
+  return rows
+}

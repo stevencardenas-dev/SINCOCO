@@ -130,3 +130,48 @@ export async function enviarAvisoIncidencia({ destino, nombre, incidencia }) {
     return false
   }
 }
+
+/**
+ * HU-24: recordatorio de una alerta (actividad atrasada o herramienta sin
+ * devolver) al responsable. Como el resto de envíos, nunca lanza: devuelve
+ * false si no hay SMTP configurado, falta el destino o el servidor lo rechaza.
+ */
+export async function enviarRecordatorioAlerta({ destino, nombre, alerta }) {
+  const t = obtenerTransporte()
+  if (!t || !destino) return false
+
+  const remitente = process.env.SMTP_FROM || `SINCOCO <${process.env.SMTP_USER}>`
+  const saludo = nombre ? `Hola ${nombre},` : 'Hola,'
+  const detalle = [
+    `Alerta: ${alerta.titulo}`,
+    alerta.referencia ? `Referencia: ${alerta.referencia}` : null,
+    `Severidad: ${alerta.severidad} (${alerta.dias_atraso} ${alerta.dias_atraso === 1 ? 'día' : 'días'} de atraso)`,
+    '',
+    alerta.descripcion,
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  try {
+    await t.sendMail({
+      from: remitente,
+      to: destino,
+      subject: `SINCOCO · Recordatorio: ${alerta.titulo}`,
+      text: `${saludo}\n\n${detalle}\n\nPor favor póngase al día o informe a su líder de proyecto.\n\nSINCOCO · Constructora XYZ`,
+      html:
+        `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;color:#1f2530">` +
+        `<h2 style="margin:0 0 12px">Recordatorio de alerta</h2>` +
+        `<p>${escapar(saludo)}</p>` +
+        `<p><strong>${escapar(alerta.titulo)}</strong></p>` +
+        (alerta.referencia ? `<p>Referencia: ${escapar(alerta.referencia)}</p>` : '') +
+        `<p>Severidad: <strong>${escapar(alerta.severidad)}</strong> · ` +
+        `${alerta.dias_atraso} ${alerta.dias_atraso === 1 ? 'día' : 'días'} de atraso</p>` +
+        `<p>${escapar(alerta.descripcion)}</p>` +
+        `<p style="color:#667085;font-size:13px">Póngase al día o informe a su líder de proyecto.</p></div>`,
+    })
+    return true
+  } catch (err) {
+    console.error('[correo] No se pudo enviar el recordatorio de la alerta:', err.message)
+    return false
+  }
+}

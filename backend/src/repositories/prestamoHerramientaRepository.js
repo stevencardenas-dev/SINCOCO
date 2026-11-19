@@ -204,3 +204,27 @@ export async function devolver({ prestamoId, usuarioId, condicion, fechaReal, ob
     conn.release()
   }
 }
+
+/**
+ * HU-24 · préstamos vencidos: pasó la fecha estimada de devolución y no hay
+ * fecha real registrada. Solo mira préstamos que siguen abiertos.
+ */
+export async function vencidos() {
+  const [rows] = await pool.query(
+    `SELECT ph.id, ph.fecha_estimada_devolucion, ph.herramienta_id, ph.proyecto_id,
+            ph.trabajador_id,
+            h.codigo AS herramienta_codigo, h.nombre AS herramienta_nombre,
+            p.nombre AS proyecto_nombre,
+            TRIM(CONCAT(t.nombres, ' ', t.apellidos)) AS trabajador_nombre,
+            t.email AS trabajador_email
+       FROM prestamos_herramientas ph
+       JOIN herramientas h ON h.id = ph.herramienta_id
+       JOIN proyectos p ON p.id = ph.proyecto_id
+       LEFT JOIN trabajadores t ON t.id = ph.trabajador_id
+      WHERE ph.fecha_real_devolucion IS NULL
+        AND ph.estado_prestamo IN ('ACTIVO', 'ATRASADO')
+        AND ph.fecha_estimada_devolucion < CURDATE()
+      ORDER BY ph.fecha_estimada_devolucion ASC, ph.id ASC`,
+  )
+  return rows
+}

@@ -21,6 +21,22 @@ const FILTROS = [
   { valor: '', etiqueta: 'Todas' },
 ]
 
+const CLASE_SEVERIDAD = {
+  ALTA: 'bg-rose-50 text-rose-700 ring-rose-200',
+  MEDIA: 'bg-amber-50 text-amber-700 ring-amber-200',
+  BAJA: 'bg-slate-100 text-slate-600 ring-slate-200',
+}
+
+/** HU-24: la severidad sale de los días de atraso; las alertas sin fecha no la tienen. */
+function Severidad({ valor }) {
+  if (!valor) return <span className="text-slate-400">—</span>
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ${CLASE_SEVERIDAD[valor]}`}>
+      {valor}
+    </span>
+  )
+}
+
 export default function Alertas() {
   const { puede } = useAuth()
   const puedeAtender = puede('alertas.atender')
@@ -30,9 +46,34 @@ export default function Alertas() {
   const atender = (a) =>
     alertas.ejecutar(() => alertasApi.atender(a.id), { exito: 'Alerta atendida.', error: 'No se pudo atender la alerta.' })
 
+  const recordar = (a) =>
+    alertas.ejecutar(() => alertasApi.recordar(a.id), {
+      exito: 'Recordatorio enviado al responsable.',
+      error: 'No se pudo enviar el recordatorio: revise el correo del responsable o la configuración SMTP.',
+    })
+
+  const evaluar = () =>
+    alertas.ejecutar(() => alertasApi.evaluar(), {
+      exito: 'Atrasos evaluados.',
+      error: 'No se pudieron evaluar los atrasos.',
+    })
+
   return (
     <div className="space-y-6">
-      <PageHeader accion={<BotonActualizar onClick={alertas.recargar} />} title="Alertas de inventario" subtitle="Materiales en nivel mínimo y nuevas solicitudes de materiales" />
+      <PageHeader
+        accion={
+          <div className="flex items-center gap-2">
+            {puedeAtender && (
+              <button type="button" className="btn-ghost text-xs" onClick={evaluar}>
+                Evaluar atrasos
+              </button>
+            )}
+            <BotonActualizar onClick={alertas.recargar} />
+          </div>
+        }
+        title="Alertas"
+        subtitle="Stock mínimo, actividades atrasadas y herramientas pendientes de devolución"
+      />
       <div className="flex gap-2">
         {FILTROS.map((f) => (
           <button key={f.etiqueta} type="button" className={atendida === f.valor ? 'btn-primary text-xs' : 'btn-ghost text-xs'} onClick={() => setAtendida(f.valor)}>
@@ -59,6 +100,7 @@ export default function Alertas() {
             columnas={[
               { titulo: 'Alerta', movil: true, celda: (a) => a.titulo },
               { titulo: 'Detalle', movil: true, tdClase: 'text-slate-600', celda: (a) => a.descripcion },
+              { titulo: 'Severidad', celda: (a) => <Severidad valor={a.severidad} /> },
               { titulo: 'Material', celda: (a) => a.material_codigo ?? '—' },
               { titulo: 'Existencia actual', celda: (a) => (a.material_codigo ? `${Number(a.existencia_total)} ${a.unidad_medida}` : '—') },
               { titulo: 'Nivel mínimo', celda: (a) => (a.material_codigo ? `${Number(a.nivel_minimo)} ${a.unidad_medida}` : '—') },
@@ -67,9 +109,12 @@ export default function Alertas() {
               {
                 titulo: '',
                 movil: true,
-                celda: (a) => (puedeAtender && !a.atendida
-                  ? <button type="button" className="btn-primary text-xs" onClick={() => atender(a)}>Atender</button>
-                  : null),
+                celda: (a) => (puedeAtender && !a.atendida ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" className="btn-primary text-xs" onClick={() => atender(a)}>Atender</button>
+                    <button type="button" className="btn-ghost text-xs" onClick={() => recordar(a)}>Recordar</button>
+                  </div>
+                ) : null),
               },
             ]}
           />
