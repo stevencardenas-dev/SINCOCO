@@ -14,6 +14,9 @@ por historia (estado, responsable, clave Jira) está en `SEGUIMIENTO_HU.md`.
 
 ## Objetivo de cada sprint
 
+Los objetivos de los sprints 2, 3 y 4 están cargados en Jira (campo **Objetivo del sprint**)
+desde el 2026-11-19; el sprint 1 conserva el que ya tenía en Jira.
+
 Cada objetivo condensa, en una frase, el resultado que el sprint deja usable; el
 detalle de qué historia aporta cada pieza está en las tablas de abajo.
 
