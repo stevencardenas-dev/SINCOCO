@@ -4,9 +4,13 @@ import { pool } from '../db/pool.js'
 
 const SELECT = `SELECT a.id, a.tipo, a.titulo, a.descripcion, a.referencia_id, a.tabla_referencia,
                        a.fecha_generacion, a.atendida, a.fecha_atencion,
-                       m.codigo AS material_codigo, m.existencia_total, m.nivel_minimo, m.unidad_medida
+                       m.codigo AS material_codigo, m.existencia_total, m.nivel_minimo, m.unidad_medida,
+                       act.fecha_fin_programada AS fecha_limite_actividad,
+                       ph.fecha_estimada_devolucion AS fecha_limite_prestamo
                   FROM alertas a
-                  LEFT JOIN materiales m ON a.tabla_referencia = 'materiales' AND m.id = a.referencia_id`
+                  LEFT JOIN materiales m ON a.tabla_referencia = 'materiales' AND m.id = a.referencia_id
+                  LEFT JOIN actividades act ON a.tabla_referencia = 'actividades' AND act.id = a.referencia_id
+                  LEFT JOIN prestamos_herramientas ph ON a.tabla_referencia = 'prestamos_herramientas' AND ph.id = a.referencia_id`
 
 export async function findById(id) {
   const [rows] = await pool.query(`${SELECT} WHERE a.id = ? LIMIT 1`, [id])
@@ -49,6 +53,23 @@ export async function evaluarStockMinimo(materialId, conn = pool) {
       WHERE m.id = ? AND m.activo = 1 AND m.nivel_minimo > 0 AND m.existencia_total <= m.nivel_minimo
         AND NOT EXISTS (SELECT 1 FROM alertas a WHERE a.tipo = 'STOCK_MINIMO' AND a.referencia_id = m.id AND a.atendida = 0)`,
     [materialId],
+  )
+  return r.affectedRows > 0
+}
+
+/**
+ * HU-24 · crea la alerta solo si no hay otra pendiente del mismo tipo para la
+ * misma referencia (evita duplicados en cada evaluación).
+ */
+export async function crearSiNoExiste({ tipo, titulo, descripcion, referenciaId, tablaReferencia }) {
+  const [r] = await pool.query(
+    `INSERT INTO alertas (tipo, titulo, descripcion, referencia_id, tabla_referencia)
+     SELECT ?, ?, ?, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM alertas a
+         WHERE a.tipo = ? AND a.referencia_id = ? AND a.atendida = 0
+      )`,
+    [tipo, titulo, descripcion, referenciaId, tablaReferencia, tipo, referenciaId],
   )
   return r.affectedRows > 0
 }
