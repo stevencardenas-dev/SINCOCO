@@ -103,7 +103,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como administrador, quiero consultar el historial de asignaciones de un trabajador, para saber en qué proyectos ha participado y cuándo.
 * **Prioridad:** Baja
 * **Estimación:** 2
-* **Sprint:** 3
+* **Sprint:** 4
 * **Criterios de Aceptación:**
   * La consulta debe listar cada registro de asignaciones_personal del trabajador ordenado por fecha de inicio.
   * Debe mostrar rol_en_proyecto, fechas programadas y reales, y estado de cada asignación.
@@ -144,7 +144,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como encargado de bodega, quiero registrar la devolución de materiales sobrantes, para actualizar el inventario disponible.
 * **Prioridad:** Muy baja
 * **Estimación:** 3
-* **Sprint:** 4
+* **Sprint:** 3
 * **Criterios de Aceptación:**
   * Toda devolución debe referenciar el almacén de destino, el proyecto y la actividad de origen, y cuando aplique, la salida que la originó.
   * Al confirmarse una devolución válida, el trigger trg_devolucion_suma_existencia debe sumar la cantidad devuelta a materiales.existencia_total.
@@ -168,7 +168,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como maestro de obra, quiero registrar el consumo real de materiales por actividad, para reflejar el gasto efectivo del proyecto.
 * **Prioridad:** Muy baja
 * **Estimación:** 5
-* **Sprint:** 4
+* **Sprint:** 3
 * **Criterios de Aceptación:**
   * El consumo registrado no puede superar la cantidad efectivamente despachada a la actividad.
   * Todo registro de consumo debe asociarse a la actividad y al material correspondientes.
@@ -180,7 +180,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como encargado de bodega, quiero registrar la salida efectiva de materiales entregados a un proyecto, para llevar control preciso de lo que sale del inventario.
 * **Prioridad:** Alta
 * **Estimación:** 5
-* **Sprint:** 4
+* **Sprint:** 3
 * **Criterios de Aceptación:**
   * Toda salida debe validar que exista existencia suficiente antes de confirmarse.
   * El registro de salida debe indicar almacén de origen, proyecto, actividad, material, cantidad despachada y costo unitario al momento de la salida.
@@ -390,7 +390,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como maestro de obra, quiero adjuntar evidencias (fotos, documentos u observaciones) al avance registrado, para sustentar el progreso reportado.
 * **Prioridad:** Muy baja
 * **Estimación:** 3
-* **Sprint:** 3
+* **Sprint:** 4
 * **Criterios de Aceptación:**
   * Toda evidencia debe asociarse a un registro de seguimiento de avance existente.
   * Solo deben aceptarse los formatos y tamaños de archivo definidos por el sistema.
@@ -407,7 +407,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como encargado de bodega, quiero recibir una alerta cuando un material llegue a su nivel mínimo, para gestionar oportunamente su reabastecimiento.
 * **Prioridad:** Baja
 * **Estimación:** 3
-* **Sprint:** 4
+* **Sprint:** 3
 * **Criterios de Aceptación:**
   * El nivel mínimo debe ser configurable de forma independiente para cada material.
   * El proceso de descuento de existencia debe evaluar el stock resultante tras cada salida y generar la alerta correspondiente cuando aplique.
@@ -419,7 +419,7 @@ problema→proceso→RF→CU→HU→sprint, en `TRAZABILIDAD.md`.
 * **Historia de Usuario:** Como gerente, quiero recibir alertas de actividades atrasadas y herramientas pendientes de devolución, para tomar decisiones oportunas.
 * **Prioridad:** Baja
 * **Estimación:** 5
-* **Sprint:** 3
+* **Sprint:** 4
 * **Criterios de Aceptación:**
   * Una actividad se considera atrasada cuando su fecha fin programada es anterior a la fecha actual y su porcentaje de avance es menor a 100.
   * Un préstamo se considera vencido cuando su fecha estimada de devolución ya pasó y no existe fecha real de devolución registrada.
@@ -495,7 +495,7 @@ HU-12 y HU-08: sus criterios cubren solo lo nuevo.
 * **Historia de Usuario:** Como gerente, quiero recibir una notificación cuando la contratación de un servicio externo exceda el presupuesto de la actividad, para autorizar o reajustar el monto antes de confirmar.
 * **Prioridad:** Alta
 * **Estimación:** 3
-* **Sprint:** 3
+* **Sprint:** 4
 * **Criterios de Aceptación:**
   * Cuando el valor_contratado de un servicio externo (HU-28) supera el presupuesto de la actividad, el servicio queda en estado pendiente de autorización y no se suma a la consolidación de costos (HU-15) hasta ser autorizado.
   * El sistema genera una notificación al gerente con el servicio, el proveedor, la actividad, el presupuesto disponible, el valor contratado y el exceso.
@@ -508,7 +508,7 @@ HU-12 y HU-08: sus criterios cubren solo lo nuevo.
 * **Historia de Usuario:** Como administrador, quiero calificar la puntualidad y calidad de cada servicio o entrega contratada, para generar una métrica histórica que ayude a elegir mejores proveedores en futuros proyectos.
 * **Prioridad:** Muy baja
 * **Estimación:** 3
-* **Sprint:** 3
+* **Sprint:** 4
 * **Criterios de Aceptación:**
   * Solo se puede calificar un servicio externo finalizado (HU-28) o una entrega recibida de una orden de compra (HU-19); cada uno admite una única calificación.
   * La calificación incluye puntualidad y calidad en una escala de 1 a 5, y un comentario opcional que es obligatorio cuando algún puntaje es 2 o menor.
@@ -591,7 +591,7 @@ HU-12 y HU-08: sus criterios cubren solo lo nuevo.
 * **Historia de Usuario:** Como encargado de bodega, quiero modificar las cantidades aprobadas en una solicitud de materiales según el stock real disponible, para despachar solo lo existente y dejar el saldo pendiente.
 * **Prioridad:** Alta
 * **Estimación:** 5
-* **Sprint:** 4
+* **Sprint:** 3
 * **Criterios de Aceptación:**
   * Extiende HU-08. La cantidad_aprobada de cada línea no puede superar la cantidad_solicitada ni la existencia disponible al momento de la revisión.
   * La diferencia entre lo solicitado y lo aprobado queda como saldo pendiente, visible en la solicitud, que queda en estado aprobada parcial.
