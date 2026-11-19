@@ -50,6 +50,14 @@ function Desviacion({ valor }) {
   )
 }
 
+const ESTADO_LABEL = {
+  PLANIFICACION: 'Planificación',
+  EN_EJECUCION: 'En ejecución',
+  PAUSADO: 'Congelado',
+  FINALIZADO: 'Finalizado',
+  CANCELADO: 'Cancelado',
+}
+
 export default function Costos() {
   const { puede } = useAuth()
   const puedeConsolidar = puede('proyectos.editar')
@@ -116,7 +124,7 @@ export default function Costos() {
                       <p className="font-medium text-slate-800">{p.nombre}</p>
                       <p className="text-xs text-slate-500">{p.codigo}</p>
                     </td>
-                    <td className="px-4 py-2 text-slate-600">{p.estado}</td>
+                    <td className="px-4 py-2 text-slate-600">{ESTADO_LABEL[p.estado] ?? p.estado}</td>
                     <td className="px-4 py-2 text-right tabular-nums text-slate-700">
                       {moneda(p.presupuesto_inicial)}
                     </td>
