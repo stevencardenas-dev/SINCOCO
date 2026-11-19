@@ -31,6 +31,7 @@ import CampoMoneda from '../components/CampoMoneda.jsx'
 import CampoEsfuerzo from '../components/CampoEsfuerzo.jsx'
 import { BotonQuitar } from '../components/BotonesBaja.jsx'
 import PageHeader from '../components/PageHeader.jsx'
+import EstadoProyecto from '../components/EstadoProyecto.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
@@ -265,6 +266,7 @@ export default function PlanProyecto() {
   // «Registrar avance»: en cualquier actividad para quien gestiona el plan; si no, solo en las suyas.
   const puedeAvance = (a) => gestionaPlan || miAcceso.actividades_ids.includes(a.id)
   const [cambiandoEstado, setCambiandoEstado] = useState(null)
+  const [estadoAbierto, setEstadoAbierto] = useState(false) // HU-38: congelar o finalizar
   const [porAvanzar, setPorAvanzar] = useState(null) // HU-21: actividad cuyo avance se registra
   const [consumiendo, setConsumiendo] = useState(null) // HU-20: actividad cuyo consumo de materiales se gestiona
   const [presupuestando, setPresupuestando] = useState(null) // HU-08: actividad cuyo presupuesto de materiales se consulta
@@ -564,12 +566,28 @@ export default function PlanProyecto() {
         title={proyecto ? proyecto.nombre : `Proyecto #${id}`}
         subtitle={proyecto ? `${proyecto.codigo} · ${fmtFecha(proyecto.fecha_inicio_programada)} — ${fmtFecha(proyecto.fecha_fin_programada)}` : 'Plan de trabajo'}
       >
+        {proyecto?.activo !== 0 && puede('proyectos.editar') && ['EN_EJECUCION', 'PAUSADO'].includes(proyecto?.estado) && (
+          <button type="button" className="btn-ghost" onClick={() => setEstadoAbierto(true)}>
+            {proyecto.estado === 'PAUSADO' ? 'Reanudar o finalizar' : 'Congelar o finalizar'}
+          </button>
+        )}
         {proyecto?.activo !== 0 && proyecto?.activo !== false && puede('proyectos.editar') && (
           <Link to={`/proyectos?editar=${id}&volver=plan`} className="btn-ghost">
             <PencilSquareIcon className="h-5 w-5" /> Editar proyecto
           </Link>
         )}
       </PageHeader>
+
+      {/* HU-38: congelar, reanudar o finalizar desde el propio plan. */}
+      <EstadoProyecto
+        proyecto={estadoAbierto ? proyecto : null}
+        onCerrar={() => setEstadoAbierto(false)}
+        onCambiado={(mensaje) => {
+          setEstadoAbierto(false)
+          setAviso(mensaje)
+          recargar()
+        }}
+      />
 
       {error && <AlertaFormulario mensaje={error} />}
       {aviso && <AlertaFormulario tipo="aviso" mensaje={aviso} />}
