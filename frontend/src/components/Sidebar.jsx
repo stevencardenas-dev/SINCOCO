@@ -62,7 +62,7 @@ const NAV = [
     items: [
       { to: '/proveedores', label: 'Proveedores', icon: TruckIcon, permiso: ['proveedores.listar', 'servicios_externos.listar'] },
       { to: '/incidencias', label: 'Incidencias', icon: ExclamationTriangleIcon, permiso: ['incidencias.listar'] },
-      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE], proximamente: true },
+      { to: '/costos', label: 'Costos', icon: CurrencyDollarIcon, roles: [ADMIN, GERENTE] },
     ],
   },
   {

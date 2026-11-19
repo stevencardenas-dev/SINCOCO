@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import EstadoProyecto from '../components/EstadoProyecto.jsx'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowPathIcon,
@@ -258,6 +259,7 @@ export default function Proyectos() {
   // La interfaz sigue la matriz de permisos, no el nombre del rol.
   const puedeCrear = puede('proyectos.registrar')
   const puedeEditar = puede('proyectos.editar')
+  const [estadoModal, setEstadoModal] = useState(null)
   const puedeBaja = puede('proyectos.dar_baja')
   const puedeCrearCliente = puede('clientes.crear')
   const gestionaProyectos = puedeCrear || puedeEditar
@@ -965,6 +967,15 @@ export default function Proyectos() {
                           <PencilSquareIcon className="h-4 w-4" /> Editar
                         </button>
                       )}
+                      {!!p.activo && puedeEditar && ['EN_EJECUCION', 'PAUSADO'].includes(p.estado) && (
+                        <button
+                          className="btn-accion btn-accion-estado"
+                          onClick={() => setEstadoModal(p)}
+                          aria-label={`Cambiar estado de ${p.nombre}`}
+                        >
+                          Estado
+                        </button>
+                      )}
                       {puedeBaja && (
                         <button
                           className={`btn-accion ${p.activo ? 'btn-accion-peligro' : 'btn-accion-ok'}`}
@@ -983,6 +994,17 @@ export default function Proyectos() {
           />
         </div>
       )}
+
+      {/* HU-38: congelar, reanudar o finalizar el proyecto. */}
+      <EstadoProyecto
+        proyecto={estadoModal}
+        onCerrar={() => setEstadoModal(null)}
+        onCambiado={(aviso) => {
+          setEstadoModal(null)
+          setAviso(aviso)
+          recargar()
+        }}
+      />
 
       {/* Menú de la tarjeta: abrir el plan es lo principal; editar y reactivar según permisos. */}
       <Modal
