@@ -89,15 +89,18 @@ jobs:
           node-version: '22'
 
       # tests/api_helper.py consulta la base con el binario `mysql`.
-      - name: Instalar el cliente de MySQL
+      # tests/api_helper.py solo necesita el binario `mysql`. La imagen del
+      # runner ya lo trae: reinstalarlo con el metapaquete `mysql-client`
+      # arrastra mysql-server, cuyo postinst falla sin systemd y deja el job en
+      # dpkg 100 antes de desplegar. Si de verdad faltara, se instala el
+      # cliente de MariaDB, que habla el mismo protocolo.
+      - name: Comprobar el cliente de MySQL
         run: |
-          sudo apt-get update -qq
-          # Solo hace falta el binario `mysql`. Instalar el metapaquete
-          # `mysql-client` arrastra también mysql-server, que no se puede
-          # configurar en el runner (sin systemd) y tumba el paso con dpkg 100.
-          sudo apt-get install -y -qq --no-install-recommends mysql-client-core-8.4 \
-            || sudo apt-get install -y -qq --no-install-recommends mysql-client-core-8.0
-          command -v mysql
+          if ! command -v mysql >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq --no-install-recommends default-mysql-client || sudo apt-get install -y -qq --no-install-recommends mariadb-client
+          fi
+          mysql --version
 
       - name: Cargar esquema y datos de prueba
         env:
