@@ -32,6 +32,8 @@ import { Interruptor, SeccionFiltros, Segmentado } from '../components/FiltrosCo
 import ConfirmarAusencia from '../components/ConfirmarAusencia.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
 import AsignarPersonal from '../components/AsignarPersonal.jsx'
+import HistorialAsignaciones from '../components/HistorialAsignaciones.jsx'
+import { ClockIcon } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
 import SelectorUbicacion from '../components/SelectorUbicacion.jsx'
 import TelefonoPais, { telefonoLegible } from '../components/TelefonoPais.jsx'
@@ -179,6 +181,7 @@ export default function Personal() {
 
   const [mapaAbierto, setMapaAbierto] = useState(false)
   const [verFicha, setVerFicha] = useState(null)
+  const [historial, setHistorial] = useState(null)
   // Ficha desde la que se abrió la edición: al cancelar (flecha, Esc) se vuelve a ella.
   const [volverFicha, setVolverFicha] = useState(null)
   // /personal?ficha=ID abre directamente la ficha de esa persona (enlace desde Proyectos).
@@ -1002,6 +1005,9 @@ export default function Personal() {
         }}
       />
 
+      {/* HU-06: historial de asignaciones del trabajador (solo lectura). */}
+      <HistorialAsignaciones trabajador={historial} onCerrar={() => setHistorial(null)} />
+
       {personal !== null && personal.length > 0 && vista === 'tarjetas' && (
         <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
           {pag.visibles.map((t) => (
@@ -1067,6 +1073,12 @@ export default function Personal() {
                   </li>
                 ))}
               </ul>
+              {/* HU-06: el historial se consulta desde la ficha, sin salir de ella. */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button className="btn-ghost" onClick={() => { setVerFicha(null); setHistorial(t) }}>
+                  <ClockIcon className="h-4 w-4" /> Historial de asignaciones
+                </button>
+              </div>
               {(t.activo ? puedeEditar || puedeAsignar : puedeBaja) && (
                 <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-4">
                   {t.activo ? (
