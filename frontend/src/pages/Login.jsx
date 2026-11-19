@@ -85,7 +85,7 @@ export default function Login() {
     const res = await login(username, password)
     setEnviando(false)
     if (res.ok) navigate('/')
-    else setError(res.error)
+    else setError(res.error || 'No se pudo iniciar sesión. Reintente en un momento.')
   }
 
   return (

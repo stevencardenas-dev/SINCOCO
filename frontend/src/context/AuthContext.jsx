@@ -44,7 +44,15 @@ export function AuthProvider({ children }) {
       setUser(data.user)
       return { ok: true }
     } catch (err) {
-      return { ok: false, error: err.response?.data?.error ?? 'No se pudo conectar con el servidor' }
+      const data = err.response?.data
+      return {
+        ok: false,
+        codigo: data?.codigo ?? null,
+        // El backend explica el motivo: credenciales, cuenta bloqueada o la
+        // sesión única que ya está abierta en otro equipo. Sin respuesta solo
+        // se puede avisar del problema de conexión.
+        error: data?.error ?? (err.response ? 'No se pudo iniciar sesión' : 'No se pudo conectar con el servidor'),
+      }
     }
   }
 
