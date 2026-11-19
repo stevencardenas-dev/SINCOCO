@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import { listar, disponibles, consolidacion, registrar, solicitar, autorizar, rechazar } from '../controllers/consumoMaterialController.js'
+import { requireProyectoOperableDeActividad } from '../middleware/proyectoOperable.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -11,7 +12,7 @@ router.get('/', requirePermiso('consumos_materiales.listar'), listar)
 // Antes de '/:id' para que «disponibles» y «consolidacion» no se lean como un id.
 router.get('/disponibles', requirePermiso('consumos_materiales.crear'), disponibles)
 router.get('/consolidacion', requirePermiso('consumos_materiales.listar'), consolidacion)
-router.post('/', requirePermiso('consumos_materiales.crear'), registrar)
+router.post('/', requirePermiso('consumos_materiales.crear'), requireProyectoOperableDeActividad, registrar)
 router.patch('/:id/solicitar-anulacion', requirePermiso('consumos_materiales.crear'), solicitar)
 router.patch('/:id/autorizar-anulacion', requirePermiso('consumos_materiales.autorizar_anulacion'), autorizar)
 router.patch('/:id/rechazar-anulacion', requirePermiso('consumos_materiales.autorizar_anulacion'), rechazar)

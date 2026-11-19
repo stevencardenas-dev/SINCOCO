@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import { registrar, actualizar, listar, baja, reactivarCtrl, miAccesoCtrl } from '../controllers/proyectoController.js'
+import { congelar, reanudar, finalizar } from '../controllers/proyectoEstadoController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -24,5 +25,10 @@ router.patch('/:id', requirePermiso('proyectos.editar'), actualizar)
 // HU-18: baja lógica y reactivación (nunca borrado físico)
 router.patch('/:id/baja', requirePermiso('proyectos.dar_baja'), baja)
 router.patch('/:id/reactivar', requirePermiso('proyectos.dar_baja'), reactivarCtrl)
+
+// HU-38: congelar, reanudar y finalizar. Todo cambio exige motivo.
+router.patch('/:id/congelar', requirePermiso('proyectos.editar'), congelar)
+router.patch('/:id/reanudar', requirePermiso('proyectos.editar'), reanudar)
+router.patch('/:id/finalizar', requirePermiso('proyectos.editar'), finalizar)
 
 export default router
