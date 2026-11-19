@@ -23,6 +23,7 @@ const Materiales = lazy(() => import('./pages/Materiales.jsx'))
 const Incidencias = lazy(() => import('./pages/Incidencias.jsx'))
 const ProveedoresServicios = lazy(() => import('./pages/ProveedoresServicios.jsx'))
 const Costos = lazy(() => import('./pages/Costos.jsx'))
+const Reportes = lazy(() => import('./pages/Reportes.jsx'))
 
 /**
  * RNF05 · RBAC en las rutas: ocultar la opción del menú no basta, alguien
@@ -173,7 +174,7 @@ export default function App() {
           {/* Consolidación de costos */}
           <Route path="costos" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Consolidación de costos" descripcion="Consolidación de costos de materiales y servicios externos por proyecto para el análisis gerencial." /></RutaPorRol>} />
           {/* Reportes */}
-          <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><ModulePlaceholder title="Reportes" descripcion="Reportes filtrados por proyecto, periodo o trabajador, exportables a PDF y Excel." /></RutaPorRol>} />
+          <Route path="reportes" element={<RutaPorRol roles={[ADMIN, GERENTE]}><Reportes /></RutaPorRol>} />
           {/* RF18 · HU-17: bitácora de trazabilidad (solo el administrador) */}
           <Route path="auditoria" element={<RutaPorRol roles={[ADMIN]}><Auditoria /></RutaPorRol>} />
           {/* RF1 */}

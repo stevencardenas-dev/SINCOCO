@@ -8,6 +8,7 @@ import auditoriaRoutes from './routes/auditoria.js'
 import dashboardRoutes from './routes/dashboard.js'
 import costosRoutes from './routes/costos.js'
 import evidenciasRoutes from './routes/evidencias.js'
+import reportesRoutes from './routes/reportes.js'
 import proyectosRoutes from './routes/proyectos.js'
 import clientesRoutes from './routes/clientes.js'
 import proveedoresRoutes from './routes/proveedores.js'
@@ -66,6 +67,8 @@ app.use('/api/dashboard', rutasSeguras(dashboardRoutes))
 app.use('/api/costos', rutasSeguras(costosRoutes))
 // HU-22: evidencias del avance de las actividades.
 app.use('/api/evidencias', rutasSeguras(evidenciasRoutes))
+// HU-25: reportes filtrados y sus exportaciones.
+app.use('/api/reportes', rutasSeguras(reportesRoutes))
 app.use('/api/proyectos', rutasSeguras(proyectosRoutes))
 app.use('/api/clientes', rutasSeguras(clientesRoutes))
 app.use('/api/proveedores', rutasSeguras(proveedoresRoutes))

@@ -73,7 +73,7 @@ const NAV = [
       // y permisos (`catalogos.listar` / `catalogos.gestionar`): así el menú y
       // esa pantalla no se contradicen si el administrador cambia la matriz.
       { to: '/catalogo', label: 'Gestión Administrativa', icon: RectangleStackIcon, permiso: ['catalogos.listar', 'catalogos.gestionar'] },
-      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE], proximamente: true },
+      { to: '/reportes', label: 'Reportes', icon: DocumentChartBarIcon, roles: [ADMIN, GERENTE] },
       { to: '/auditoria', label: 'Auditoría', icon: ShieldCheckIcon, roles: [ADMIN] },
       { to: '/roles', label: 'Roles y permisos', icon: KeyIcon, roles: [ADMIN] },
     ],
