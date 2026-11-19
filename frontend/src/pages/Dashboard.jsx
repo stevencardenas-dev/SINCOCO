@@ -24,6 +24,7 @@ import {
 } from 'recharts'
 import StatCard from '../components/StatCard.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
+import EvidenciasRecientes from '../components/EvidenciasRecientes.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { dashboardApi } from '../services/dashboard'
 import { useRecurso } from '../hooks/useRecurso'
@@ -376,6 +377,9 @@ export default function Dashboard() {
           </div>
         </>
       )}
+
+      {/* HU-22: últimas evidencias adjuntas al avance. */}
+      <EvidenciasRecientes />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import Modal from './Modal.jsx'
 import AlertaFormulario from './AlertaFormulario.jsx'
+import EvidenciasAvance from './EvidenciasAvance.jsx'
 import { actividadesApi } from '../services/actividades'
 import { mensajeError } from '../lib/errores'
 import { fmtFechaHora, etiquetaEsfuerzo } from '../lib/format.js'
@@ -185,6 +186,9 @@ export default function RegistrarAvance({ actividad, onCerrar, onRegistrado }) {
                 : 'La actividad ya está completada y no admite más avance.'}
           </p>
         )}
+        {/* HU-22: evidencias del avance de esta actividad. */}
+        <EvidenciasAvance actividadId={actividad.id} onCambio={onRegistrado} />
+
       </div>
     </Modal>
   )
