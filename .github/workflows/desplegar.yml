@@ -92,7 +92,12 @@ jobs:
       - name: Instalar el cliente de MySQL
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq mysql-client
+          # Solo hace falta el binario `mysql`. Instalar el metapaquete
+          # `mysql-client` arrastra también mysql-server, que no se puede
+          # configurar en el runner (sin systemd) y tumba el paso con dpkg 100.
+          sudo apt-get install -y -qq --no-install-recommends mysql-client-core-8.4 \
+            || sudo apt-get install -y -qq --no-install-recommends mysql-client-core-8.0
+          command -v mysql
 
       - name: Cargar esquema y datos de prueba
         env:
