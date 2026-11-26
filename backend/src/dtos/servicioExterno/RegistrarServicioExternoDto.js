@@ -24,8 +24,9 @@ function fecha(valor, campo, etiqueta) {
 /**
  * DTO para registrar un servicio externo contratado (HU-28).
  * Criterio 1: proveedor, proyecto y actividad obligatorios. Criterio 2: fechas
- * de inicio y fin y valor contratado obligatorios. `confirmar_exceso` es la
- * respuesta del administrador a la advertencia de presupuesto excedido.
+ * de inicio y fin y valor contratado obligatorios. HU-32: si el valor excede el
+ * presupuesto de la actividad, el servicio queda pendiente de autorización; el
+ * formulario ya no pide confirmar el exceso.
  */
 export class RegistrarServicioExternoDto {
   static fromRequestBody(body = {}) {

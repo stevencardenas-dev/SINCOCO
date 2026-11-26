@@ -11,7 +11,7 @@ import { test, describe, beforeEach, mock } from 'node:test'
 import assert from 'node:assert/strict'
 
 // ---------------------------------------------------------------- base en memoria
-const db = { proveedores: [], proyectos: [], actividades: [], servicios: [], bitacora: [] }
+const db = { proveedores: [], proyectos: [], actividades: [], servicios: [], bitacora: [], notificaciones: [], gerentes: [] }
 
 function filaServicio(s) {
   const proveedor = db.proveedores.find((p) => p.id === s.proveedor_id)
@@ -40,20 +40,54 @@ async function query(sql, params = []) {
     return [db.actividades.filter((a) => a.id === Number(params[0]))]
   }
   if (s.startsWith('SELECT COALESCE(SUM(valor_contratado), 0) AS total FROM servicios_externos WHERE actividad_id = ?')) {
+    // HU-32: un servicio rechazado libera su presupuesto; el pendiente lo sigue comprometiendo.
+    const excluir = params.length > 1 ? Number(params[1]) : null
     const total = db.servicios
-      .filter((x) => x.actividad_id === Number(params[0]) && x.estado !== 'CANCELADO')
+      .filter((x) => x.actividad_id === Number(params[0]) && x.estado !== 'CANCELADO'
+        && x.autorizacion_estado !== 'RECHAZADA' && (excluir === null || x.id !== excluir))
       .reduce((suma, x) => suma + x.valor_contratado, 0)
     return [[{ total }]]
   }
   if (s.startsWith('INSERT INTO servicios_externos')) {
     const [proveedor_id, proyecto_id, actividad_id, nombre_servicio, descripcion, responsable_externo,
-      fecha_inicio, fecha_fin, valor_contratado, estado, observaciones] = params
+      fecha_inicio, fecha_fin, valor_contratado, estado, observaciones, autorizacion_estado, exceso_presupuesto] = params
     const id = db.servicios.length + 1
     db.servicios.push({
       id, proveedor_id, proyecto_id, actividad_id, nombre_servicio, descripcion, responsable_externo,
-      fecha_inicio, fecha_fin, valor_contratado, estado, observaciones, creado_en: '2026-10-18 10:00:00',
+      fecha_inicio, fecha_fin, valor_contratado, estado, observaciones, autorizacion_estado, exceso_presupuesto,
+      creado_en: '2026-10-18 10:00:00', autorizado_por_usuario_id: null, autorizado_en: null,
+      observacion_autorizacion: null,
     })
     return [{ insertId: id }]
+  }
+  if (s.startsWith('UPDATE servicios_externos SET autorizacion_estado')) {
+    const [estado, usuarioId, observacion, exceso, id] = params
+    const servicio = db.servicios.find((x) => x.id === Number(id) && x.autorizacion_estado === 'PENDIENTE')
+    if (!servicio) return [{ affectedRows: 0 }]
+    Object.assign(servicio, {
+      autorizacion_estado: estado,
+      autorizado_por_usuario_id: usuarioId,
+      observacion_autorizacion: observacion,
+      exceso_presupuesto: exceso ?? servicio.exceso_presupuesto,
+      autorizado_en: '2026-11-26 09:00:00',
+    })
+    return [{ affectedRows: 1 }]
+  }
+  if (s.startsWith('UPDATE servicios_externos SET valor_contratado')) {
+    const [valor, autorizacion, exceso, id] = params
+    const servicio = db.servicios.find((x) => x.id === Number(id))
+    Object.assign(servicio, {
+      valor_contratado: valor, autorizacion_estado: autorizacion, exceso_presupuesto: exceso,
+      autorizado_por_usuario_id: null, autorizado_en: null, observacion_autorizacion: null,
+    })
+    return [{ affectedRows: 1 }]
+  }
+  if (/FROM usuarios u JOIN roles r .*WHERE r\.nombre = 'GERENTE'/.test(s)) {
+    return [db.gerentes]
+  }
+  if (s.startsWith('INSERT INTO notificaciones')) {
+    db.notificaciones.push(params)
+    return [{ insertId: db.notificaciones.length }]
   }
   if (/FROM servicios_externos s JOIN proveedores pv .*WHERE s\.id = \? LIMIT 1/.test(s)) {
     return [db.servicios.filter((x) => x.id === Number(params[0])).map(filaServicio)]
@@ -113,6 +147,8 @@ function sembrar() {
   ]
   db.servicios = []
   db.bitacora = []
+  db.notificaciones = []
+  db.gerentes = [{ id: 2 }, { id: 3 }]
   acceso.total = true
   acceso.proyectosPermitidos = []
 }
@@ -177,61 +213,63 @@ describe('HU-28 · escenario principal: registro de un servicio contratado', () 
 describe('HU-28 · escenario alternativo: excede el presupuesto de la actividad (criterio 4)', () => {
   beforeEach(sembrar)
 
-  test('advierte antes de confirmar y no guarda nada', async () => {
-    await assert.rejects(registrar({ valor_contratado: 12000000 }), (err) => {
-      assert.equal(err.statusCode, 409)
-      assert.equal(err.campo, 'valor_contratado')
-      assert.deepEqual(err.extra, {
-        codigo: 'EXCEDE_PRESUPUESTO',
-        presupuesto: 10000000,
-        comprometido: 0,
-        disponible: 10000000,
-        valor_contratado: 12000000,
-        exceso: 2000000,
-      })
-      return true
-    })
-    assert.equal(db.servicios.length, 0)
-    assert.equal(db.bitacora.length, 0)
-  })
+  test('no bloquea el registro: lo deja pendiente de autorización (HU-32)', async () => {
+    const s = await registrar({ valor_contratado: 12000000 })
 
-  test('guarda cuando el administrador confirma y lo deja en la bitácora', async () => {
-    const s = await registrar({ valor_contratado: 12000000, confirmar_exceso: true })
-    assert.equal(s.valor_contratado, 12000000)
+    assert.equal(db.servicios.length, 1)
+    assert.equal(s.autorizacion_estado, 'PENDIENTE')
+    assert.equal(s.exceso_presupuesto, 2000000)
+    assert.equal(s.notificados, 2)
     assert.equal(db.bitacora[0].detalles.excede_presupuesto, true)
     assert.equal(db.bitacora[0].detalles.exceso, 2000000)
   })
 
-  test('un valor igual al presupuesto disponible no excede', async () => {
-    assert.equal((await registrar({ valor_contratado: 10000000 })).valor_contratado, 10000000)
+  test('notifica al gerente con el detalle del exceso (HU-32, criterio 2)', async () => {
+    await registrar({ valor_contratado: 12000000 })
+
+    assert.equal(db.notificaciones.length, 2)
+    const [usuarioId, titulo, mensaje] = db.notificaciones[0]
+    assert.equal(usuarioId, 2)
+    assert.match(titulo, /Transporte de escombros/)
+    assert.match(mensaje, /exceso/)
+    assert.match(mensaje, /2\.000\.000/)
+  })
+
+  test('un valor dentro del presupuesto se confirma sin autorización', async () => {
+    const s = await registrar({ valor_contratado: 10000000 })
+    assert.equal(s.autorizacion_estado, 'NO_REQUIERE')
+    assert.equal(s.exceso_presupuesto, 0)
+    assert.equal(db.notificaciones.length, 0)
   })
 
   test('descuenta lo ya contratado en la actividad', async () => {
     await registrar({ valor_contratado: 7000000 })
-    await assert.rejects(registrar({ valor_contratado: 4000000 }), (err) => {
-      assert.equal(err.extra.comprometido, 7000000)
-      assert.equal(err.extra.disponible, 3000000)
-      assert.equal(err.extra.exceso, 1000000)
-      return true
-    })
-    assert.equal(db.servicios.length, 1)
+    const s = await registrar({ valor_contratado: 4000000 })
+
+    assert.equal(s.autorizacion_estado, 'PENDIENTE')
+    assert.equal(s.exceso_presupuesto, 1000000)
+    assert.equal(db.servicios.length, 2)
   })
 
-  test('un servicio cancelado libera su presupuesto', async () => {
+  test('un servicio cancelado o rechazado libera su presupuesto', async () => {
     await registrar({ valor_contratado: 9000000 })
     db.servicios[0].estado = 'CANCELADO'
-    assert.equal((await registrar({ valor_contratado: 9000000 })).valor_contratado, 9000000)
+    assert.equal((await registrar({ valor_contratado: 9000000 })).autorizacion_estado, 'NO_REQUIERE')
+
+    db.servicios[1].autorizacion_estado = 'RECHAZADA'
+    assert.equal((await registrar({ valor_contratado: 9000000 })).autorizacion_estado, 'NO_REQUIERE')
   })
 
   test('no pierde centavos al comparar montos decimales', async () => {
     await registrar({ valor_contratado: 9999999.9 })
-    assert.equal((await registrar({ valor_contratado: 0.1 })).valor_contratado, 0.1)
-    await rechaza(registrar({ valor_contratado: 0.01 }), 409, /supera el presupuesto/)
+    assert.equal((await registrar({ valor_contratado: 0.1 })).autorizacion_estado, 'NO_REQUIERE')
+    assert.equal((await registrar({ valor_contratado: 0.01 })).autorizacion_estado, 'PENDIENTE')
   })
 
   test('una actividad sin presupuesto definido no genera advertencia', async () => {
     const s = await registrar({ actividad_id: 11, valor_contratado: 999999999 })
     assert.equal(s.valor_contratado, 999999999)
+    assert.equal(s.autorizacion_estado, 'NO_REQUIERE')
   })
 })
 

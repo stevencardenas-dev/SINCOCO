@@ -190,7 +190,9 @@ export async function totalesCostos() {
           FROM detalles_salida_materiales d
           JOIN salidas_materiales s ON s.id = d.salida_id) AS materiales_despachados,
        (SELECT COALESCE(SUM(valor_contratado), 0)
-          FROM servicios_externos WHERE estado <> 'CANCELADO') AS servicios_externos,
+          FROM servicios_externos
+         WHERE estado <> 'CANCELADO'
+           AND autorizacion_estado IN ('NO_REQUIERE', 'AUTORIZADA')) AS servicios_externos,
        (SELECT COALESCE(SUM(monto_total), 0)
           FROM ordenes_compra WHERE activo = 1 AND estado <> 'CANCELADA') AS ordenes_compra`,
   )
