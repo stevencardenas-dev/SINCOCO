@@ -211,10 +211,18 @@ export async function despachar({ id, almacenId, trabajadorId, usuarioId, observ
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [almacenId, sol.proyecto_id, sol.id, sol.actividad_id, trabajadorId, usuarioId, observaciones],
     )
+    // HU-40: toda salida genera su acta de recepción pendiente, con una línea
+    // por material, para que el maestro confirme lo recibido en obra.
+    const [acta] = await conn.query('INSERT INTO actas_recepcion (salida_id) VALUES (?)', [ins.insertId])
     for (const s of salidas) {
-      await conn.query(
+      const [detalle] = await conn.query(
         'INSERT INTO detalles_salida_materiales (salida_id, material_id, cantidad_despachada, costo_unitario_momento) VALUES (?, ?, ?, ?)',
         [ins.insertId, s.material_id, s.cantidad, s.costo],
+      )
+      await conn.query(
+        `INSERT INTO actas_recepcion_detalle (acta_id, detalle_salida_id, material_id, cantidad_despachada)
+         VALUES (?, ?, ?, ?)`,
+        [acta.insertId, detalle.insertId, s.material_id, s.cantidad],
       )
       // HU-36: despachar parte del saldo también lo aprueba (la aprobación nunca queda por debajo de lo despachado).
       await conn.query(

@@ -5,21 +5,36 @@ import EntradasInventario from './EntradasInventario.jsx'
 import SalidasMateriales from './SalidasMateriales.jsx'
 import DevolucionesMateriales from './DevolucionesMateriales.jsx'
 import TrasladosMateriales from './TrasladosMateriales.jsx'
+import ActasRecepcion from './ActasRecepcion.jsx'
 import Pestanas from '../components/Pestanas.jsx'
-import { ArrowDownTrayIcon, ArrowUpTrayIcon, ArrowUturnLeftIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  ArrowUturnLeftIcon,
+  ArrowsRightLeftIcon,
+  ClipboardDocumentCheckIcon,
+} from '@heroicons/react/24/outline'
 
 /**
  * Movimientos de inventario de materiales, en pestañas como Solicitudes y Herramientas.
  * Cada pestaña es la pantalla de su movimiento, con su propio formulario y su propio
  * permiso: solo aparece a quien puede consultarla.
  */
-const ICONOS_TAB = { ingresos: ArrowDownTrayIcon, salidas: ArrowUpTrayIcon, devoluciones: ArrowUturnLeftIcon, traslados: ArrowsRightLeftIcon }
+const ICONOS_TAB = {
+  ingresos: ArrowDownTrayIcon,
+  salidas: ArrowUpTrayIcon,
+  devoluciones: ArrowUturnLeftIcon,
+  traslados: ArrowsRightLeftIcon,
+  recepcion: ClipboardDocumentCheckIcon,
+}
 
 export const PESTANAS_MOVIMIENTOS = [
   { id: 'ingresos', label: 'Ingresos', permiso: 'entradas_inventario.listar', pagina: EntradasInventario },
   { id: 'salidas', label: 'Salidas', permiso: 'salidas_materiales.listar', pagina: SalidasMateriales },
   { id: 'devoluciones', label: 'Devoluciones', permiso: 'devoluciones_materiales.listar', pagina: DevolucionesMateriales },
   { id: 'traslados', label: 'Traslados', permiso: 'traslados_materiales.listar', pagina: TrasladosMateriales },
+  // HU-40: acta de recepción en obra; el maestro la firma desde aquí.
+  { id: 'recepcion', label: 'Recepción', permiso: 'actas_recepcion.listar', pagina: ActasRecepcion },
 ]
 
 export default function Movimientos() {
