@@ -3,6 +3,7 @@ import { ArrowPathIcon } from '@heroicons/react/24/outline'
 import PageHeader from '../components/PageHeader.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import AlertaFormulario from '../components/AlertaFormulario.jsx'
+import DesviacionesPresupuesto from '../components/DesviacionesPresupuesto.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { costosApi } from '../services/costos'
 import { useRecurso } from '../hooks/useRecurso'
@@ -92,6 +93,9 @@ export default function Costos() {
           </button>
         ))}
       </div>
+
+      {/* HU-39: desviación porcentual, desglose y semáforo. */}
+      <DesviacionesPresupuesto estado={estado} />
 
       {costos.error && <AlertaFormulario mensaje={costos.error} />}
       {costos.aviso && <AlertaFormulario tipo="aviso" mensaje={costos.aviso} />}

@@ -1,4 +1,5 @@
 import { resumenCostos, consolidarProyecto, ultimaConsolidacion } from '../services/consolidacionCostoService.js'
+import { listarDesviaciones } from '../services/desviacionService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 /**
@@ -19,3 +20,10 @@ export const consolidar = asyncHandler(async (req, res) => {
   const consolidacion = await consolidarProyecto(req.params.id, contexto(req))
   return res.status(201).json({ message: 'Costo consolidado', consolidacion })
 })
+
+/**
+ * GET /api/costos/desviaciones -> HU-39. Filtros: `proyecto_id`, `estado`,
+ * `umbral_advertencia` y `umbral_critico` (porcentajes).
+ */
+export const desviaciones = asyncHandler(async (req, res) =>
+  res.json(await listarDesviaciones(req.query, req.user)))

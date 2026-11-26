@@ -80,14 +80,26 @@ export async function historialDeProyecto(proyectoId, limite = 12) {
 
 /**
  * Un renglón por proyecto vigente con su presupuesto y el último corte
- * consolidado (si lo tiene). Es la lista que alimenta la pantalla de costos.
+ * consolidado (si lo tiene). Es la lista que alimenta la pantalla de costos y
+ * las desviaciones presupuestales (HU-39), que además filtran por proyecto y
+ * por el alcance del usuario.
  */
-export async function resumenPorProyecto({ estado = '' } = {}) {
+export async function resumenPorProyecto({ estado = '', proyectoId = null, alcance = null } = {}) {
   const condiciones = ['p.activo = 1']
   const params = []
   if (estado) {
     condiciones.push('p.estado = ?')
     params.push(estado)
+  }
+  if (proyectoId) {
+    condiciones.push('p.id = ?')
+    params.push(proyectoId)
+  }
+  if (alcance && !alcance.total) {
+    condiciones.push(`(p.responsable_id = ? OR EXISTS (
+      SELECT 1 FROM asignaciones_personal ap
+       WHERE ap.proyecto_id = p.id AND ap.trabajador_id = ? AND ap.estado = 'ACTIVO'))`)
+    params.push(alcance.trabajadorId ?? 0, alcance.trabajadorId ?? 0)
   }
   const [rows] = await pool.query(
     `SELECT p.id, p.codigo, p.nombre, p.estado, p.presupuesto_inicial,
