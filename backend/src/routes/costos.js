@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
-import { resumen, ultima, consolidar } from '../controllers/consolidacionCostoController.js'
+import { resumen, ultima, consolidar, desviaciones } from '../controllers/consolidacionCostoController.js'
 
 const router = Router()
 router.use(requireAuth)
@@ -10,6 +10,8 @@ router.use(requireAuth)
 // de gestión del proyecto. El alcance por proyecto lo sigue resolviendo la
 // matriz de permisos, igual que en el módulo de proyectos.
 router.get('/', requirePermiso('proyectos.listar'), resumen)
+// HU-39: desviación porcentual con desglose y semáforo (antes de '/proyectos/:id').
+router.get('/desviaciones', requirePermiso('proyectos.listar'), desviaciones)
 router.get('/proyectos/:id', requirePermiso('proyectos.listar'), ultima)
 router.post('/proyectos/:id', requirePermiso('proyectos.editar'), consolidar)
 
