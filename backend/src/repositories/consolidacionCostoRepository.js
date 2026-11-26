@@ -19,7 +19,8 @@ export async function costosDeProyecto(proyectoId) {
          WHERE s.proyecto_id = ?) AS materiales,
        (SELECT COALESCE(SUM(valor_contratado), 0)
           FROM servicios_externos
-         WHERE proyecto_id = ? AND estado <> 'CANCELADO') AS servicios,
+         WHERE proyecto_id = ? AND estado <> 'CANCELADO'
+           AND autorizacion_estado IN ('NO_REQUIERE', 'AUTORIZADA')) AS servicios,
        (SELECT COALESCE(SUM(monto_total), 0)
           FROM ordenes_compra
          WHERE proyecto_id = ? AND activo = 1 AND estado <> 'CANCELADA') AS ordenes_compra`,
