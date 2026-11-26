@@ -7,7 +7,14 @@ import { Proveedor } from '../entities/Proveedor.js'
 
 const CAMPOS = `id, documento_identificacion, razon_social, nombre_contacto,
                 telefono, email, direccion, estado, activo, fecha_baja,
-                (SELECT COUNT(*) FROM proveedor_documentos d WHERE d.proveedor_id = proveedores.id) AS documentos`
+                (SELECT COUNT(*) FROM proveedor_documentos d WHERE d.proveedor_id = proveedores.id) AS documentos,
+                -- HU-41: desempeño histórico del proveedor (promedios por criterio).
+                (SELECT ROUND(AVG(c.puntualidad), 2) FROM calificaciones_proveedor c
+                  WHERE c.proveedor_id = proveedores.id) AS puntualidad_promedio,
+                (SELECT ROUND(AVG(c.calidad), 2) FROM calificaciones_proveedor c
+                  WHERE c.proveedor_id = proveedores.id) AS calidad_promedio,
+                (SELECT COUNT(*) FROM calificaciones_proveedor c
+                  WHERE c.proveedor_id = proveedores.id) AS calificaciones`
 
 export async function findById(id) {
   const [rows] = await pool.query(

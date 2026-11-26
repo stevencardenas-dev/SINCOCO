@@ -4,6 +4,7 @@ import { requirePermiso } from '../middleware/permisos.js'
 import {
   listar, obtener, registrar, actualizar, baja, reactivarCtrl,
   documentos, adjuntar, descargar, eliminar,
+  calificaciones, calificarProveedor, corregirCalificacionCtrl,
 } from '../controllers/proveedorController.js'
 import { MIME_PERMITIDOS, TAMANO_MAXIMO } from '../services/proveedorService.js'
 
@@ -32,5 +33,11 @@ router.post(
 )
 router.get('/:id/documentos/:docId', requirePermiso('proveedores.listar'), descargar)
 router.delete('/:id/documentos/:docId', requirePermiso('proveedores.documentos'), eliminar)
+
+// HU-41: calificación de desempeño (puntualidad y calidad). Consulta cualquier
+// rol con acceso al catálogo; calificar y corregir, solo el administrador.
+router.get('/:id/calificaciones', requirePermiso('proveedores.listar'), calificaciones)
+router.post('/:id/calificaciones', requirePermiso('proveedores.calificar'), calificarProveedor)
+router.patch('/:id/calificaciones/:calificacionId', requirePermiso('proveedores.calificar'), corregirCalificacionCtrl)
 
 export default router

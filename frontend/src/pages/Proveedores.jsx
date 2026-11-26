@@ -9,11 +9,13 @@ import {
   PlusIcon,
   TrashIcon,
   TruckIcon,
+  StarIcon,
 } from '@heroicons/react/24/outline'
 import Modal from '../components/Modal.jsx'
 import ModalFormulario from '../components/ModalFormulario.jsx'
 import { BotonDarDeBaja } from '../components/BotonesBaja.jsx'
 import { TablaFicha } from '../components/Ficha.jsx'
+import CalificacionesProveedor from '../components/CalificacionesProveedor.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import FiltrosDesplegable from '../components/FiltrosDesplegable.jsx'
 import { Interruptor } from '../components/FiltrosControles.jsx'
@@ -244,6 +246,8 @@ export default function Proveedores({ pestanas }) {
 
   const [incluirInactivos, setIncluirInactivos] = useState(false)
   const [conDocumentos, setConDocumentos] = useState(null)
+  // HU-41: desempeño del proveedor (promedio, historial y calificación).
+  const [conCalificaciones, setConCalificaciones] = useState(null)
   const {
     filtros,
     cambiar: cambiarFiltro,
@@ -448,6 +452,14 @@ export default function Proveedores({ pestanas }) {
         />
       )}
 
+      {conCalificaciones && (
+        <CalificacionesProveedor
+          proveedor={conCalificaciones}
+          onCerrar={() => setConCalificaciones(null)}
+          alCambiar={recargar}
+        />
+      )}
+
       {proveedores === null && !error && (
         <div className="card flex items-center gap-3 px-6 py-12 text-sm text-slate-500">
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando proveedores…
@@ -524,11 +536,38 @@ export default function Proveedores({ pestanas }) {
                 ),
               },
               {
+                titulo: 'Desempeño',
+                movil: true,
+                celda: (p) =>
+                  p.calificaciones > 0 ? (
+                    <>
+                      <span className="inline-flex items-center gap-1 font-semibold tabular-nums text-slate-800">
+                        <StarIcon className="h-4 w-4 fill-amber-400 text-amber-500" />
+                        {p.calidad_promedio}
+                      </span>
+                      <p className="text-xs text-slate-400">
+                        {p.calificaciones} calificación(es) · puntualidad {p.puntualidad_promedio}
+                      </p>
+                    </>
+                  ) : (
+                    <span className="text-xs text-slate-400">Sin calificar</span>
+                  ),
+                orden: (p) => p.calidad_promedio ?? 0,
+              },
+              {
                 titulo: 'Acciones',
                 acciones: true,
                 celda: (p, enFicha) => {
                   const botones = (
                     <>
+                      {/* HU-41: disponible para quien consulta el catálogo. */}
+                      <button
+                        className="btn-accion btn-accion-plan"
+                        onClick={() => setConCalificaciones(p)}
+                        aria-label={`Desempeño de ${p.razon_social}`}
+                      >
+                        <StarIcon className="h-4 w-4" /> Desempeño
+                      </button>
                       <button
                         className="btn-accion btn-accion-editar"
                         onClick={() => setConDocumentos(p)}
