@@ -25,6 +25,7 @@ import {
 import StatCard from '../components/StatCard.jsx'
 import BotonActualizar from '../components/BotonActualizar.jsx'
 import EvidenciasRecientes from '../components/EvidenciasRecientes.jsx'
+import IndicadoresGerenciales from '../components/IndicadoresGerenciales.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { dashboardApi } from '../services/dashboard'
 import { useRecurso } from '../hooks/useRecurso'
@@ -130,6 +131,9 @@ export default function Dashboard() {
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando indicadores…
         </div>
       )}
+
+      {/* HU-16 · dashboard de indicadores: avance, estado y alertas con filtros. */}
+      {(user?.rol === 'GERENTE' || user?.rol === 'ADMINISTRADOR') && <IndicadoresGerenciales />}
 
       {datos && (
         <>

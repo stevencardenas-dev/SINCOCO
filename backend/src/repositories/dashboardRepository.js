@@ -6,6 +6,94 @@ import { pool } from '../db/pool.js'
  * resumen que consume el frontend.
  */
 
+// --- Indicadores gerenciales (HU-16) ----------------------------------------
+//
+// Un solo recorrido de proyectos con su último corte de consolidación: el
+// dashboard no recalcula costos ni consulta por fila, para que la pantalla
+// cargue con el mismo tiempo haya tres proyectos o treinta.
+//
+// `alcance` limita la consulta a los proyectos del usuario cuando su rol no ve
+// todos (`{ total: false, trabajadorId }`); con alcance total no se agrega
+// ninguna condición.
+export async function indicadoresProyectos({ proyectoId, estado, desde, hasta, alcance } = {}) {
+  const condiciones = ['p.activo = 1']
+  const params = []
+  if (proyectoId) { condiciones.push('p.id = ?'); params.push(proyectoId) }
+  if (estado) { condiciones.push('p.estado = ?'); params.push(estado) }
+  // El rango de fechas se aplica sobre la programación del proyecto.
+  if (desde) { condiciones.push('p.fecha_inicio_programada >= ?'); params.push(desde) }
+  if (hasta) { condiciones.push('p.fecha_fin_programada <= ?'); params.push(hasta) }
+  if (alcance && !alcance.total) {
+    condiciones.push(`(p.responsable_id = ? OR EXISTS (
+      SELECT 1 FROM asignaciones_personal ap
+       WHERE ap.proyecto_id = p.id AND ap.trabajador_id = ? AND ap.estado = 'ACTIVO'))`)
+    params.push(alcance.trabajadorId ?? 0, alcance.trabajadorId ?? 0)
+  }
+
+  const [rows] = await pool.query(
+    `SELECT p.id, p.codigo, p.nombre, p.estado, p.porcentaje_avance_total,
+            p.presupuesto_inicial, p.fecha_inicio_programada, p.fecha_fin_programada,
+            c.costo_real, c.desviacion_porcentaje, c.consolidado_en
+       FROM proyectos p
+       LEFT JOIN consolidaciones_costo c ON c.id = (
+         SELECT c2.id FROM consolidaciones_costo c2
+          WHERE c2.proyecto_id = p.id
+          ORDER BY c2.consolidado_en DESC, c2.id DESC LIMIT 1)
+      WHERE ${condiciones.join(' AND ')}
+      ORDER BY p.codigo`,
+    params,
+  )
+  return rows
+}
+
+/**
+ * Alertas sin atender, con el proyecto al que pertenece su referencia cuando se
+ * puede resolver (actividad, préstamo, solicitud o servicio externo). Las
+ * alertas de inventario no dependen de un proyecto y salen con `proyecto_id`
+ * en null.
+ */
+export async function alertasSinAtender() {
+  const [rows] = await pool.query(
+    `SELECT a.id, a.tipo, a.titulo, a.descripcion, a.referencia_id, a.tabla_referencia,
+            a.creada_en,
+            CASE a.tabla_referencia
+              WHEN 'actividades' THEN (
+                SELECT e.proyecto_id FROM actividades ac
+                  JOIN etapas_proyecto e ON e.id = ac.etapa_id WHERE ac.id = a.referencia_id)
+              WHEN 'prestamos_herramientas' THEN (
+                SELECT ph.proyecto_id FROM prestamos_herramientas ph WHERE ph.id = a.referencia_id)
+              WHEN 'solicitudes_materiales' THEN (
+                SELECT sm.proyecto_id FROM solicitudes_materiales sm WHERE sm.id = a.referencia_id)
+              WHEN 'servicios_externos' THEN (
+                SELECT se.proyecto_id FROM servicios_externos se WHERE se.id = a.referencia_id)
+              ELSE NULL
+            END AS proyecto_id
+       FROM alertas a
+      WHERE a.atendida = 0
+      ORDER BY a.creada_en DESC, a.id DESC
+      LIMIT 100`,
+  )
+  return rows
+}
+
+/** Proyectos vigentes que puede consultar el usuario, para el selector de filtros. */
+export async function proyectosDelAlcance(alcance) {
+  const condiciones = ['p.activo = 1']
+  const params = []
+  if (alcance && !alcance.total) {
+    condiciones.push(`(p.responsable_id = ? OR EXISTS (
+      SELECT 1 FROM asignaciones_personal ap
+       WHERE ap.proyecto_id = p.id AND ap.trabajador_id = ? AND ap.estado = 'ACTIVO'))`)
+    params.push(alcance.trabajadorId ?? 0, alcance.trabajadorId ?? 0)
+  }
+  const [rows] = await pool.query(
+    `SELECT p.id, p.codigo, p.nombre FROM proyectos p
+      WHERE ${condiciones.join(' AND ')} ORDER BY p.codigo`,
+    params,
+  )
+  return rows
+}
+
 // --- Proyectos (RF03 · HU-02) ------------------------------------------------
 export async function totalesProyectos() {
   const [[fila]] = await pool.query(
