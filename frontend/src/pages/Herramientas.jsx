@@ -26,6 +26,7 @@ import { fmtFecha } from '../lib/format.js'
 import { mensajeError } from '../lib/errores'
 import AlmacenesGestion from '../components/AlmacenesGestion.jsx'
 import PrestamosHerramientas from '../components/PrestamosHerramientas.jsx'
+import HistorialHerramienta from '../components/HistorialHerramienta.jsx'
 import SelectBuscable from '../components/SelectBuscable.jsx'
 import Pestanas from '../components/Pestanas.jsx'
 import { BuildingStorefrontIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
@@ -89,6 +90,8 @@ function CatalogoHerramientas({ pestanas }) {
   const puedeEditar = puede('herramientas.editar')
   const puedeBaja = puede('herramientas.dar_baja')
   const puedeEstado = puede('herramientas.cambiar_estado')
+  // HU-27: historial completo de una herramienta (préstamos, devoluciones y estados).
+  const [historialDe, setHistorialDe] = useState(null)
   // HU-37: cambio de estado operativo (reparación) con motivo obligatorio.
   const [cambio, setCambio] = useState(null)
   const [errorCambio, setErrorCambio] = useState('')
@@ -616,6 +619,11 @@ function CatalogoHerramientas({ pestanas }) {
         </div>
       </Modal>
 
+      {/* HU-27: historial completo de la herramienta. */}
+      {historialDe && (
+        <HistorialHerramienta herramienta={historialDe} onCerrar={() => setHistorialDe(null)} />
+      )}
+
       {herramientas === null && !error && (
         <div className="card flex items-center gap-3 px-6 py-12 text-sm text-slate-500">
           <ArrowPathIcon className="h-5 w-5 animate-spin text-brand-600" /> Cargando herramientas…
@@ -701,23 +709,35 @@ function CatalogoHerramientas({ pestanas }) {
                 acciones: true,
                 // Una herramienta dada de baja es historial: no se edita, solo se reactiva.
                 celda: (h, enFicha) => {
-                  if (h.activo ? !puedeEditar : !puedeBaja) return null
-                  const botones = h.activo ? (
-                    <button
-                      className="btn-accion btn-accion-editar"
-                      onClick={() => abrirEditar(h)}
-                      aria-label={`Actualizar ${h.nombre}`}
-                    >
-                      <PencilSquareIcon className="h-4 w-4" /> Editar
-                    </button>
-                  ) : (
-                    <button
-                      className="btn-accion btn-accion-ok"
-                      onClick={() => reactivar(h)}
-                      aria-label={`Reactivar ${h.nombre}`}
-                    >
-                      <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
-                    </button>
+                  const botones = (
+                    <>
+                      {/* HU-27: consultable para cualquier rol con acceso al catálogo. */}
+                      <button
+                        className="btn-accion btn-accion-editar"
+                        onClick={() => setHistorialDe(h)}
+                        aria-label={`Ver historial de ${h.nombre}`}
+                      >
+                        <ClipboardDocumentListIcon className="h-4 w-4" /> Historial
+                      </button>
+                      {h.activo && puedeEditar && (
+                        <button
+                          className="btn-accion btn-accion-editar"
+                          onClick={() => abrirEditar(h)}
+                          aria-label={`Actualizar ${h.nombre}`}
+                        >
+                          <PencilSquareIcon className="h-4 w-4" /> Editar
+                        </button>
+                      )}
+                      {!h.activo && puedeBaja && (
+                        <button
+                          className="btn-accion btn-accion-ok"
+                          onClick={() => reactivar(h)}
+                          aria-label={`Reactivar ${h.nombre}`}
+                        >
+                          <ArrowUturnLeftIcon className="h-4 w-4" /> Reactivar
+                        </button>
+                      )}
+                    </>
                   )
                   return enFicha ? botones : <div className="-my-1 flex flex-col items-stretch gap-1.5">{botones}</div>
                 },
