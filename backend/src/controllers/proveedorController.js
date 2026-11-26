@@ -11,6 +11,9 @@ import {
   eliminarDocumento,
 } from '../services/proveedorService.js'
 import { RegistrarProveedorDto } from '../dtos/proveedor/RegistrarProveedorDto.js'
+import {
+  calificar, corregirCalificacion, listarCalificaciones,
+} from '../services/calificacionProveedorService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 /**
@@ -26,6 +29,23 @@ export const listar = asyncHandler(async (req, res) => {
 export const obtener = asyncHandler(async (req, res) => {
   return res.json(await obtenerProveedor(req.params.id))
 })
+
+/** GET /api/proveedores/:id/calificaciones -> HU-41: historial y promedio. */
+export const calificaciones = asyncHandler(async (req, res) =>
+  res.json(await listarCalificaciones(req.params.id)))
+
+/** POST /api/proveedores/:id/calificaciones -> HU-41: calificar un servicio o entrega. */
+export const calificarProveedor = asyncHandler(async (req, res) => {
+  const resultado = await calificar(req.params.id, req.body, contexto(req))
+  return res.status(201).json({ message: 'Calificación registrada', ...resultado })
+})
+
+/** PATCH /api/proveedores/:id/calificaciones/:calificacionId -> HU-41: corregir. */
+export const corregirCalificacionCtrl = asyncHandler(async (req, res) =>
+  res.json({
+    message: 'Calificación corregida',
+    ...(await corregirCalificacion(req.params.id, req.params.calificacionId, req.body, contexto(req))),
+  }))
 
 /**
  * POST /api/proveedores -> HU-13: registrar un proveedor con su documento

@@ -16,4 +16,9 @@ export const proveedoresApi = {
   descargar: (id, docId) =>
     api.get(`/proveedores/${id}/documentos/${docId}`, { responseType: 'blob' }).then((res) => res.data),
   eliminarDocumento: (id, docId) => datos(api.delete(`/proveedores/${id}/documentos/${docId}`)),
+  /** HU-41: promedio histórico, calificaciones y lo que falta por calificar. */
+  calificaciones: (id) => datos(api.get(`/proveedores/${id}/calificaciones`)),
+  calificar: (id, cuerpo) => datos(api.post(`/proveedores/${id}/calificaciones`, cuerpo)),
+  corregirCalificacion: (id, calificacionId, cuerpo) =>
+    datos(api.patch(`/proveedores/${id}/calificaciones/${calificacionId}`, cuerpo)),
 }
