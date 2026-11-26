@@ -2,8 +2,8 @@ import { Router } from 'express'
 import { requireAuth } from '../middleware/auth.js'
 import { requirePermiso } from '../middleware/permisos.js'
 import {
-  listar, obtener, almacenes, registrar, actualizar, baja, reactivarCtrl,
-  registrarAlm, actualizarAlm, bajaAlm, reactivarAlm, estado, reparaciones,
+  listar, obtener, almacenes,   registrar, actualizar, baja, reactivarCtrl,
+  registrarAlm, actualizarAlm, bajaAlm, reactivarAlm, estado, reparaciones, historial,
 } from '../controllers/herramientaController.js'
 
 const router = Router()
@@ -29,5 +29,8 @@ router.patch('/:id/reactivar', requirePermiso('herramientas.dar_baja'), reactiva
 // HU-37: estado operativo (reparación / baja definitiva) e historial de reparaciones.
 router.patch('/:id/estado', requirePermiso('herramientas.cambiar_estado'), estado)
 router.get('/:id/reparaciones', requirePermiso('herramientas.listar'), reparaciones)
+
+// HU-27: historial completo (préstamos, devoluciones y cambios de estado).
+router.get('/:id/historial', requirePermiso('herramientas.listar'), historial)
 
 export default router

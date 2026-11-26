@@ -13,6 +13,7 @@ import {
 } from '../services/herramientaService.js'
 import { RegistrarHerramientaDto } from '../dtos/herramienta/RegistrarHerramientaDto.js'
 import { cambiarEstado, historialReparaciones } from '../services/herramientaEstadoService.js'
+import { historialHerramienta } from '../services/herramientaHistorialService.js'
 import { asyncHandler, contexto } from '../utils/http.js'
 
 const verdadero = (v) => ['1', 'true', 'on'].includes(String(v))
@@ -89,3 +90,6 @@ export const estado = asyncHandler(async (req, res) =>
   res.json({ message: 'Estado actualizado', herramienta: await cambiarEstado(req.params.id, req.body, contexto(req)) }))
 
 export const reparaciones = asyncHandler(async (req, res) => res.json(await historialReparaciones(req.params.id)))
+
+// HU-27: historial de préstamos, devoluciones y cambios de estado operativo.
+export const historial = asyncHandler(async (req, res) => res.json(await historialHerramienta(req.params.id)))

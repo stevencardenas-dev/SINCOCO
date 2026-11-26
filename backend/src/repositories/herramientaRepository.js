@@ -207,3 +207,30 @@ export async function findAlmacen(id) {
   )
   return rows[0] || null
 }
+
+/**
+ * HU-27 · préstamos de una herramienta con el trabajador, el proyecto y quien
+ * la entregó y la recibió. Es la base del historial de movimientos.
+ */
+export async function historialPrestamos(herramientaId) {
+  const [rows] = await pool.query(
+    `SELECT p.id, p.fecha_prestamo, p.fecha_estimada_devolucion, p.fecha_real_devolucion,
+            p.estado_entrega, p.estado_devolucion, p.estado_prestamo,
+            p.observaciones_entrega, p.observaciones_devolucion,
+            CONCAT(t.nombres, ' ', t.apellidos) AS trabajador,
+            pr.id AS proyecto_id, pr.codigo AS proyecto_codigo, pr.nombre AS proyecto,
+            COALESCE(CONCAT(te.nombres, ' ', te.apellidos), ue.username) AS entregado_por,
+            COALESCE(CONCAT(tr.nombres, ' ', tr.apellidos), ur.username) AS recibido_por
+       FROM prestamos_herramientas p
+       JOIN trabajadores t ON t.id = p.trabajador_id
+       JOIN proyectos pr ON pr.id = p.proyecto_id
+       JOIN usuarios ue ON ue.id = p.entregado_por_usuario_id
+       LEFT JOIN trabajadores te ON te.id = ue.trabajador_id
+       LEFT JOIN usuarios ur ON ur.id = p.recibido_por_usuario_id
+       LEFT JOIN trabajadores tr ON tr.id = ur.trabajador_id
+      WHERE p.herramienta_id = ?
+      ORDER BY p.fecha_prestamo DESC, p.id DESC`,
+    [herramientaId],
+  )
+  return rows
+}

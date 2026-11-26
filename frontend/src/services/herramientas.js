@@ -10,4 +10,6 @@ export const herramientasApi = {
   // HU-37: enviar a reparación, volver a disponible o dar de baja (con motivo).
   cambiarEstado: (id, cuerpo) => datos(api.patch(`/herramientas/${id}/estado`, cuerpo)),
   reparaciones: (id) => datos(api.get(`/herramientas/${id}/reparaciones`)),
+  // HU-27: historial de préstamos, devoluciones y cambios de estado.
+  historial: (id) => datos(api.get(`/herramientas/${id}/historial`)),
 }
