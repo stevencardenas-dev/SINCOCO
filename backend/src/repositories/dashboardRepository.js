@@ -55,7 +55,7 @@ export async function indicadoresProyectos({ proyectoId, estado, desde, hasta, a
 export async function alertasSinAtender() {
   const [rows] = await pool.query(
     `SELECT a.id, a.tipo, a.titulo, a.descripcion, a.referencia_id, a.tabla_referencia,
-            a.creada_en,
+            a.fecha_generacion AS creada_en,
             CASE a.tabla_referencia
               WHEN 'actividades' THEN (
                 SELECT e.proyecto_id FROM actividades ac
@@ -70,7 +70,7 @@ export async function alertasSinAtender() {
             END AS proyecto_id
        FROM alertas a
       WHERE a.atendida = 0
-      ORDER BY a.creada_en DESC, a.id DESC
+      ORDER BY a.fecha_generacion DESC, a.id DESC
       LIMIT 100`,
   )
   return rows
